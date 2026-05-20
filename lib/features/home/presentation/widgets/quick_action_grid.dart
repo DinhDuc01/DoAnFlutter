@@ -42,7 +42,7 @@ class QuickActionGrid extends StatelessWidget {
       title: 'Lịch sử',
       icon: Icons.history,
       color: Color(0xFFEC4899),
-      route: AppRoutes.notifications,
+      route: AppRoutes.history,
     ),
   ];
 
