@@ -12,7 +12,7 @@ class MockAccountRepository implements AccountRepository {
 
     return const AccountProfile(
       name: 'Nguyễn Văn A',
-      email: 'nhanvien@wms-ec.com',
+      email: 'nhanvien@stocklite.vn',
       role: 'Nhân viên kho',
       avatarInitial: 'N',
       inboundCount: 48,

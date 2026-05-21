@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/account/presentation/screens/account_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/history/presentation/screens/operation_history_screen.dart';
+import '../../features/inbound/presentation/screens/inbound_success_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/inbound/presentation/screens/inbound_screen.dart';
 import '../../features/inventory/presentation/screens/inventory_screen.dart';
@@ -19,6 +20,7 @@ class AppRoutes {
   static const login = '/login';
   static const home = '/home';
   static const inbound = '/inbound';
+  static const inboundSuccess = '/inbound/success';
   static const outbound = '/outbound';
   static const outboundSuccess = '/outbound/success';
   static const inventory = '/inventory';
@@ -34,6 +36,7 @@ class AppRoutes {
       login: (_) => const LoginScreen(),
       home: (_) => const HomeScreen(),
       inbound: (_) => const InboundScreen(),
+      inboundSuccess: (_) => const InboundSuccessScreen(),
       outbound: (_) => const OutboundScreen(),
       outboundSuccess: (_) => const OutboundSuccessScreen(),
       inventory: (_) => const InventoryScreen(),

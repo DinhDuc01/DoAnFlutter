@@ -4,13 +4,13 @@ import '../core/routes/app_routes.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/screens/login_screen.dart';
 
-class WmsEcApp extends StatelessWidget {
-  const WmsEcApp({super.key});
+class StockLiteApp extends StatelessWidget {
+  const StockLiteApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'WMS-EC',
+      title: 'StockLite',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       initialRoute: AppRoutes.login,

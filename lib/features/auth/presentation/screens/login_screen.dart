@@ -13,7 +13,7 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _authService = MockAuthService();
-  final _emailController = TextEditingController(text: 'nhanvien@wms-ec.com');
+  final _emailController = TextEditingController(text: 'nhanvien@stocklite.vn');
   final _passwordController = TextEditingController(text: '123456');
 
   bool _isLoading = false;
@@ -76,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      'WMS-EC',
+                      'StockLite',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Ung dung nhan vien kho',
+                      'Ứng dụng quản lý kho tinh gọn',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 28),
@@ -115,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             const SizedBox(height: 14),
-                            const Text('Mat khau'),
+                            const Text('Mật khẩu'),
                             const SizedBox(height: 8),
                             TextField(
                               controller: _passwordController,
@@ -127,7 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 20),
                             FilledButton(
                               onPressed: _isLoading ? null : _login,
-                              child: Text(_isLoading ? 'Dang nhap...' : 'Dang nhap'),
+                              child: Text(_isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'),
                             ),
                           ],
                         ),
@@ -135,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'Phien ban 2.1.0 - WMS-EC Mobile',
+                      'Phiên bản 2.1.0 • StockLite Mobile',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                   ],

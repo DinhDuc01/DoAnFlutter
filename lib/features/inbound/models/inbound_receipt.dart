@@ -19,3 +19,23 @@ class InboundReceipt {
   final int quantity;
   final String noteHint;
 }
+
+class InboundSuccessResult {
+  const InboundSuccessResult({
+    required this.receiptCode,
+    required this.quantity,
+    required this.productName,
+    required this.sku,
+    required this.warehouseName,
+    required this.performedBy,
+    required this.completedAt,
+  });
+
+  final String receiptCode;
+  final int quantity;
+  final String productName;
+  final String sku;
+  final String warehouseName;
+  final String performedBy;
+  final DateTime completedAt;
+}

@@ -1,4 +1,4 @@
-package com.example.do_an_flutter_test
+package com.stocklite.app
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/inbound_repository.dart';
 import '../../models/inbound_receipt.dart';
@@ -22,6 +23,7 @@ class _InboundScreenState extends State<InboundScreen> {
   final TextEditingController _noteController = TextEditingController();
 
   late final Future<InboundReceipt> _receiptFuture;
+  InboundReceipt? _receipt;
   int _quantity = 0;
   bool _quantityInitialized = false;
 
@@ -39,6 +41,7 @@ class _InboundScreenState extends State<InboundScreen> {
   }
 
   void _setInitialQuantity(InboundReceipt receipt) {
+    _receipt = receipt;
     if (_quantityInitialized) return;
     _quantity = receipt.quantity;
     _quantityInitialized = true;
@@ -54,9 +57,23 @@ class _InboundScreenState extends State<InboundScreen> {
   }
 
   void _confirmInbound() {
+    final receipt = _receipt;
+    if (receipt == null) return;
+
     // API_SWAP: Send receiptCode, quantity and note to POST /inbound/confirm.
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Đã xác nhận nhập $_quantity cái')),
+    final result = InboundSuccessResult(
+      receiptCode: receipt.receiptCode,
+      quantity: _quantity,
+      productName: receipt.productName,
+      sku: receipt.sku,
+      warehouseName: 'Kho A - TP. HCM',
+      performedBy: 'Nguyễn Văn A',
+      completedAt: DateTime.now(),
+    );
+
+    Navigator.of(context).pushReplacementNamed(
+      AppRoutes.inboundSuccess,
+      arguments: result,
     );
   }
 

@@ -3,5 +3,5 @@ import 'package:flutter/material.dart';
 import 'app/app.dart';
 
 void main() {
-  runApp(const WmsEcApp());
+  runApp(const StockLiteApp());
 }

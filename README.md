@@ -1,6 +1,6 @@
-# Flutter Test Page
+# StockLite
 
-Project Flutter toi thieu de test giao dien.
+Ung dung Flutter quan ly thao tac kho cho StockLite.
 
 ## Chay ung dung
 

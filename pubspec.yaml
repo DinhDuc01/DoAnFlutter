@@ -1,5 +1,5 @@
-name: do_an_flutter_test
-description: A simple Flutter test page.
+name: stocklite
+description: A Flutter warehouse stock management app.
 publish_to: "none"
 version: 1.0.0+1
 
