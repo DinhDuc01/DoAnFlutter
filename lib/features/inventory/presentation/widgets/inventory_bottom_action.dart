@@ -21,7 +21,7 @@ class InventoryBottomAction extends StatelessWidget {
       child: FilledButton(
         onPressed: onConfirm,
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFFA855F7),
+          backgroundColor: const Color.fromARGB(255, 29, 179, 29),
         ),
         child: const Text('Xác nhận kiểm kho'),
       ),
