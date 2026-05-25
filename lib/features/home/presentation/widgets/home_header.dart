@@ -1,34 +1,42 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/data/auth_session_store.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = AuthSessionStore.current?.user;
+    final fullName = user?.fullName.trim().isNotEmpty == true ? user!.fullName.trim() : 'Người dùng';
+    final avatarText = fullName.characters.first.toUpperCase();
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 18),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 14),
       color: AppColors.primary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       'Xin chào,',
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
                     ),
                     Text(
-                      'Nguyễn Văn A',
-                      style: TextStyle(
+                      fullName,
+                      style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 17,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -36,15 +44,22 @@ class HomeHeader extends StatelessWidget {
                 ),
               ),
               CircleAvatar(
+                radius: 22,
                 backgroundColor: Colors.white24,
-                child: Text('N', style: TextStyle(color: Colors.white)),
+                child: Text(
+                  avatarText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: Colors.white24,
               borderRadius: BorderRadius.circular(14),
@@ -54,9 +69,12 @@ class HomeHeader extends StatelessWidget {
               children: [
                 Text(
                   'Kho đang hoạt động',
-                  style: TextStyle(color: Colors.white70),
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                  ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 3),
                 Text(
                   'Kho A - TP. Hồ Chí Minh',
                   style: TextStyle(

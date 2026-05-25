@@ -8,24 +8,32 @@ class HomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.all(16),
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Thao tác nhanh',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          SizedBox(height: 10),
-          QuickActionGrid(),
-          SizedBox(height: 18),
+          const SizedBox(height: 10),
+          const QuickActionGrid(),
+          const SizedBox(height: 18),
           Text(
             'Hoạt động gần đây',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-          SizedBox(height: 10),
-          RecentActivityCard(),
+          const SizedBox(height: 10),
+          const RecentActivityCard(),
         ],
       ),
     );

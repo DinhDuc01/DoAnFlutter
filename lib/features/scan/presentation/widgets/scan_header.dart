@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 
 class ScanHeader extends StatelessWidget {
-  const ScanHeader({super.key});
+  const ScanHeader({
+    required this.onToggleTorch,
+    super.key,
+  });
+
+  final VoidCallback onToggleTorch;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +34,7 @@ class ScanHeader extends StatelessWidget {
             ),
           ),
           IconButton.filled(
-            onPressed: () {},
+            onPressed: onToggleTorch,
             style: IconButton.styleFrom(
               backgroundColor: Colors.white.withValues(alpha: 0.16),
               foregroundColor: Colors.white,

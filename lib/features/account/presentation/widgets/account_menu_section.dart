@@ -14,11 +14,13 @@ class AccountMenuSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -28,8 +30,8 @@ class AccountMenuSection extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 2),
               child: Text(
                 title!,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: colorScheme.onSurfaceVariant,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
                 ),
@@ -38,7 +40,11 @@ class AccountMenuSection extends StatelessWidget {
           for (var index = 0; index < items.length; index++) ...[
             items[index],
             if (index < items.length - 1)
-              const Divider(height: 1, indent: 58),
+              Divider(
+                height: 1,
+                indent: 58,
+                color: colorScheme.outlineVariant,
+              ),
           ],
         ],
       ),
@@ -102,6 +108,7 @@ class AccountMenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isToggle = value != null;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: isToggle ? null : onTap,
@@ -125,8 +132,8 @@ class AccountMenuItem extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -134,8 +141,8 @@ class AccountMenuItem extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
+                      style: TextStyle(
+                        color: colorScheme.onSurfaceVariant,
                         fontSize: 12,
                       ),
                     ),
@@ -150,9 +157,9 @@ class AccountMenuItem extends StatelessWidget {
                 onChanged: onChanged,
               )
             else
-              const Icon(
+              Icon(
                 Icons.chevron_right,
-                color: AppColors.textSecondary,
+                color: colorScheme.onSurfaceVariant,
                 size: 20,
               ),
           ],

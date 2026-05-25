@@ -29,12 +29,14 @@ class RecentActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -47,7 +49,11 @@ class RecentActivityCard extends StatelessWidget {
         children: [
           for (var index = 0; index < activities.length; index++) ...[
             RecentActivityItem(activity: activities[index]),
-            if (index < activities.length - 1) const Divider(height: 1),
+            if (index < activities.length - 1)
+              Divider(
+                height: 1,
+                color: colorScheme.outlineVariant,
+              ),
           ],
         ],
       ),
@@ -65,6 +71,8 @@ class RecentActivityItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: CircleAvatar(
@@ -77,9 +85,15 @@ class RecentActivityItem extends StatelessWidget {
       ),
       title: Text(
         activity.title,
-        style: const TextStyle(fontWeight: FontWeight.w700),
+        style: TextStyle(
+          color: colorScheme.onSurface,
+          fontWeight: FontWeight.w700,
+        ),
       ),
-      subtitle: Text(activity.subtitle),
+      subtitle: Text(
+        activity.subtitle,
+        style: TextStyle(color: colorScheme.onSurfaceVariant),
+      ),
       trailing: Text(
         activity.amount,
         style: TextStyle(

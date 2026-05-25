@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../models/account_profile.dart';
 
 class AccountStatsCard extends StatelessWidget {
@@ -13,14 +12,16 @@ class AccountStatsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Transform.translate(
       offset: const Offset(0, -18),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: colorScheme.outlineVariant),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -54,13 +55,15 @@ class _StatItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Expanded(
       child: Column(
         children: [
           Text(
             '$value',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: colorScheme.onSurface,
               fontSize: 18,
               fontWeight: FontWeight.w900,
             ),
@@ -68,8 +71,8 @@ class _StatItem extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: colorScheme.onSurfaceVariant,
               fontSize: 12,
             ),
           ),
@@ -85,7 +88,7 @@ class _Divider extends StatelessWidget {
     return Container(
       width: 1,
       height: 28,
-      color: AppColors.border,
+      color: Theme.of(context).colorScheme.outlineVariant,
     );
   }
 }

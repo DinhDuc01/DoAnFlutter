@@ -14,7 +14,7 @@ class InventoryCheckItemCard extends StatelessWidget {
   final InventoryCheckItem item;
   final ValueChanged<String> onActualChanged;
 
-  static const _accent = Color(0xFFA855F7);
+  static const _accent = Color.fromARGB(255, 17, 179, 65);
 
   @override
   Widget build(BuildContext context) {

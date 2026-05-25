@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 class InventoryCheckHeader extends StatelessWidget {
   const InventoryCheckHeader({super.key});
 
-  static const _accent = Color(0xFFA855F7);
-  static const _accentDark = Color(0xFF8200DB);
+  static const _accent = Color.fromARGB(255, 0, 219, 18);
+  static const _accentDark = Color.fromARGB(255, 0, 219, 18);
 
   @override
   Widget build(BuildContext context) {

@@ -48,6 +48,8 @@ class QuickActionGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -65,9 +67,9 @@ class QuickActionGrid extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           child: DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: colorScheme.outlineVariant),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.05),
@@ -92,7 +94,10 @@ class QuickActionGrid extends StatelessWidget {
                 Text(
                   item.title,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 12),
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),

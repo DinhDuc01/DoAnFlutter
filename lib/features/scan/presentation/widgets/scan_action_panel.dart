@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../models/scan_result_info.dart';
 
 class ScanActionPanel extends StatelessWidget {
-  const ScanActionPanel({super.key});
+  const ScanActionPanel({
+    required this.onScanAgain,
+    required this.onSwitchCamera,
+    this.result,
+    super.key,
+  });
+
+  final ScanResultInfo? result;
+  final VoidCallback onScanAgain;
+  final VoidCallback onSwitchCamera;
 
   @override
   Widget build(BuildContext context) {
@@ -12,14 +22,43 @@ class ScanActionPanel extends StatelessWidget {
       color: Colors.black,
       child: Column(
         children: [
+          if (result != null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    result!.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    result!.productCode ?? result!.rawValue,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFFCBD5E1),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           FilledButton(
-            onPressed: () {
-              // API_SWAP: Trigger real QR scanner result handling here.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Đang mô phỏng quét QR')),
-              );
-            },
-            child: const Text('Quét ngay'),
+            onPressed: onScanAgain,
+            child: Text(result == null ? 'Đang quét' : 'Quét lại'),
           ),
           const SizedBox(height: 10),
           Row(
@@ -28,7 +67,7 @@ class ScanActionPanel extends StatelessWidget {
                 child: _SecondaryScanButton(
                   icon: Icons.cameraswitch_outlined,
                   label: 'Đổi camera',
-                  onTap: () {},
+                  onTap: onSwitchCamera,
                 ),
               ),
               const SizedBox(width: 8),
@@ -36,7 +75,11 @@ class ScanActionPanel extends StatelessWidget {
                 child: _SecondaryScanButton(
                   icon: Icons.photo_library_outlined,
                   label: 'Thư viện ảnh',
-                  onTap: () {},
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Chưa hỗ trợ quét từ ảnh')),
+                    );
+                  },
                 ),
               ),
             ],

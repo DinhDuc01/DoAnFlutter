@@ -8,10 +8,13 @@ class HomeBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return BottomNavigationBar(
       currentIndex: 0,
+      backgroundColor: colorScheme.surface,
       selectedItemColor: AppColors.primary,
-      unselectedItemColor: AppColors.textSecondary,
+      unselectedItemColor: colorScheme.onSurfaceVariant,
       onTap: (index) {
         if (index == 1) {
           Navigator.of(context).pushNamed(AppRoutes.notifications);

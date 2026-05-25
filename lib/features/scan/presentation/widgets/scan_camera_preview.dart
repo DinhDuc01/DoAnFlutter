@@ -1,51 +1,91 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../models/scan_result_info.dart';
 
 class ScanCameraPreview extends StatelessWidget {
-  const ScanCameraPreview({super.key});
+  const ScanCameraPreview({
+    required this.controller,
+    required this.onDetect,
+    this.result,
+    super.key,
+  });
+
+  final MobileScannerController controller;
+  final void Function(BarcodeCapture capture) onDetect;
+  final ScanResultInfo? result;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF0F1E3A),
-            Color(0xFF0B172A),
-            Color(0xFF07150F),
-          ],
-        ),
-      ),
-      child: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 190,
-              height: 190,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  _ScanCorners(),
-                  _QrGlyph(),
-                ],
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        MobileScanner(
+          controller: controller,
+          onDetect: onDetect,
+          errorBuilder: (context, error) {
+            return const ColoredBox(
+              color: Color(0xFF0B172A),
+              child: Center(
+                child: Text(
+                  'Không mở được camera',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
-            ),
-            SizedBox(height: 18),
-            Text(
-              'Căn mã QR vào khung để quét',
-              style: TextStyle(
-                color: Color(0xFF94A3B8),
-                fontSize: 12,
-              ),
-            ),
-          ],
+            );
+          },
         ),
-      ),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.black.withValues(alpha: 0.20),
+                Colors.transparent,
+                Colors.black.withValues(alpha: 0.35),
+              ],
+            ),
+          ),
+        ),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 190,
+                height: 190,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    _ScanCorners(),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                result == null ? 'Căn mã QR hoặc barcode vào khung để quét' : result!.title,
+                style: const TextStyle(
+                  color: Color(0xFFE2E8F0),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (result?.productCode != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  result!.productCode!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -110,47 +150,4 @@ class _CornerPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _QrGlyph extends StatelessWidget {
-  const _QrGlyph();
-
-  @override
-  Widget build(BuildContext context) {
-    const cells = [
-      true,
-      true,
-      true,
-      false,
-      true,
-      false,
-      true,
-      false,
-      false,
-    ];
-
-    return SizedBox(
-      width: 76,
-      height: 76,
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: cells.length,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3,
-          crossAxisSpacing: 5,
-          mainAxisSpacing: 5,
-        ),
-        itemBuilder: (context, index) {
-          return DecoratedBox(
-            decoration: BoxDecoration(
-              color: cells[index]
-                  ? AppColors.primary.withValues(alpha: 0.40)
-                  : Colors.white.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(3),
-            ),
-          );
-        },
-      ),
-    );
-  }
 }

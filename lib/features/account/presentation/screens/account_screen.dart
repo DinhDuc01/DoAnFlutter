@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/routes/app_routes.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/theme/theme_controller.dart';
 import '../../data/account_repository.dart';
 import '../../models/account_profile.dart';
 import '../widgets/account_bottom_bar.dart';
@@ -48,6 +48,7 @@ class _AccountScreenState extends State<AccountScreen> {
 
   void _toggleDarkMode(bool value) {
     // API_SWAP: Call PATCH /account/settings darkModeEnabled=value or save locally.
+    ThemeController.setDarkMode(value);
     final profile = _profile;
     if (profile == null) return;
     setState(() {
@@ -66,7 +67,7 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundStart,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: FutureBuilder<AccountProfile>(
           future: _profileFuture,
