@@ -4,7 +4,10 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/scan_result_info.dart';
 
+/// Widget xem trước Camera để quét mã QR/Barcode (Scan Camera Preview).
+/// Tích hợp thư viện mobile_scanner, phủ lớp màu tối, vẽ khung góc xanh lá hướng dẫn quét và hiển thị nội dung quét được.
 class ScanCameraPreview extends StatelessWidget {
+  /// Khởi tạo [ScanCameraPreview] nhận bộ điều khiển, callback khi nhận diện và kết quả hiện tại.
   const ScanCameraPreview({
     required this.controller,
     required this.onDetect,
@@ -12,8 +15,13 @@ class ScanCameraPreview extends StatelessWidget {
     super.key,
   });
 
+  /// Bộ điều khiển camera.
   final MobileScannerController controller;
+
+  /// Callback kích hoạt khi camera nhận diện được một mã vạch/QR.
   final void Function(BarcodeCapture capture) onDetect;
+
+  /// Thông tin kết quả quét hiện tại (nếu có).
   final ScanResultInfo? result;
 
   @override
@@ -21,6 +29,7 @@ class ScanCameraPreview extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
+        // Camera thu hình từ mobile_scanner
         MobileScanner(
           controller: controller,
           onDetect: onDetect,
@@ -36,6 +45,7 @@ class ScanCameraPreview extends StatelessWidget {
             );
           },
         ),
+        // Lớp phủ tối mờ gradient để làm nổi bật khung quét
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -49,6 +59,7 @@ class ScanCameraPreview extends StatelessWidget {
             ),
           ),
         ),
+        // Khung quét nằm giữa màn hình kèm văn bản hướng dẫn
         Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -59,13 +70,15 @@ class ScanCameraPreview extends StatelessWidget {
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    _ScanCorners(),
+                    _ScanCorners(), // Vẽ 4 góc khung quét
                   ],
                 ),
               ),
               const SizedBox(height: 18),
               Text(
-                result == null ? 'Căn mã QR hoặc barcode vào khung để quét' : result!.title,
+                result == null
+                    ? 'Căn mã QR hoặc barcode vào khung để quét'
+                    : result!.title,
                 style: const TextStyle(
                   color: Color(0xFFE2E8F0),
                   fontSize: 12,
@@ -90,6 +103,7 @@ class ScanCameraPreview extends StatelessWidget {
   }
 }
 
+/// Widget gom nhóm 4 góc viền của khung quét mã (_ScanCorners).
 class _ScanCorners extends StatelessWidget {
   const _ScanCorners();
 
@@ -106,13 +120,17 @@ class _ScanCorners extends StatelessWidget {
   }
 }
 
+/// Một góc viền riêng lẻ của khung quét (_Corner) được xoay theo góc tương ứng.
 class _Corner extends StatelessWidget {
   const _Corner({
     required this.alignment,
     this.rotate = 0,
   });
 
+  /// Vị trí góc (Ví dụ: topLeft, topRight...).
   final Alignment alignment;
+
+  /// Giá trị xoay (0 = topLeft, 1 = topRight, 2 = bottomRight, 3 = bottomLeft).
   final int rotate;
 
   @override
@@ -131,6 +149,7 @@ class _Corner extends StatelessWidget {
   }
 }
 
+/// Bộ vẽ CustomPainter vẽ hình chữ L bo góc cho khung quét mã.
 class _CornerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

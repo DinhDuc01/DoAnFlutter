@@ -3,16 +3,21 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/warehouse_report.dart';
 
+/// Thẻ hiển thị biểu đồ hoạt động xuất nhập kho hàng tuần (Weekly Activity Chart Card).
+/// Sử dụng các cột dọc (Row/Column) mô phỏng dạng biểu đồ Bar Chart so sánh hoạt động Nhập/Xuất kho hàng ngày.
 class WeeklyActivityChartCard extends StatelessWidget {
+  /// Khởi tạo [WeeklyActivityChartCard] nhận danh sách hoạt động trong tuần.
   const WeeklyActivityChartCard({
     required this.activities,
     super.key,
   });
 
+  /// Danh sách dữ liệu hoạt động các ngày trong tuần.
   final List<WeeklyWarehouseActivity> activities;
 
   @override
   Widget build(BuildContext context) {
+    // Tìm giá trị lớn nhất của nhập/xuất để làm đỉnh trục Y
     final maxValue = activities.fold<int>(
       1,
       (max, item) => [
@@ -25,30 +30,32 @@ class WeeklyActivityChartCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surfaceFor(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          // Tiêu đề biểu đồ và chú thích màu sắc (Legend)
+          Row(
             children: [
               Expanded(
                 child: Text(
                   'Nhập / Xuất tuần này',
                   style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryFor(context),
                     fontWeight: FontWeight.w900,
                   ),
                 ),
               ),
-              _LegendDot(color: AppColors.primary, label: 'Nhập'),
-              SizedBox(width: 10),
-              _LegendDot(color: Color(0xFF93C5FD), label: 'Xuất'),
+              const _LegendDot(color: AppColors.primary, label: 'Nhập'),
+              const SizedBox(width: 10),
+              const _LegendDot(color: Color(0xFF93C5FD), label: 'Xuất'),
             ],
           ),
           const SizedBox(height: 14),
+          // Khu vực vẽ biểu đồ (Trục Y bên trái, Cột bên phải)
           SizedBox(
             height: 135,
             child: Row(
@@ -78,11 +85,13 @@ class WeeklyActivityChartCard extends StatelessWidget {
   }
 }
 
+/// Nhãn giá trị chia vạch dọc theo trục Y (_YAxisLabels).
 class _YAxisLabels extends StatelessWidget {
   const _YAxisLabels({
     required this.maxValue,
   });
 
+  /// Giá trị lớn nhất của biểu đồ.
   final int maxValue;
 
   @override
@@ -98,8 +107,8 @@ class _YAxisLabels extends StatelessWidget {
           for (var i = 4; i >= 0; i--)
             Text(
               '${step * i}',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: AppColors.textSecondaryFor(context),
                 fontSize: 10,
               ),
             ),
@@ -109,13 +118,17 @@ class _YAxisLabels extends StatelessWidget {
   }
 }
 
+/// Cột biểu đồ của một ngày đơn lẻ (_ChartDayColumn) gồm hai thanh nhập/xuất và nhãn ngày phía dưới.
 class _ChartDayColumn extends StatelessWidget {
   const _ChartDayColumn({
     required this.activity,
     required this.maxValue,
   });
 
+  /// Hoạt động trong ngày đó.
   final WeeklyWarehouseActivity activity;
+
+  /// Giá trị lớn nhất trên biểu đồ để làm mốc tỷ lệ chiều cao.
   final int maxValue;
 
   @override
@@ -149,8 +162,8 @@ class _ChartDayColumn extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             activity.dayLabel,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: AppColors.textSecondaryFor(context),
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
@@ -161,13 +174,17 @@ class _ChartDayColumn extends StatelessWidget {
   }
 }
 
+/// Thanh cột dọc riêng lẻ (_Bar) hiển thị dữ liệu nhập hoặc xuất.
 class _Bar extends StatelessWidget {
   const _Bar({
     required this.height,
     required this.color,
   });
 
+  /// Chiều cao của cột.
   final double height;
+
+  /// Màu sắc của cột.
   final Color color;
 
   @override
@@ -183,13 +200,17 @@ class _Bar extends StatelessWidget {
   }
 }
 
+/// Chấm ghi chú màu sắc bên góc phải biểu đồ (_LegendDot).
 class _LegendDot extends StatelessWidget {
   const _LegendDot({
     required this.color,
     required this.label,
   });
 
+  /// Màu sắc của chấm.
   final Color color;
+
+  /// Nhãn văn bản đi kèm.
   final String label;
 
   @override
@@ -207,8 +228,8 @@ class _LegendDot extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           label,
-          style: const TextStyle(
-            color: AppColors.textSecondary,
+          style: TextStyle(
+            color: AppColors.textSecondaryFor(context),
             fontSize: 12,
           ),
         ),

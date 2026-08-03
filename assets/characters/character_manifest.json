@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "defaultBody": "worker_standard",
+  "defaultLayers": {
+    "outfit": "uniform_green",
+    "headwear": "helmet_yellow",
+    "tool": "scanner_blue"
+  },
+  "bodies": [
+    {
+      "id": "worker_standard",
+      "label": "Nhân viên tiêu chuẩn",
+      "rig": "stocklite.worker.v1",
+      "assetKey": "vector:worker_standard",
+      "sourceDirections": ["front", "right", "back"],
+      "mirrorDirections": {"left": "right"},
+      "skinColor": "#DFA47A",
+      "hairColor": "#2D241F",
+      "actions": {
+        "idle": {"frames": 8, "fps": 8, "loop": true, "bob": 1.4, "sway": 0.8},
+        "walk": {"frames": 8, "fps": 12, "loop": true, "bob": 2.2, "sway": 5.5, "stride": 8.0},
+        "scan": {"frames": 10, "fps": 10, "loop": false, "impactFrame": 6, "holdLast": true, "bob": 0.8, "sway": 2.0},
+        "lift": {"frames": 12, "fps": 10, "loop": false, "impactFrame": 7, "holdLast": true, "bob": 3.0, "sway": 4.0},
+        "celebrate": {"frames": 12, "fps": 12, "loop": false, "impactFrame": 8, "holdLast": false, "bob": 4.0, "sway": 7.0}
+      },
+      "sockets": {
+        "root": {"x": 0, "y": 0},
+        "ground": {"x": 0, "y": 0},
+        "mainHand": {"x": 25, "y": -63, "xWave": 3, "yWave": 5, "phase": 0.1},
+        "offHand": {"x": -24, "y": -64, "xWave": 3, "yWave": 4, "phase": 0.6},
+        "back": {"x": 0, "y": -72, "xWave": 1, "yWave": 2, "phase": 0.2},
+        "title": {"x": 0, "y": -126, "yWave": 2, "phase": 0.3}
+      }
+    },
+    {
+      "id": "worker_compact",
+      "label": "Nhân viên nhỏ gọn",
+      "rig": "stocklite.worker.v1",
+      "assetKey": "vector:worker_compact",
+      "sourceDirections": ["front", "right", "back"],
+      "mirrorDirections": {"left": "right"},
+      "skinColor": "#B87552",
+      "hairColor": "#161616",
+      "scale": 0.92,
+      "actions": {
+        "idle": {"frames": 8, "fps": 8, "loop": true, "bob": 1.2, "sway": 0.7},
+        "walk": {"frames": 8, "fps": 12, "loop": true, "bob": 2.0, "sway": 5.0, "stride": 7.0},
+        "scan": {"frames": 10, "fps": 10, "loop": false, "impactFrame": 6, "holdLast": true, "bob": 0.7, "sway": 1.8},
+        "lift": {"frames": 12, "fps": 10, "loop": false, "impactFrame": 7, "holdLast": true, "bob": 2.6, "sway": 3.5},
+        "celebrate": {"frames": 12, "fps": 12, "loop": false, "impactFrame": 8, "holdLast": false, "bob": 3.5, "sway": 6.0}
+      },
+      "sockets": {
+        "root": {"x": 0, "y": 0},
+        "ground": {"x": 0, "y": 0},
+        "mainHand": {"x": 23, "y": -59, "xWave": 3, "yWave": 4, "phase": 0.1},
+        "offHand": {"x": -22, "y": -60, "xWave": 3, "yWave": 4, "phase": 0.6},
+        "back": {"x": 0, "y": -68, "xWave": 1, "yWave": 2, "phase": 0.2},
+        "title": {"x": 0, "y": -118, "yWave": 2, "phase": 0.3}
+      }
+    }
+  ],
+  "layers": [
+    {"id": "uniform_green", "label": "Đồng phục xanh lá", "slot": "outfit", "rig": "stocklite.worker.v1", "assetKey": "vector:uniform", "visual": "uniform", "color": "#159447", "accentColor": "#F4C542", "painterOrder": 20},
+    {"id": "uniform_navy", "label": "Đồng phục xanh navy", "slot": "outfit", "rig": "stocklite.worker.v1", "assetKey": "vector:uniform", "visual": "uniform", "color": "#24435D", "accentColor": "#5BC0BE", "painterOrder": 20},
+    {"id": "safety_vest", "label": "Áo phản quang", "slot": "outfit", "rig": "stocklite.worker.v1", "assetKey": "vector:safety_vest", "visual": "uniform", "color": "#F28C28", "accentColor": "#FFF2A8", "painterOrder": 20},
+    {"id": "helmet_yellow", "label": "Mũ bảo hộ vàng", "slot": "headwear", "rig": "stocklite.worker.v1", "assetKey": "vector:helmet", "visual": "helmet", "color": "#F4C542", "accentColor": "#FFF4B8", "painterOrder": 40},
+    {"id": "cap_green", "label": "Mũ lưỡi trai", "slot": "headwear", "rig": "stocklite.worker.v1", "assetKey": "vector:cap", "visual": "cap", "color": "#166534", "accentColor": "#A7F3D0", "painterOrder": 40},
+    {"id": "scanner_blue", "label": "Máy quét cầm tay", "slot": "tool", "rig": "stocklite.worker.v1", "assetKey": "vector:scanner", "visual": "scanner", "socket": "mainHand", "color": "#2563EB", "accentColor": "#93C5FD", "painterOrder": 60},
+    {"id": "clipboard", "label": "Bảng kiểm kê", "slot": "offhand", "rig": "stocklite.worker.v1", "assetKey": "vector:clipboard", "visual": "clipboard", "socket": "offHand", "color": "#8B5A2B", "accentColor": "#F8E7C4", "painterOrder": 55},
+    {"id": "success_sparkle", "label": "Hiệu ứng hoàn tất", "slot": "effect", "rig": "stocklite.worker.v1", "assetKey": "vector:sparkle", "visual": "sparkle", "socket": "title", "color": "#FBBF24", "accentColor": "#FEF3C7", "painterOrder": 80, "actions": ["celebrate"]}
+  ]
+}

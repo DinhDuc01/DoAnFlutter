@@ -8,7 +8,7 @@ Mục tiêu chính:
 
 - Kiểm tra các màn hình hiển thị đúng theo thiết kế.
 - Kiểm tra luồng điều hướng giữa các màn.
-- Kiểm tra các thao tác cơ bản như đăng nhập, nhập kho, xuất kho, kiểm kho, xem lịch sử, thông báo, tài khoản và quét QR.
+- Kiểm tra các thao tác cơ bản như đăng nhập, thu mua, giao hàng, kiểm kho, xay xát, xem lịch sử, thông báo, tài khoản và quét QR.
 - Ghi nhận các điểm hiện đang dùng mock data để test lại sau khi nối API.
 
 ## 2. Phạm vi test
@@ -22,6 +22,7 @@ Các màn hình cần test:
 - Xuất kho
 - Xuất kho thành công
 - Kiểm kho
+- Xay xát: chuẩn bị, cân gạo, cân cám, xác nhận kết quả
 - Lịch sử thao tác
 - Thông báo
 - Tài khoản cá nhân
@@ -94,12 +95,13 @@ Ghi chú: ở giai đoạn mock, form đăng nhập chỉ cần email và mật 
 | --- | --- | --- | --- |
 | HM-01 | Header user | Vào Trang chủ | Thấy lời chào và tên nhân viên |
 | HM-02 | Kho hoạt động | Vào Trang chủ | Thấy kho đang hoạt động |
-| HM-03 | Thao tác nhanh | Vào Trang chủ | Thấy 6 chức năng: Nhập kho, Xuất kho, Kiểm kho, Quét QR, Thống kê, Lịch sử |
+| HM-03 | Thao tác nhanh | Vào Trang chủ | Thấy 6 chức năng hiện trường: Thu mua, Kho, Giao hàng, Xay xát, Kiểm chất, Kiểm kê |
 | HM-04 | Mở Nhập kho | Bấm Nhập kho | Vào màn Phiếu nhập kho |
 | HM-05 | Mở Xuất kho | Bấm Xuất kho | Vào màn Phiếu xuất kho |
 | HM-06 | Mở Kiểm kho | Bấm Kiểm kho | Vào màn Phiếu kiểm kho |
 | HM-07 | Mở Quét QR | Bấm Quét QR | Vào màn Quét mã QR |
 | HM-08 | Mở Lịch sử | Bấm Lịch sử | Vào màn Lịch sử thao tác |
+| HM-09 | Mở Xay xát | Bấm Xay xát | Vào màn Hoàn tất xay & đóng bao, không chuyển sang tab Kho |
 
 ## 8. Test màn Nhập kho
 
@@ -138,7 +140,19 @@ Ghi chú: ở giai đoạn mock, form đăng nhập chỉ cần email và mật 
 | INV-07 | Nhập ghi chú | Gõ ghi chú | Text hiển thị |
 | INV-08 | Xác nhận kiểm kho | Bấm Xác nhận kiểm kho | Hiển thị thông báo xác nhận mock |
 
-## 11. Test màn Lịch sử thao tác
+## 11. Test luồng Xay xát
+
+| ID | Mô tả | Bước test | Kết quả mong đợi |
+| --- | --- | --- | --- |
+| MILL-01 | Mở lệnh xay | Bấm Xay xát từ Home | Hiển thị mã lệnh, lô lúa, khối lượng, vị trí và cân |
+| MILL-02 | Trạng thái tải | Chọn Đang tải | Hiển thị skeleton, không vỡ bố cục |
+| MILL-03 | Trạng thái lỗi | Chọn Lỗi tải | Hiển thị lỗi và nút Thử lại |
+| MILL-04 | Cân gạo | Bấm Bắt đầu cân gạo | Hiển thị dữ liệu cân trực tiếp, 10 bao và tổng 250kg |
+| MILL-05 | Cân cám | Bấm Tiếp tục cân cám | Hiển thị 5 bao và tổng 99.5kg |
+| MILL-06 | Xác nhận | Bấm Xác nhận kết quả xay | Hiển thị tổng gạo, cám, yield và chi tiết từng bao |
+| MILL-07 | Hoàn tất | Bấm Hoàn tất mẻ xay | Hiển thị xác nhận thành công và cho phép về Home |
+
+## 12. Test màn Lịch sử thao tác
 
 | ID | Mô tả | Bước test | Kết quả mong đợi |
 | --- | --- | --- | --- |
@@ -148,7 +162,7 @@ Ghi chú: ở giai đoạn mock, form đăng nhập chỉ cần email và mật 
 | HIS-04 | Số lượng thay đổi | Xem item | Nhập kho có `+`, xuất/kiểm có `-` nếu âm |
 | HIS-05 | Back | Bấm back | Quay lại màn trước |
 
-## 12. Test màn Thông báo
+## 13. Test màn Thông báo
 
 | ID | Mô tả | Bước test | Kết quả mong đợi |
 | --- | --- | --- | --- |
@@ -161,7 +175,7 @@ Ghi chú: ở giai đoạn mock, form đăng nhập chỉ cần email và mật 
 | NOTI-07 | Đóng thông báo | Bấm icon `x` | Thông báo bị loại khỏi danh sách |
 | NOTI-08 | Empty filter | Lọc khi không có data phù hợp | Hiển thị text empty |
 
-## 13. Test màn Tài khoản
+## 14. Test màn Tài khoản
 
 | ID | Mô tả | Bước test | Kết quả mong đợi |
 | --- | --- | --- | --- |
@@ -172,7 +186,7 @@ Ghi chú: ở giai đoạn mock, form đăng nhập chỉ cần email và mật 
 | ACC-05 | Toggle giao diện tối | Bật/tắt switch | Switch đổi trạng thái |
 | ACC-06 | Đăng xuất | Bấm Đăng xuất | Quay về màn Login |
 
-## 14. Test màn Quét QR
+## 15. Test màn Quét QR
 
 | ID | Mô tả | Bước test | Kết quả mong đợi |
 | --- | --- | --- | --- |
@@ -183,7 +197,7 @@ Ghi chú: ở giai đoạn mock, form đăng nhập chỉ cần email và mật 
 | QR-05 | Thư viện ảnh | Bấm Thư viện ảnh | Không crash |
 | QR-06 | Back | Bấm back | Quay lại màn trước |
 
-## 15. Test điều hướng
+## 16. Test điều hướng
 
 | ID | Mô tả | Bước test | Kết quả mong đợi |
 | --- | --- | --- | --- |
@@ -194,7 +208,7 @@ Ghi chú: ở giai đoạn mock, form đăng nhập chỉ cần email và mật 
 | NAV-05 | Account tab | Bấm bottom nav Tài khoản | Vào Tài khoản |
 | NAV-06 | Success back home | Từ success bấm Quay về trang chủ | Về Home và clear stack |
 
-## 16. Test responsive/UI
+## 17. Test responsive/UI
 
 Kiểm tra trên ít nhất 2 kích thước:
 
@@ -210,7 +224,7 @@ Checklist:
 - Màn success căn giữa hợp lý.
 - Màn QR giữ bố cục ổn trên màn cao/thấp.
 
-## 17. Test regression sau khi nối API
+## 18. Test regression sau khi nối API
 
 Khi backend/API được nối, cần test lại các điểm có note `API_SWAP` trong code:
 
@@ -229,7 +243,7 @@ Khi backend/API được nối, cần test lại các điểm có note `API_SWAP
 - Dismiss notification
 - Logout
 
-## 18. Tiêu chí pass
+## 19. Tiêu chí pass
 
 Một build được xem là pass frontend smoke nếu:
 
@@ -241,9 +255,38 @@ Một build được xem là pass frontend smoke nếu:
 - Không crash khi bấm các button chính.
 - Các luồng nhập/xuất kho sang màn success hoạt động.
 
-## 19. Ghi chú cho tester
+## 20. Ghi chú cho tester
 
 - Ứng dụng hiện đang dùng mock data.
 - Một số button như `Xem chi tiết`, `Đổi camera`, `Thư viện ảnh` chưa có nghiệp vụ thật.
 - Màn Quét QR hiện là UI mock, chưa dùng camera thật.
 - Khi phát hiện lỗi UI, ghi rõ thiết bị, kích thước màn hình, bước tái hiện và ảnh chụp màn hình.
+
+## 21. Bộ test tự động hiện tại
+
+Kết quả gần nhất ngày 22/07/2026:
+
+- 21 file test.
+- 152 test case đã pass.
+- Line coverage: 68.29% (`3133/4588` dòng có thể đo).
+- Không có lỗi hoặc warning từ analyzer; còn 26 lint mức `info` trong code giao diện.
+
+Các nhóm đã được tự động hóa:
+
+- Đăng nhập đúng/sai, parse session và lỗi API.
+- Model nghiệp vụ, JSON reader, QR/barcode parser và dữ liệu cân.
+- Repository API cho tài khoản, sản phẩm, tồn kho, thu mua, giao hàng, kiểm kê, kiểm chất, xay xát, báo cáo, lịch sử và thông báo.
+- Trạng thái loading, error, empty, success và retry của các màn bất đồng bộ.
+- Luồng nhập kho, giao hàng, kiểm kê nhiều chữ số và điều hướng sang màn thành công/chi tiết.
+- Smoke test các màn chính, tài khoản, lịch mua hàng và luồng xay xát.
+- Cân sản phẩm trong kho bằng nhập tay hoặc cân IoT Bluetooth ESP32.
+
+Lệnh chạy:
+
+```powershell
+flutter test
+flutter test --coverage
+flutter analyze --no-fatal-infos
+```
+
+File coverage được tạo tại `coverage/lcov.info`. Camera thật, kết nối BLE thật, quyền Android và nghiệp vụ với backend đang chạy vẫn cần integration test hoặc manual test trên thiết bị.

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/scan_result_info.dart';
 
+/// Bảng điều khiển hành động quét QR/Barcode (Scan Action Panel) hiển thị ở cuối màn hình quét camera.
+/// Hiển thị thông số sản phẩm quét được và cung cấp các nút bấm đổi camera, quét tiếp.
 class ScanActionPanel extends StatelessWidget {
   const ScanActionPanel({
     required this.onScanAgain,
@@ -11,9 +13,16 @@ class ScanActionPanel extends StatelessWidget {
     super.key,
   });
 
+  /// Thông tin sản phẩm đọc được (nếu bằng null nghĩa là đang đợi quét).
   final ScanResultInfo? result;
+
+  /// Callback kích hoạt quét lại.
   final VoidCallback onScanAgain;
+
+  /// Callback đổi camera trước/sau.
   final VoidCallback onSwitchCamera;
+
+  static const _greenAccent = Color(0xFF10B981); // Màu xanh lá chủ đạo quét QR
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +31,7 @@ class ScanActionPanel extends StatelessWidget {
       color: Colors.black,
       child: Column(
         children: [
+          // Nếu đã có kết quả quét thành công, hiển thị thẻ thông số sản phẩm
           if (result != null) ...[
             Container(
               width: double.infinity,
@@ -56,11 +66,27 @@ class ScanActionPanel extends StatelessWidget {
             ),
             const SizedBox(height: 10),
           ],
+          // Nút bấm hành động chính (Quét ngay hoặc Quét lại) màu xanh lá
           FilledButton(
             onPressed: onScanAgain,
-            child: Text(result == null ? 'Đang quét' : 'Quét lại'),
+            style: FilledButton.styleFrom(
+              backgroundColor: _greenAccent,
+              minimumSize: const Size.fromHeight(46),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              result == null ? 'Quét ngay' : 'Quét lại',
+              style: const TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+              ),
+            ),
           ),
           const SizedBox(height: 10),
+
+          // Các phím chức năng phụ: Đổi camera, Thư viện ảnh
           Row(
             children: [
               Expanded(
@@ -90,6 +116,7 @@ class ScanActionPanel extends StatelessWidget {
   }
 }
 
+/// Nút bấm phụ màu đen viền xám cho các tuỳ chọn của camera
 class _SecondaryScanButton extends StatelessWidget {
   const _SecondaryScanButton({
     required this.icon,

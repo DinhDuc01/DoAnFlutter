@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../models/account_profile.dart';
 
+/// Thẻ hiển thị số liệu thống kê hoạt động (Account Stats Card).
+/// Được dịch chuyển âm (-18px) lên trên để đè một phần lên Header tạo hiệu ứng chiều sâu (floating card).
 class AccountStatsCard extends StatelessWidget {
   const AccountStatsCard({
     required this.profile,
     super.key,
   });
 
+  /// Thông tin hồ sơ chứa các biến đếm hoạt động.
   final AccountProfile profile;
 
   @override
@@ -15,7 +18,7 @@ class AccountStatsCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Transform.translate(
-      offset: const Offset(0, -18),
+      offset: const Offset(0, -18), // Dịch chuyển vị trí lên trên đè lên header
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
@@ -32,11 +35,12 @@ class AccountStatsCard extends StatelessWidget {
         ),
         child: Row(
           children: [
+            // Hiển thị 3 chỉ số Nhập kho, Xuất kho, Kiểm kho phân tách bởi vạch dọc
             _StatItem(value: profile.inboundCount, label: 'Nhập kho'),
             _Divider(),
             _StatItem(value: profile.outboundCount, label: 'Xuất kho'),
             _Divider(),
-            _StatItem(value: profile.inventoryCount, label: 'Kiểm kho'),
+            _StatItem(value: profile.inventoryCount, label: 'Kiểm kê'),
           ],
         ),
       ),
@@ -44,13 +48,17 @@ class AccountStatsCard extends StatelessWidget {
   }
 }
 
+/// Widget phụ con biểu diễn một ô đếm chỉ số.
 class _StatItem extends StatelessWidget {
   const _StatItem({
     required this.value,
     required this.label,
   });
 
+  /// Số lượng thống kê.
   final int value;
+
+  /// Nhãn mô tả (ví dụ: "Nhập kho").
   final String label;
 
   @override
@@ -82,6 +90,7 @@ class _StatItem extends StatelessWidget {
   }
 }
 
+/// Vạch kẻ phân cách dọc giữa các chỉ số.
 class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

@@ -1,0 +1,1167 @@
+﻿
+Project Management Plan
+Warehouse Management Application for SME E-Commerce Businesses
+ STOCKLITE - REPORT 2
+Project Name
+Warehouse Management Application for SME E-Commerce Businesses
+Vision & Scope Ref
+SU26_StockLite_Report1_Vision_Scope
+RTW Ref
+SU26_StockLite_Report 3.1_RTW
+Plan Version
+v1.1.0
+Date Created
+28/05/2026
+Last Updated
+20/06/2026
+Author(s)
+SEP490-G60
+Reviewer(s)
+Tô Thanh Hải
+Status
+Approved
+
+Table Of Content
+ TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3,Heading 4,4,Heading 5,5,Heading 6,6,"Table Of Content2
+Document Change History3
+List of Table4
+Definition and Acronyms5
+1. Overview7
+1.1 Cost / Time Estimation7
+1.2 Project Objectives9
+1.3 Project Risks9
+2. Management Approach11
+2.1 Project Processes11
+Development Lifecycle11
+Scrum Ceremonies11
+Definition of Done (DoD)12
+Change Management Process12
+2.2 Quality Management13
+2.3 Project Training Plan14
+3. Responsibility Assignments (RACI)15
+4. Project Communications18
+5. Configuration Management19
+5.1 Document Management19
+5.2 Source Code Management20
+Branching Strategy20
+Commit Convention20
+5.3 Tools & Infrastructure21
+
+Document Change History
+Version
+Date
+Changes
+Author
+v1.0.0
+05/06/2026
+Add format docs and information
+LongTD
+v1.0.1
+14/06/2026
+Edit information, Config Manager 
+LongTD
+v1.0.2
+14/06/2026
+Add information about Cost/Time, Project objectives
+LongTD
+v1.1.0
+20/06/2026
+Edit information to fit name of document
+NhanDND
+
+List of Table
+Table No.
+Title
+Page
+Table 1
+Cost / Time Estimation
+5
+Table 2
+Project Objectives
+7
+Table 3
+Project Risks:
+7
+Table 4
+Development Lifecycle
+9
+Table 5
+Scrum Ceremonies
+9
+Table 6
+Definition of Done (DoD)
+10
+Table 7
+Change Management Process
+10
+Table 8
+Quality Management
+11
+Table 9
+Project Training Plan
+12
+Table 10 
+Responsibility Assignments (RACI)
+13
+Table 11
+Project Communications
+16
+Table 12
+Document Management
+17
+Table 13
+Branching Strategy
+18
+Table 14
+Commit Convention
+18
+Table 15
+Tools & Infrastructure
+19
+
+Definition and Acronyms 
+Acronym
+Definition
+SME
+Small and Medium-sized Enterprises
+WMS
+Warehouse Management System
+MVP
+Minimum Viable Product
+SKU
+Stock Keeping Unit
+QR
+Quick Response Code
+SRS
+Software Requirements Specification
+TDS
+Technical Design Specification
+PMP 
+Project Management Plan 
+POC 
+Proof of Concept 
+UAT 
+User Acceptance Testing 
+CI / CD 
+Continuous Integration / Continuous Deployment 
+PR / MR 
+Pull Request / Merge Request 
+RACI 
+Responsible, Accountable, Consulted, Informed 
+BA 
+Business Analyst 
+QA 
+Quality Assurance 
+API 
+Application Programming Interface 
+REST 
+REpresentational State Transfer 
+IoT 
+Internet of Things 
+JWT 
+JSON Web Token 
+EF (Core) 
+Entity Framework Core 
+FK 
+Foreign Key 
+FCM 
+Firebase Cloud Messaging 
+SMTP 
+Simple Mail Transfer Protocol 
+UI / UX 
+User Interface / User Experience 
+DB 
+Database 
+IDE 
+Integrated Development Environment 
+RTW 
+Requirements Traceability Workbook 
+ORM 
+Object-Relational Mapping 
+SQL / MySQL 
+Structured Query Language 
+XML 
+Extensible Markup Language 
+JSON 
+JavaScript Object Notation 
+SSL 
+Secure Sockets Layer 
+DoD 
+Definition of Done 
+URL / URI 
+Uniform Resource Locator / Identifier 
+PDF 
+Portable Document Format 
+BLoC 
+Business Logic Component 
+HTTP 
+Hypertext Transfer Protocol 
+
+1. Overview
+1.1 Cost / Time Estimation
+The table below lists all deliverable work packages across 6 stages and 14 weeks following the SEP490 project plan template. Total estimated team effort is approximately 380 person-days for 5 members. Based on a working schedule of 6 days per week (Monday through Saturday) and 5 hours per day per team member, each team member is expected to contribute approximately 76 days of work throughout the project, leaving 8 days per member as contingency buffer (approximately 9.5%) for unforeseen risks and additional quality assurance activities.
+The formal implementation stage is planned for Weeks 6–11, with a total effort of 220 person-days split across three development iterations. Earlier weeks (1–5) are allocated for planning, high-level design, vertical prototypes, and proof-of-concept (POC) validation—totaling 100 person-days—to reduce implementation risk and ensure technical feasibility before entering the coding phase. The remaining effort (60 person-days) covers verification, validation, user acceptance testing (UAT), and project closure activities in Weeks 12–14 
+#
+Work Package
+Est. Effort (p-days)
+Deadline
+Stage 1: Project Initiating (Week 1)
+1.1
+Report 1 — Project Introduction
+5
+Week 1
+Stage 2: Project Planning & Initial Requirements (Weeks 2–3)
+2.1
+Report 2: Project Management Plan v1.0
+10
+Week 2
+2.2
+Report 3: SRS v0.9 — Overall Requirements
+10
+Week 2
+2.3
+Vertical Prototypes — Code Demo (Backend skeleton + Flutter shell + Angular shell)
+15
+Week 3
+Stage 3: Software Design (Weeks 4–5)
+3.1
+Vertical Prototypes — POC (Proof of Concept: QR flow, IoT REST API integration, Auth)
+25
+Week 4
+3.2
+Report 4: TDS v1.0 — High-Level Design Specifications
+15
+Week 4
+3.3
+Report 5: Test Planning (strategy, test types, tools, coverage targets)
+10
+Week 5
+3.4
+Report 3: SRS v1.0 — Detailed Requirements for Iteration 1
+10
+Week 5
+Stage 4: Implementation (Weeks 6–11)
+4.1 Implementation Iteration 1 (Weeks 6–7)
+4.1.1
+Report 4: TDS v1.1 — Detailed Design (Domain models, DB schema, API contracts for Iter 1)
+10
+Week 6
+4.1.2
+Code Package & Unit Testing Report — Iter 1 (Product/Product Variant/SKU, QR Label, Auth, User, Role APIs)
+30
+Week 6
+4.1.3
+Report 5: Integration Test Cases — Iter 1
+10
+Week 6
+4.1.4
+Report 5: Integration Test Report — Iter 1
+10
+Week 7
+4.1.5
+Report 3: SRS v1.1 — Detailed Requirements for Iteration 2
+10
+Week 7
+4.1.6
+Software Package Version 1 (deployed to staging, demo-ready)
+5
+Week 7
+4.2 Implementation Iteration 2 (Weeks 8–9)
+4.2.1
+Report 4: TDS v1.2 — Detailed Design (Inbound, Outbound, Inventory Transaction, Supplier, Warehouse & Location, Rule-based Warning & Put-away Algorithm)
+10
+Week 8
+4.2.2
+Code Package & Unit Testing Report — Iter 2 (Supplier & Warehouse/Location master data, inbound, outbound, Stock Take, Inventory Transaction, Flutter screens)
+25
+Week 8
+4.2.3
+Report 5: Integration Test Cases — Iter 2
+10
+Week 8
+4.2.4
+Report 5: Integration Test Report — Iter 2
+10
+Week 9
+4.2.5
+Report 3: SRS v1.2 — Detailed Requirements for Iteration 3
+10
+Week 9
+4.2.6
+Software Package Version 2 (QR workflow, IoT weight REST integration, Flutter mobile v2,Inbound Warning & Put-away features)
+5
+Week 9
+4.3 Implementation Iteration 3 (Weeks 10–11)
+4.3.1
+Report 4: TDS v1.3 — Detailed Design (Dashboard, Reports, Returns Management FE-16, Admin management)
+10
+Week 10
+4.3.2
+Code Package & Unit Testing Report — Iter 3 (Angular admin, SignalR realtime dashboard, Firebase Cloud Messaging notifications, returns Management FE-16, reporting)
+30
+Week 10
+4.3.3
+Report 5: Integration Test Cases — Iter 3
+10
+Week 10
+4.3.4
+Report 5: Integration Test Report — Iter 3
+10
+Week 11
+4.3.5
+Report 5: System Test Cases (end-to-end scenarios covering all scope)
+10
+Week 11
+4.3.6
+Software Package Version 3 (feature-complete MVP)
+5
+Week 11
+Stage 5: Verification & Validation (Weeks 12–13)
+5.1
+Report 5: System Test Report (results, defect summary, pass/fail criteria)
+10
+Week 12
+5.2
+Report 6: User Guides — Installation Guide + User Manual (Web Admin & Mobile)
+10
+Week 12
+5.3
+Acceptance Testing & Support (mentor-led user accepted testing, defect fixes)
+10
+Week 13
+5.4
+Final Software Package (source code, DB scripts, config, deployment guide)
+10
+Week 13
+Stage 6: Closing (Week 14)
+6.1
+Report 7: Final Project Report (retrospective, lessons learned, metrics actuals)
+10
+Week 14
+6.2
+Presentation Slides + Demo Script
+10
+Week 14
+ Table 1 - Cost / Time Estimation
+1.2 Project Objectives
+This section defines the quantitative Key Performance Indicators (KPIs) and quality targets that the team formally commits to achieving by the end of the project. It outlines explicit success metrics—such as keeping final open defects under 5, maintaining a >= 95 % defect fix rate, ensuring >= 70% unit test line coverage for the backend service layer, and keeping API response times under 2 seconds—providing an objective framework to evaluate project success at Week 14.
+#
+Metric
+Unit
+Planned
+Actual
+Notes / References
+1
+Total Effort Usage
+Person-day
+~380
+—
+5 members × 14 weeks x 5 hour/day
+2
+Open Defects at Final Submission
+Count
+< 5
+—
+Tracked in GitHub Issues
+3
+Defect Fix Rate
+% fixed / total
+≥ 95%
+—
+Before final package
+4
+Timeliness (deliverables on time)
+% on-time
+≥ 90%
+—
+Per milestone deadline
+5
+Requirement Completeness 
+% implemented
+100%
+—
+Baseline scope tracked in RTW and GitHub Projects
+6
+Milestones Met on Time
+Count / 9
+9 / 9
+—
+9 milestones in tracker
+7
+Unit Test Coverage (Backend)
+% line coverage
+≥ 70%
+—
+Service layer, xUnit
+8
+Integration Test Pass Rate
+% cases passed
+≥ 95%
+—
+Postman / CI pipeline
+9
+System Test Pass Rate 
+% cases passed
+100%
+—
+UAT with mentor
+10
+API Response Time (p95, under load)
+s
+< 2s
+—
+Load test Week 11
+ Table 2 - Project Objectives
+1.3 Project Risks
+This section identifies and analyzes potential technical, operational, and structural roadblocks that could jeopardize the project's timeline, scope, or quality. Each risk is prioritized based on its impact and probability Priority = Impact × Possibility (H = High, M = Medium, L = Low), and is backed by actionable mitigation strategies and clear contingency plans for critical issues like scope creep, hardware instability (IoT scale calibration), or free-tier cloud infrastructure limitations. 
+#
+Risk Description
+Impact
+Possibility
+Priority
+Mitigation / Contingency
+1
+Key member unexpectedly leaves mid-project (medical, personal, academic probation)
+H
+M
+H
+Mitigation: All code reviewed & documented in GitHub Wiki; cross-training in Week 2–3. No single point of knowledge. Contingency: Redistribute tasks in next sprint; escalate to mentor within 24 h; if critical path impacted, request deadline extension.
+2
+Scope creep — mentor/stakeholder requests features beyond MVP scope
+H
+H
+H
+Mitigation: Freeze scope after SRS v1.0 (Week 5). All new requests go through the formal Change Request form (logged in GitHub). Contingency: Defer features to post-MVP backlog; document as out-of-scope in acceptance test evidence.
+3
+Backend API performance degradation under realistic load (> 10 concurrent users)
+M
+L
+M
+Mitigation: Use MemoryCacheService for lookup data; index FK columns via EF Fluent API; enable AsNoTracking on read queries. Benchmark in Week 10. Contingency: Profile slow endpoints with MiniProfiler; reduce default page size; add response compression.
+4
+Third-party service outage: Cloudinary, Firebase Cloud Messaging, Gmail SMTP during demo/testing
+L
+M
+L
+Mitigation: Abstract behind IStorageService / IEmailService / IFireBaseService; configure Polly retry & circuit-breaker in HttpClient registration. Contingency: Pre-cache demo images locally; disable notification features; use console-sink logging as fallback evidence of email triggers.
+5
+IoT scale instability or calibration error causes incorrect receiving verification
+H
+M
+H
+Build ESP32 + HX711 + load cell POC in Week 3–4; store stable weight logs; allow re-weigh and remote tare command; inventory is updated only after staff confirms receiving. If hardware fails during demo, use recorded stable weight logs and manual verification mode as fallback evidence.
+6
+Infrastructure limitation: Backend deployed on Render.com free tier causes server "sleep" (cold start delay up to 50s) after periods of inactivity, leading to Mobile App request timeouts during testing/demo.
+H
+H
+H
+Mitigation: Implement an automated ping mechanism (using an external cron job service like Cron-Job.org, UptimeRobot, or an internal Hangfire dashboard hosted elsewhere) to send a lightweight GET request to the server every 10–14 minutes to keep the instance active.
+Contingency: Manually trigger a backend request (warm-up) 5 minutes before any evaluation, testing session, or live demo to ensure the server is fully awake.
+ Table 3 - Project Risks
+
+2. Management Approach
+2.1 Project Processes
+StockLite follows an Iterative & Incremental methodology aligned with FPT SEP490 requirements, incorporating lightweight Scrum ceremonies. The project keeps the standard 14-week planning structure: Week 1 for initiating, Weeks 2–3 for planning, Weeks 4–5 for design, Weeks 6–11 for implementation, Weeks 12–13 for verification and validation, and Week 14 for closing and defense preparation. The implementation stage is organized into three 2-week sprints, each producing a shippable software package.
+Development Lifecycle
+Defines the chronological phases of the project across the 14-week timeline (Initiating, Planning, Design, Implementation, Verification & Validation, and Closing). It outlines the specific objectives and key deliverables required to transition smoothly from one phase to the next.
+Phase
+Key Activities
+Initiating (Week 1)
+Define project charter, identify stakeholders, finalize team roles & responsibilities, submit Report 1.
+Planning (Weeks 2–3)
+Produce PMP (Report 2), SRS v1.0 (Report 3), vertical code prototypes. Establish GitHub repo, CI/CD pipeline, branching strategy, and communication channels.
+Design (Weeks 4–5)
+POC to validate architecture decisions (Clean Architecture, QR scan flow, IoT REST API polling). Produce TDS v1.0 (Report 4), Test Plan (Report 5), SRS v1.0.
+Implementation (Weeks 6–11)
+Three 2-week sprints. Each sprint: Sprint Planning → Daily Standups → Code + Review → Unit Tests → Integration Tests → Sprint Review & Demo → Retrospective → next SRS version.
+Verification & Validation (Weeks 12–13)
+System testing, UAT with mentor, defect triage & fixes, final software package, user guides.
+Closing (Week 14)
+Final report, retrospective, project metrics actuals, presentation & defense.
+ Table 4 - Development Lifecycle
+Scrum Ceremonies
+Establishes the structured Agile meetings used to synchronize the team and track progress, detailing the cadence, duration, and goals for Sprint Planning, Daily Standups, Sprint Reviews, Sprint Retrospectives, and Backlog Refinements. 
+Ceremony
+Cadence
+Description
+Sprint Planning
+Start of each 2-week sprint
+Team reviews the backlog, selects tasks for the sprint, assigns owners, and estimates effort. Output: sprint backlog in GitHub Projects board.
+Daily Standup
+Every day, 15 min
+Each member answers: (1) What did I do yesterday? (2) What will I do today? (3) Any blockers? Conducted via Discord voice or Teams chat.
+Sprint Review & Demo
+End of each sprint (Fridays)
+Live demo of completed features to all members ± mentor. Acceptance: feature meets Definition of Done (see below).
+Sprint Retrospective
+After each review
+Team identifies: What went well? What needs improvement? Agrees on 1–2 concrete action items for the next sprint.
+Backlog Refinement
+Mid-sprint (Week midpoint)
+Review upcoming sprint's tasks: clarify requirements, break down large tasks (>3 person-days), add test cases to tickets.
+ Table 5 - Scrum Ceremonies
+Definition of Done (DoD)
+Serves as a mandatory quality checklist that every feature or task must successfully fulfill—including code review approvals, C/CDI pipeline passes, unit test coverage, and documentation updates—before it can be formally marked as completed. 
+✓
+Criterion
+✓
+Code complete and pushed to feature branch; PR created with description linking to GitHub issue.
+✓
+Minimum 1 peer code review approval; all review comments resolved or acknowledged.
+✓
+CI/CD pipeline passes: build succeeds, linting clean, all unit tests green.
+✓
+Unit tests written for new business logic (Service layer); coverage does not drop below 70% on covered files.
+✓
+Integration test case added to Postman collection; test passes against local/staging environment.
+✓
+No hardcoded credentials or secrets; appsettings.json uses placeholder values only.
+✓
+API endpoint documented in Swagger (XML comments on Controller method).
+✓
+Feature branch merged to develop; no merge conflicts outstanding.
+✓
+GitHub issue updated to 'Closed'; time logged; linked MR referenced.
+Table 6 - Definition of Done (DoD)
+Change Management Process
+Outlines the formal step-by-step workflow for requesting, assessing, and approving modifications to the project's scope, timeline, or architecture, ensuring all changes are tracked via GitHub issues and properly logged.
+Step
+Action
+Owner / Tool
+1
+Submit Change Request
+Requester opens GitHub Issue with label 'change-request', describes the change, impact on scope/timeline, and priority.
+2
+Impact Assessment
+Team lead (Nhân) assesses effort delta, risk, and affected deliverables within 24 h.
+3
+Team Decision
+Majority vote in group chat; changes with > 3 person-days effort require mentor sign-off.
+4
+Update Artifacts
+Approved changes → update SRS, task backlog, Gantt, and RACI. Rejected changes → closed with reason documented.
+5
+Communicate
+Notify all members and mentors via group chat; update project tracking sheet.
+Table 7 - Change Management Process
+2.2 Quality Management
+This section outlines the defensive engineering practices, coding standards, and testing protocols designed to enforce high software quality and prevent architectural decay across all layers of the stack. It sets clear rules for Clean Architecture compliance, mandatory peer code reviews, xUnit backend testing, mobile/web component testing, automated Postman integration collections, and end-to-end system testing scenarios like the core "Receive Goods" workflow.
+Quality Activity
+Description & Standard
+Architecture Compliance
+Clean Architecture enforced: Controllers delegate to Services only — no business logic in API layer. Repositories never call SaveChangesAsync(). Services never inject DbContext directly. Violations flagged in code review.
+Coding Standards
+C# naming conventions (PascalCase methods, camelCase params). XML doc comments on all public Controller and Service methods. No magic strings — use ApiCodeConstants and ErrorMessagesConstants. No hardcoded credentials.
+Peer Code Review
+All PRs require ≥ 1 approval. Reviewer checklist: architecture compliance, no secrets, naming conventions, Swagger documentation, Serilog logging on error paths.
+Unit Testing (Backend)
+xUnit tests for Service layer. Mock repositories using Moq. Target: ≥ 70% line coverage on Auth, Product, Inbound/Outbound, Inventory services. Run via GitHub Actions on every push.
+Unit Testing (Mobile/Web)
+Flutter widget tests for key screens (QR scan, stock take form). Angular component tests via Jasmine/Karma for dashboard and order form components.
+Integration Testing
+Postman collections per iteration. Tests cover: happy path, validation errors (400), unauthorized (401), not-found (404), and concurrency. Automated in CI/CDI.
+System Testing
+Receive Goods end-to-end scenario: Inbound created → QR label generated → warehouse staff scans QR by Flutter mobile → system shows expected item and suggested put-away location → IoT scale posts stable weight to backend → system compares expected quantity/weight → staff confirms receiving → system creates InventoryTransaction and updates Inventory → inventory log and audit trail are stored. Executed in Week 11–12.
+Static Analysis / Linting
+Backend: .editorconfig + Roslyn analyzers. Angular: ESLint + Prettier enforced. Flutter: dart analyze + analysis_options.yaml.
+Defect Management
+All bugs logged in GitHub Issues with severity, steps to reproduce, and expected vs. actual result. Bugs block the sprint and must be fixed within 24 h. Defect metrics reported in each Test Report.
+ Table 8 - Quality Management
+2.3 Project Training Plan
+This section addresses identified technical skill gaps within the team to ensure that all members are fully equipped to handle their assigned implementation tasks before development begins. It schedules specific training windows, formats, and hands-on resources covering critical project technologies, including .NET 8 Clean Architecture, EF Core Migrations, Flutter BLoC state management, Angular 17 Signals, ESP32 C++ firmware flashing, and GitHub Actions CI/CD pipelines.
+Training Area
+Participants
+When / Duration
+Format / Resources
+.NET 8 Clean Architecture (Domain → App → Infra → API)
+All members
+Week 1–2 / 3 days
+Self-study + pair coding session; reference: existing Backend.API README and project codebase
+Entity Framework Core 8 — Fluent API & Migrations
+Nhân, Khải
+Week 2 / 1 day
+Hands-on: add a new entity, create migration, seed data
+Flutter 3 — QR Scan (mobile_scanner), BLoC state management
+Đức (+ Đại for QA testing)
+Week 2–3 / 1 week
+Spike task: build standalone QR scan prototype; dart.dev + flutter.dev docs
+Angular 17 — Signals, Standalone Components
+Đại (+ Khải backend review)
+Week 2–3 / 1 week
+Angular official tour-of-heroes + component library docs
+IoT — ESP32 C++ firmware, REST API, MySQL IoTWeightLog & IoTDeviceCommand polling
+Nhân
+Week 3–4 / 3 days
+Hardware spike: flash ESP32 C++ firmware via Arduino IDE, POST weight to .NET REST endpoint, poll IoTDeviceCommand table for commands
+GitHub Actions — CI/CD pipeline (build, lint, test)
+Nhân
+Week 3 / 1 day
+GitHub Actions docs; write .github/workflows/dotnet.yml; set up repository secrets for credentials
+Postman
+Đức (QA lead)
+Week 5 / 1 day
+Workshop: write collection, use environment variables
+Serilog — Structured logging, file sinks
+Nhân, Khải
+Week 4 / 2 h
+Code walkthrough of existing Program.cs Serilog config; add custom enrichers
+Docker + Render deployment (free tier)
+Nhân
+Week 11–12 / 1 day
+Containerize .NET API with multi-stage Dockerfile; deploy to Render.com free tier.
+xUnit + Moq — Unit testing patterns
+Nhân, Khải
+Week 5 / 1 day
+Code kata: test CreateAsync and GetByIdAsync with mocked repository
+BA: Use-case writing, stakeholder interviews
+Long
+Week 2–3 / ongoing
+Review SRS template; work with Nhân to validate domain model against requirements
+ Table 9- Project Training Plan
+
+3. Responsibility Assignments (RACI)
+This section removes operational ambiguity regarding team roles by utilizing a RACI Matrix to map all project deliverables directly against individual member responsibilities. It clearly assigns who is Responsible (does the work), Accountable (owns the outcome), Consulted (provides input), and Informed (notified of results) for every work package across backend APIs, frontend/mobile features, documentation, and the final project closing phases.
+R = Responsible (does the work) | A = Accountable (owns the outcome) | C = Consulted (provides input) | I = Informed (notified of result)
+Team: Nhân — Backend / Lead / IoT | Khải — Backend | Đức — Flutter Mobile / QA | Long — BA | Đại — Angular Frontend
+Work Package
+Nhân
+Khải
+Đức
+Long
+Đại
+Stage 1–2: Initiating & Planning
+Report 1 — Project Introduction
+A/R
+I
+I
+I
+I
+Report 2 — Project Management Plan
+A/R
+C
+C
+C
+I
+Report 3 — SRS v1.0 (Overall Requirements)
+A
+C
+I
+R
+C
+Vertical Prototypes — Code Demo
+A/R
+R
+R
+C
+R
+Stage 3: Software Design
+Vertical Prototypes — POC (QR flow, IoT REST, Auth)
+A/R
+R
+C
+C
+C
+Report 4: TDS v1.0 — High-Level Design
+A/R
+R
+C
+C
+C
+Report 5: Test Planning
+A
+C
+R
+C
+C
+Report 3: SRS v1.0 — Detailed Requirements Iter 1
+A
+C
+I
+R
+C
+Stage 4: Implementation — Backend APIs
+Backend: Auth (JWT, Refresh Token, RBAC)
+A/R
+R
+I
+I
+I
+Backend: User & Role Management
+A/R
+R
+I
+I
+I
+Backend: Product/ Product Variant/ SKU / QR Label APIs
+A/R
+R
+I
+I
+I
+Backend: Inbound APIs
+A
+R
+I
+I
+I
+Backend: Outbound APIs
+A
+R
+I
+I
+I
+Backend: Stock Take & Inventory Transaction APIs
+A
+R
+C
+I
+C
+Backend: IoT REST API (IoTWeightLog, IoTDeviceCommand polling)
+A/R
+C
+I
+I
+I
+Backend: Firebase Cloud Messaging Push Notifications
+A/R
+C
+I
+I
+I
+Firebase Push Notifications
+A/R
+C
+I
+I
+C
+Backend: Hangfire Background Jobs
+A/R
+C
+I
+I
+I
+CI/CD Pipeline (GitHub Actions, Docker, Render)
+A/R
+C
+I
+I
+I
+Backend: Capacity Rule Engine & Bottleneck Warning API
+A/R
+R
+I
+C
+I
+Backend: Inbound Document Forecasting 24h Window
+A/R
+R
+I
+C
+I
+Backend: Location Allocation Algorithm & Suggestion API
+A/R
+R
+I
+C
+I
+Backend: Location Capacity & Priority Data Management
+A/R
+R
+I
+C
+I
+Backend: Supplier & Warehouse/Location Management
+A/R
+R
+I
+C
+I
+Backend: Returns Management (Inbound Returns + Return-to-Supplier)
+A
+R
+C
+I
+C
+Stage 4: Implementation — Mobile & Frontend
+Flutter: Authentication & Profile screens
+C
+I
+A/R
+I
+I
+Flutter: QR Scan — Receive Goods (Inbound → QR scan → suggested location → IoT weight → confirm receiving)
+C
+I
+A/R
+I
+I
+Flutter: QR Scan — Stock Take
+C
+I
+A/R
+I
+I
+Flutter: IoT Weight Display (REST polling → UI)
+C
+I
+A/R
+I
+I
+Flutter: Push Notification handling (Firebase Cloud Messaging)
+C
+I
+A/R
+I
+I
+Flutter: Location Suggestion UI in Receiving Workflow
+C
+I
+A/R
+C
+I
+Flutter: Returns Flow (inspection + return-to-supplier picking)
+C
+I
+A/R
+I
+I
+Angular: Login & RBAC-based menu
+I
+I
+I
+I
+A/R
+Angular: Product/ Product Variant/ SKU
+I
+C
+I
+I
+A/R
+Angular: Inbound & Outbound management
+I
+C
+I
+I
+A/R
+Angular: Stock Take & Inventory Transaction views
+I
+C
+I
+I
+A/R
+Angular: Dashboard & Inventory Reports
+I
+C
+I
+I
+A/R
+Angular: SignalR Client & Realtime Dashboard Updates
+I
+I
+I
+I
+A/R
+Angular: Bottleneck Warning Display & Dashboard Alert
+I
+I
+I
+C
+A/R
+Angular: Put-away Location Management & Analytics
+I
+C
+I
+C
+A/R
+Angular: Supplier, Warehouse/Location & Returns Management
+I
+C
+I
+C
+A/R
+BA: Requirements gathering, use-case documents
+C
+C
+C
+A/R
+C
+BA: Stakeholder interviews & process mapping
+I
+I
+I
+A/R
+I
+Stage 4: Implementation — Documentation (per iteration)
+TDS vX.Y — Detailed Design Specifications
+A/R
+R
+C
+C
+C
+Code Package & Unit Testing Report
+A
+R
+R
+I
+R
+Integration Test Cases
+A
+C
+R
+C
+C
+Integration Test Report
+A
+C
+R
+C
+C
+SRS vX.Y — Requirements next iteration
+A
+C
+I
+R
+C
+Software Package Release (v1, v2, v3)
+A/R
+R
+R
+I
+R
+Stage 5–6: V&V, Closing
+System Test Cases & System Test Report
+C
+C
+A/R
+C
+C
+Report 6: User Guides (Installation + Manual)
+A
+C
+R
+C
+R
+Acceptance Test & Support
+A/R
+R
+R
+I
+R
+Final Software Package
+A/R
+R
+R
+I
+R
+Report 7: Final Project Report
+A/R
+R
+R
+R
+R
+Final Presentation & Demo
+A/R
+R
+R
+R
+R
+ Table 10 - Responsibility Assignments (RACI)
+
+4. Project Communications
+The communication plan defines all recurring and event-driven communication touchpoints for the StockLite project, ensuring all stakeholders are aligned throughout the 14-week timeline.
+Item
+Participants
+Owner
+Purpose
+Frequency / When
+Tool / Format
+Daily Standup
+All 5 members
+Nhân
+Share daily progress, blockers, and today's plan (3-question format)
+Daily, 09:00–09:15 (weekdays)
+Zalo / Teams chat
+Weekly Sprint Review & Planning
+All members + Mentor (optional)
+Nhân
+Demo completed features; accept/reject sprint items; plan next sprint; update Gantt
+Every Friday, 60–90 min
+Google Meet + screen share
+Mentor Check-in
+All members + Tô Thanh Hải
+Nhân
+Report milestone progress, present deliverables for feedback, get sign-off
+Weekly or as scheduled by mentor
+Google Meet / on-campus
+Backlog Refinement
+All members
+Nhân
+Clarify upcoming tasks, break down large items, assign priority labels
+Mid-sprint (Wednesday)
+GitHub Projects + Discord
+Sprint Retrospective
+All 5 members
+Nhân
+What went well / what to improve / action items for next sprint
+End of each 2-week sprint
+Zalo
+Code Review (MR)
+MR author + Reviewer
+MR author
+Ensure code quality, architecture compliance, test coverage before merge
+On every MR submission
+GitHub Pull Requests
+Issue Triage
+Nhân, Đức
+Nhân
+Assign severity, priority, and owner to new GitHub issues
+Monday morning, 15 min
+GitHub Issues board
+Release Announcement
+All members + Mentor
+Nhân
+Share software package version: demo link, changelog, known issues
+End of Weeks 7, 9, 11, 13
+Group chat + GitHub Release tag
+Document Sharing & Review
+All members
+Report author
+Share deliverable drafts; collect feedback before submission deadline
+3 days before deadline
+Google Drive + comments
+Escalation (Blocker)
+Blocked member → Nhân → Mentor
+Nhân
+Escalate unresolved blockers that cannot be fixed within 24 h
+As needed (immediately)
+Direct message → meeting
+ Table 11 - Project Communications
+5. Configuration Management 
+5.1 Document Management
+This section sets the formal rules for organizing, sharing, and tracking all non-code project deliverables, reports, and templates stored in the shared team repository. It enforces a strict file-naming convention, defines the major and minor versioning system (v1.0 internal draft vs. v1.0.x post-feedback revision), establishes the draft peer-review timeline, and outlines the precise Google Drive folder hierarchy.
+Convention
+Rule
+Naming convention
+[Semester]_[ProjectName]_[ReportN]_[DocType]_[Version].[ext]
+Example: SU26_StockLite_Report2_Project_Plan
+Versioning
+v1.0 = draft (internal review); v1.1 = first submitted; v1.x = post-feedback revision. Major version bump for structural changes.
+Version history
+Maintained in Google Docs version history or tracked changes in MS Word. Each saved version includes date + author initials in the commit message.
+Review process
+Author → shares draft 3 days before deadline → team reviews → author incorporates feedback → mentor sign-off → final submission.
+Folder structure
+/ SEP490 
+├── 01.Document/ 
+ ├──Report1_Vision_Scope 
+ ├──Report2(Project plan, Project Tracking)
+ ├──Report3(Software requirement specification, Function Design Specification, Screen Design Specification, Requirements Traceability Workbook)
+ ├──Report4(Technical Design Specification) 
+ ├──Report5 (Test Plan, Unit Tests, Integration Tests, System Application Programming Interface Tests, End to End Tests, User Acceptance Testing Scripts)
+├──References/ 
+└──Others/
+Table 12 - Document Management
+5.2 Source Code Management
+This section governs how the engineering team interacts with the codebase to prevent merge conflicts, preserve branch stability, and maintain a clean development history. It outlines a simplified Git Flow branching strategy with strict rules for main, develop, feature, and bugfix branches, and standardizes commit messages using the Conventional Commits format to ensure every change is clearly documented.
+Branching Strategy
+This table defines the purpose, operational rules, and naming conventions for each branch within the repository. It enforces branch isolation to prevent configuration conflicts, detailing how code flows from development features up to the production-ready main branch. 
+Branch
+Purpose & Rules
+main
+Production-ready code. Protected branch — no direct push allowed. Merged only from develop via approved PR after final regression tests. 
+develop
+Primary integration branch. All feature and bugfix branches merge here. Must pass CI/CD pipeline before merge. Deployed to staging environment automatically via CI/CD.
+feature
+Individual feature development. Created from develop. Example: feature/IS-42-product-qr-label. Merged back to develop via PR with ≥ 1 approval.
+bugfix
+Bug fixes for issues found during testing. Created from develop Example: bugfix/IS-78-inventory-qty-overflow.
+ Table 13 - Branching Strategy
+Commit Convention
+This table standardizes the format and structure of repository commit messages based on the Conventional Commits specification. It lists the mandatory prefixes used to categorize code changes, ensuring a readable project history and enabling automated changelog generation
+Type
+Usage
+feat
+A new feature or API endpoint. Triggers MINOR version bump.
+fix
+A bug fix. Triggers PATCH version bump.
+docs
+Documentation changes only (README, XML comments, Swagger).
+test
+Adding or updating tests (unit, integration). No production code change.
+refactor
+Code restructuring without behavior change (e.g., extract method, rename variable).
+chore
+Maintenance tasks: dependency updates, CI/CD config, gitignore changes.
+ci
+Changes to GitHub Actions workflow (.github/workflows/dotnet.yml).
+perf
+Performance improvements (indexing, caching, query optimization).
+ Table 14 - Commit Convention
+Example commits:
+feat(product): add QR label generation endpoint with Cloudinary upload
+fix(auth): refresh token not revoked on logout
+test(inventory): add unit tests for CreateInventoryTransaction service
+5.3 Tools & Infrastructure
+This section serves as the centralized master registry of all software development kits (SDKs), frameworks, external cloud services, deployment environments, and productivity utilities utilized across the entire project ecosystem. It explicitly documents the project's technical stack—including the .NET 8 backend, MySQL database hosted on Aiven Cloud, Hangfire background jobs, Cloudinary storage, Firebase Cloud Messaging, ASP.NET Core SignalR real-time hub, Angular 17/Flutter frameworks, ESP32 hardware, Docker containerization, and Render.com hosting—ensuring technical consistency for all developers.
+Category
+Tools / Technologies / Version
+Backend Framework
+.NET 8 (ASP.NET Core Web API) , Clean Architecture (4-layer)
+ORM & Data Access
+Entity Framework Core 8 (code-first, Fluent API, migrations), Dapper (complex projections)
+Primary Database
+MySQL 8.0 — hosted on Aiven Cloud (SSLMode=Required, connection pooling)
+IoT Data Storage
+MySQL — IoTWeightLog table (weight readings from device), IoTDeviceCommand table (commands polled by device)
+Background Jobs
+Hangfire 1.8 — recurring jobs
+File & Image Storage
+Cloudinary — product images, QR label PDFs (CloudinarySettings in appsettings.json)
+Push Notifications
+Firebase Cloud Messaging (FCM) — mobile push via FireBaseService
+Realtime Web Updates
+ASP.NET Core SignalR — server→browser hub broadcasting inventory & alert events to the Angular Web Admin dashboard after committed transactions (NFR-P03 ≤ 5s)
+Authentication
+JWT Bearer + Refresh Token (HMAC SHA-256, 1-day expiry, rotation on use)
+Email Service
+Gmail SMTP via System.Net.Mail (STARTTLS, port 587)
+Caching
+ASP.NET Core IMemoryCache via MemoryCacheService (loaded on startup via LoadCacheAsync())
+Logging
+Serilog on .NET 8.0 with Serilog.AspNetCore (v9.0.0), Serilog.Sinks.File (v7.0.0), and Serilog.Sinks.Console. Serilog — dual sinks: info-log.txt (daily rolling) + error-log.txt (daily rolling) + Console; EF DB commands excluded from info log
+Rate Limiting
+ASP.NET Core built-in Rate Limiting middleware (RateLimitExtensions.cs)
+API Documentation
+Swagger UI (Swashbuckle) — versioned via ConfigureSwaggerOptions; Dev environment only
+Frontend (Web Admin)
+Angular 17 (standalone components, signals), TypeScript 5, Lazy Loading, RxJS ,SweetAlert2, TanStack Query, @microsoft/signalr
+Mobile Application
+Flutter 3.x (Dart 3), mobile_scanner (QR), HTTP REST client (dio), Firebase Cloud Messaging(firebase_messaging)
+IoT Hardware
+ESP32 + HX711 load cell amplifier, C++ firmware (Arduino IDE), REST API communication (HTTP POST weight readings, GET command polling)
+IDE — Backend
+Visual Studio 2022 
+IDE — Frontend/Mobile
+Visual Code, Android Studio (Flutter), Visual Studio Code(Angular)
+Diagramming
+draw.io (architecture & deployment diagrams)
+Documentation
+Microsoft Word / Google Docs, Google Sheets (Gantt, KPI tracking), Google Slides
+Version Control
+GitHub (source code, Actions CI, Issues, PRs)
+Document Storage
+Google Drive (shared team folder, version history)
+CI/CD Pipeline
+GitHub Actions (.github/workflows/dotnet.yml) — stages: build → lint → test)
+Containerization
+Docker (multi-stage Dockerfile for .NET API), Docker Compose (local dev environment)
+Deployment
+Render.com (free tier) — Docker container deploy; environment variables configured via Docker-compose.yml;
+API Testing
+Postman (collections + environments), Swagger UI
+Secrets Management
+appsettings.json (local, gitignored), Environment Variables (docker-compose.yml for production), GitHub Actions repository secrets (CI/CD pipeline)
+Project Management
+GitHub Issues & Projects board (tasks, PRs, defects), Google Sheets (KPI tracker — SEP490-G60 spreadsheet)
+Table 15 - Tools & Infrastructure
+— End of Document —

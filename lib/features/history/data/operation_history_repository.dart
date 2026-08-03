@@ -1,13 +1,17 @@
 import '../models/operation_history.dart';
 
+/// Lớp giao diện (Interface) định nghĩa các phương thức lấy lịch sử hoạt động kho hàng.
 abstract class OperationHistoryRepository {
+  /// Lấy danh sách lịch sử các hoạt động nhập/xuất/kiểm kho.
   Future<List<OperationHistory>> getHistories();
 }
 
+/// Lớp giả lập (Mock) của [OperationHistoryRepository] phục vụ thiết kế giao diện và chạy thử nghiệm.
 class MockOperationHistoryRepository implements OperationHistoryRepository {
+  /// Lấy danh sách lịch sử hoạt động giả lập sau một khoảng trễ ngắn.
   @override
   Future<List<OperationHistory>> getHistories() async {
-    // API_SWAP: Replace this mock response with GET /operation-histories.
+    // API_SWAP: Thay thế phản hồi giả lập này bằng kết nối API GET /operation-histories thực tế.
     await Future<void>.delayed(const Duration(milliseconds: 350));
 
     return [

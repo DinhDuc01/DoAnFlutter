@@ -1,6 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
+import '../../data/api_notifications_repository.dart';
 import '../../data/notifications_repository.dart';
 import '../../models/app_notification.dart';
 import '../widgets/notifications_bottom_bar.dart';
@@ -9,35 +11,56 @@ import '../widgets/notifications_filter_chips.dart';
 import '../widgets/notifications_header.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({this.repository, super.key});
+
+  final NotificationsRepository? repository;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationsRepository _repository = MockNotificationsRepository();
-
-  late final Future<List<AppNotification>> _notificationsFuture;
+  late final NotificationsRepository _repository;
   List<AppNotification> _notifications = const [];
   NotificationFilter _filter = NotificationFilter.all;
-  bool _initialized = false;
+  bool _isLoading = true;
+  String? _error;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    // API_SWAP: This is where the screen requests notifications data.
-    _notificationsFuture = _repository.getNotifications();
+    _repository = widget.repository ?? ApiNotificationsRepository();
+    unawaited(_loadNotifications(showLoading: true));
   }
 
-  void _initializeNotifications(List<AppNotification> notifications) {
-    if (_initialized) return;
-    _notifications = notifications;
-    _initialized = true;
+  Future<void> _loadNotifications({required bool showLoading}) async {
+    final generation = ++_loadGeneration;
+    if (showLoading && mounted) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
+
+    try {
+      final notifications = await _repository.getNotifications();
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _notifications = notifications;
+        _isLoading = false;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _isLoading = false;
+        _error = error.toString();
+      });
+    }
   }
 
   void _removeNotification(String id) {
-    // API_SWAP: Call DELETE /notifications/{id} or PATCH dismiss=true.
     setState(() {
       _notifications = [
         for (final notification in _notifications)
@@ -47,7 +70,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _markAllAsRead() {
-    // API_SWAP: Call PATCH /notifications/read-all.
     setState(() {
       _notifications = [
         for (final notification in _notifications)
@@ -77,66 +99,93 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     };
   }
 
-  int get _unreadCount {
-    return _notifications.where((notification) => !notification.isRead).length;
-  }
+  int get _unreadCount =>
+      _notifications.where((notification) => !notification.isRead).length;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.backgroundStart,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: FutureBuilder<List<AppNotification>>(
-          future: _notificationsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (snapshot.hasError || !snapshot.hasData) {
-              return const Center(child: Text('Không tải được thông báo'));
-            }
-
-            _initializeNotifications(snapshot.data!);
-            final filteredNotifications = _filteredNotifications;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                NotificationsHeader(
-                  unreadCount: _unreadCount,
-                  onMarkAllAsRead: _markAllAsRead,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            NotificationsHeader(
+              unreadCount: _unreadCount,
+              onMarkAllAsRead: _markAllAsRead,
+            ),
+            NotificationsFilterChips(
+              selectedFilter: _filter,
+              unreadCount: _unreadCount,
+              onChanged: (filter) => setState(() => _filter = filter),
+            ),
+            if (!_isLoading)
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: IconButton(
+                    onPressed: () => _loadNotifications(showLoading: false),
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Tải lại thông báo',
+                  ),
                 ),
-                NotificationsFilterChips(
-                  selectedFilter: _filter,
-                  unreadCount: _unreadCount,
-                  onChanged: (filter) {
-                    setState(() => _filter = filter);
-                  },
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: filteredNotifications.isEmpty
-                      ? const Center(child: Text('Không có thông báo phù hợp'))
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                          itemCount: filteredNotifications.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final notification = filteredNotifications[index];
-                            return NotificationsCard(
-                              notification: notification,
-                              onDismissed: () => _removeNotification(notification.id),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            );
-          },
+              ),
+            Expanded(child: _buildContent()),
+          ],
         ),
       ),
       bottomNavigationBar: const NotificationsBottomBar(),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null && _notifications.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Không tải được thông báo',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 8),
+              Text(_error!, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: () => _loadNotifications(showLoading: true),
+                child: const Text('Thử lại'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final filtered = _filteredNotifications;
+    if (filtered.isEmpty) {
+      return const Center(child: Text('Không có thông báo phù hợp'));
+    }
+
+    return RefreshIndicator(
+      onRefresh: () => _loadNotifications(showLoading: false),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        itemCount: filtered.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        itemBuilder: (context, index) {
+          final notification = filtered[index];
+          return NotificationsCard(
+            notification: notification,
+            onDismissed: () => _removeNotification(notification.id),
+          );
+        },
+      ),
     );
   }
 }

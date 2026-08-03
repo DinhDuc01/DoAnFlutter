@@ -1,0 +1,3061 @@
+﻿
+Screen Design Specification
+Warehouse Management Application for SME E-Commerce Businesses
+STOCKLITE - REPORT 3.2
+
+Project Name
+Warehouse Management Application for SME E-Commerce Businesses 
+SRS Reference
+SU26_StockLite_Report 3.0_SRS
+TDS Reference
+StockLite_TDS_v1.0 
+Spec Version
+v1.1.0
+Date Created
+05/06/2026
+Last Updated
+19/06/2026
+Author(s)
+SEP490-G60
+Reviewer(s)
+Tô Thanh Hải / Mentor
+Status
+Approved
+Design File
+https://figma.fun/tn53nI
+
+Table Of Content
+ TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3,Heading 4,4,Heading 5,5,Heading 6,6,"Table Of Content2
+Document Change History6
+List of Figures7
+List of Table9
+Definition and Acronyms12
+Purpose & Scope13
+Part 1 — Design Language13
+1.1 Design Principles13
+1.2 Colour Palette13
+1.3 Typography14
+1.4 Layout Grid & Spacing14
+1.5 Iconography15
+Part 2 — Information Architecture15
+2.1 User Roles & Navigation Access15
+2.2 Site Map16
+2.3 Navigation Patterns18
+Part 3 — Screen Flows19
+Flow [F-01] — Sign in and access role-based workspace19
+Flow Diagram19
+Key Decision Points20
+Flow [F-02] — Product, ProductVariant/SKU, and QR label management20
+Flow Diagram21
+Key Decision Points21
+Flow [F-03] — User, role, menu, and action permission management21
+Flow Diagram22
+Key Decision Points22
+Flow [F-04] — Inventory monitoring and transaction history review22
+Flow Diagram23
+Key Decision Points23
+Flow [F-05] — Inbound receiving with QR, IoT scale, and put-away23
+Flow Diagram24
+Key Decision Points25
+Flow [F-06] — Outbound picking, packing, and dispatching25
+Flow Diagram26
+Key Decision Points26
+Flow [F-07] — Stocktake and inventory adjustment approval26
+Flow Diagram27
+Key Decision Points27
+Flow [F-08] — Dashboard, alerts, reports, and IoT monitoring27
+Flow Diagram28
+Key Decision Points28
+Flow [F-09] — Web return document management and reverse logistics control28
+Flow Diagram29
+Key Decision Points30
+Part 4 — Screen Specifications31
+4.0 — Shared Layout (Authenticated Shell)31
+4.01 — Login / Sign In31
+Screen States32
+Layout Description32
+Zone descriptions:32
+Mockup33
+4.02 — Dashboard33
+Screen States33
+Layout Description34
+Zone descriptions:34
+Key Interactions34
+Mockup35
+4.03 — Products35
+Screen States35
+Layout Description36
+Zone descriptions:36
+Key Interactions36
+Mockup37
+4.04 — Inbound Documents37
+Screen States37
+Layout Description38
+Zone descriptions:38
+Key Interactions38
+Mockup39
+4.05 — Outbound Documents39
+Screen States39
+Layout Description40
+Zone descriptions:40
+Key Interactions40
+4.06 — Stocktake / Cycle Count41
+Screen States41
+Layout Description42
+Zone descriptions:42
+Key Interactions42
+Mockup43
+4.07 — Warehouse43
+Screen States43
+Layout Description44
+Zone descriptions:44
+Key Interactions44
+Mockup45
+4.08 — Reports & Analytics45
+Screen States45
+Layout Description46
+Zone descriptions:46
+Key Interactions46
+Mockup47
+4.09 — Alerts & Warnings47
+Screen States47
+Layout Description48
+Zone descriptions:48
+Key Interactions48
+Mockup49
+4.10 — Return Documents49
+Screen States49
+Layout Description50
+Zone descriptions:50
+Key Interactions50
+Mockup51
+4.11 — Users51
+Screen States51
+Layout Description52
+Zone descriptions:52
+Key Interactions52
+Mockup53
+4.12 — Mobile Login53
+Screen States53
+Layout Description54
+Zone descriptions:54
+Key Interactions54
+Mockup55
+4.13 — Mobile Home55
+Screen States56
+Layout Description56
+Zone descriptions:57
+Key Interactions57
+Mockup57
+4.14 — Mobile Inbound58
+Screen States59
+Layout Description59
+Zone descriptions:60
+Key Interactions60
+Mockup60
+4.15 — Mobile Outbound61
+Screen States61
+Layout Description62
+Zone descriptions:62
+Key Interactions62
+Mockup63
+4.16 — Mobile Cycle Count63
+Screen States63
+Layout Description64
+Zone descriptions:64
+Key Interactions65
+Mockup65
+4.17 — Mobile QR Scanner65
+Screen States66
+Layout Description66
+Zone descriptions:67
+Key Interactions67
+Mockup67
+4.18 — Mobile Inventory Statistics68
+Screen States68
+Layout Description69
+Zone descriptions:69
+Key Interactions69
+Mockup70
+4.19 — Mobile Operation History70
+Screen States70
+Layout Description71
+Zone descriptions:71
+Key Interactions71
+Mockup72
+4.20 — Mobile Notifications72
+Screen States72
+Layout Description73
+Zone descriptions:73
+Key Interactions73
+Mockup74
+4.21 — Mobile Profile Settings75
+Screen States75
+Layout Description75
+Zone descriptions:75
+Key Interactions76
+Mockup77
+4.22 — Mobile Return77
+Screen States78
+Layout Description78
+Zone descriptions:79
+Key Interactions79
+Mockup80
+Part 5 — Responsive & Accessibility Rules81
+5.1 — Navigation81
+5.2 Content Layout81
+5.3 Data Tables82
+5.4 Typography Scaling83
+5.5 Forms, Filters, and Modals83
+5.6 Mobile Operational Workflow Rules84
+5.7 Accessibility-Related Responsive Rules84
+Appendix A — Screen Inventory Summary85
+
+Document Change History
+Version
+Date
+Changes
+Author
+v1.0.0
+03/06/2026
+Initial screen design specification baseline. Angular Web Admin confirmed.
+Duy Long
+v1.0.1
+
+06/06/2026
+Revised document to align with SRS, project mockups, role-based navigation, Site Map, and Colour Palette. 
+Quốc Đại
+v1.0.2
+06/06/2026
+Added mobile screen mockups and mobile screen inventory for the main warehouse management flows.
+Đình Đức
+v1.0.3
+13/06/2026
+Updated Screen Flows and Screen Specifications to match the approved screen inventory, user journeys, screen states, layout zones, and mockup references. 
+Quốc Đại
+v.1.0.4
+13/06/2026
+Revised mobile and desktop screens to match the finalized screen inventory, screen flows, layout zones, UI states, and mockup references. Updated Appendix A — Screen Inventory Summary, List of Figures, and List of Tables based on the finalized screen designs. 
+Đình Đức
+v1.1.0
+21/06/2026
+Updated the List of Figures and List of Tables to correct page numbers based on the final Google Docs pagination. Reviewed missing page references and aligned figure/table entries with the actual document layout 
+Đình Đức
+
+List of Figures
+Figure No.
+Title
+Page
+Figure 1
+Flow Diagram — F-01 Sign in and access role-based workspace
+19
+Figure 2
+Flow Diagram — F-02 Product, ProductVariant/SKU, and QR Label Management
+21
+Figure 3
+Flow Diagram — F-03 User, Role, Menu, and Action Permission Management
+22
+Figure 4
+Flow Diagram — F-04 Inventory Monitoring and Transaction History Review
+23
+Figure 5
+Flow Diagram — F-05 Inbound receiving with QR, IoT scale, and put-away
+24
+Figure 6
+Flow Diagram — F-06 Outbound picking, packing, and dispatching
+26
+Figure 7
+Flow Diagram — F-07 Stocktake and inventory adjustment approval
+27
+Figure 8
+Flow Diagram — F-08 Dashboard, alerts, reports, and IoT monitoring
+28
+Figure 9
+Flow Diagram — F-09 Web Return Document Management and Reverse Logistics Control
+29
+Figure 10
+Shared Layout — Authenticated Shell
+31
+Figure 11
+Login / Sign In Screen Layout
+33
+Figure 12
+Dashboard Screen Layout
+35
+Figure 13
+Products Screen Layout
+37
+Figure 14
+Inbound Documents Screen Layout
+39
+Figure 15
+Outbound Documents Screen Layout
+41
+Figure 16
+Stocktake / Cycle Count Screen Layout
+43
+Figure 17
+Warehouse Screen Layout
+45
+Figure 18
+Reports & Analytics Screen Layout
+47
+Figure 19
+Alerts & Warnings Screen Layout
+49
+Figure 20
+Return Documents Screen Layout
+51
+Figure 21
+Users Screen Layout
+53
+Figure 22
+Mobile Login Screen Layout
+55
+Figure 23
+Mobile Home Screen Layout
+57
+Figure 24
+Mobile Inbound Screen Layout
+60
+Figure 25
+Mobile Outbound Screen Layout
+63
+Figure 26
+Mobile Cycle Count Screen Layout
+65
+Figure 27
+Mobile QR Scanner Screen Layout
+67
+Figure 28
+Mobile Inventory Statistics Screen Layout
+70
+Figure 29
+Mobile Operation History Screen Layout
+72
+Figure 30
+Mobile Notifications Screen Layout
+74
+Figure 31
+Mobile Profile Settings Screen Layout
+77
+Figure 32
+Mobile Return Screen Layout
+80
+
+List of Table
+Table No.
+Title
+Page
+Table 1
+Document Change History
+6
+Table 2
+Definition and Acronyms
+12
+Table 3
+Design Principles
+13
+Table 4
+Colour Palette
+13
+Table 5
+Typography
+14
+Table 6
+Layout Grid & Spacing
+14
+Table 7
+Iconography Rules
+15
+Table 8
+User Roles & Navigation Access
+15
+Table 9
+Angular Web Admin Navigation Patterns
+18
+Table 10
+Flutter Mobile Navigation Patterns
+18
+Table 11
+F-01 Flow Metadata and Key Decision Points
+19
+Table 12
+F-02 Flow Metadata and Key Decision Points
+20
+Table 13
+F-03 Flow Metadata and Key Decision Points
+21
+Table 14
+F-04 Flow Metadata and Key Decision Points
+22
+Table 15
+F-05 Flow Metadata and Key Decision Points
+23
+Table 16
+F-06 Flow Metadata and Key Decision Points
+25
+Table 17
+F-07 Flow Metadata and Key Decision Points
+26
+Table 18
+F-08 Flow Metadata and Key Decision Points
+27
+Table 19
+F-09 Flow Metadata and Key Decision Points
+28
+Table 20
+Shared Navigation Items
+31
+Table 21
+Login / Sign In Screen States and Key Interactions
+32
+Table 22
+Dashboard Screen States and Key Interactions
+33
+Table 23
+Products Screen States and Key Interactions
+35
+Table 24
+Inbound Documents Screen States and Key Interactions
+37
+Table 25
+Outbound Documents Screen States and Key Interactions
+39
+Table 26
+Stocktake / Cycle Count Screen States and Key Interactions
+41
+Table 27
+Warehouse Screen States and Key Interactions
+43
+Table 28
+Reports & Analytics Screen States and Key Interactions
+45
+Table 29
+Alerts & Warnings Screen States and Key Interactions
+47
+Table 30
+Return Documents Screen States and Key Interactions
+49
+Table 31
+Users Screen States and Key Interactions
+51
+Table 32
+Mobile Login Screen States and Key Interactions
+53
+Table 33
+Mobile Home Screen States and Key Interactions
+56
+Table 34
+Mobile Inbound Screen States and Key Interactions
+59
+Table 35
+Mobile Outbound Screen States and Key Interactions
+61
+Table 36
+Mobile Cycle Count Screen States and Key Interactions
+63
+Table 37
+Mobile QR Scanner Screen States and Key Interactions
+66
+Table 38
+Mobile Inventory Statistics Screen States and Key Interactions
+68
+Table 39
+Mobile Operation History Screen States and Key Interactions
+70
+Table 40
+Mobile Notifications Screen States and Key Interactions
+72
+Table 41
+Mobile Profile Settings Screen States and Key Interactions
+75
+Table 42
+Mobile Return Screen States and Key Interactions
+78
+Table 43
+Responsive Navigation Rules
+81
+Table 44
+Responsive Content Layout Rules
+81
+Table 45
+Responsive Data Table Rules
+82
+Table 46
+Typography Scaling Rules
+83
+Table 47
+Forms, Filters, and Modals Rules
+83
+Table 48
+Mobile Operational Workflow Rules
+84
+Table 49
+ Accessibility-Related Responsive Rules
+84
+Table 50
+Appendix A — Screen Inventory Summary
+85
+
+Definition and Acronyms 
+Acronym
+Definition
+AC 
+Acceptance Criterion. 
+API 
+Application Programming Interface. 
+ARIA 
+Accessible Rich Internet Applications.
+CRUD 
+Create, Read, Update, Delete. 
+ESP32 
+A microcontroller platform used for IoT device integration. 
+FDS 
+Functional Design Specification. 
+FT 
+Feature ID from the Software Requirements Specification. 
+KPI 
+Key Performance Indicator. 
+NAC 
+Negative Acceptance Criterion.
+QR 
+Quick Response Code.
+RBAC 
+Role-Based Access Control. 
+RTW 
+Requirements Traceability Workbook.
+SC 
+Scenario ID from the Software Requirements Specification. 
+SKU 
+Stock Keeping Unit.
+SME 
+Small and Medium-sized Enterprise. 
+SRS 
+Software Requirements Specification. 
+TDS 
+Technical Design Specification. 
+UI 
+User Interface. 
+UX 
+User Experience. 
+WCAG 
+Web Content Accessibility Guidelines.
+WMS 
+Warehouse Management System. 
+WMS-EC 
+Warehouse Management System for E-Commerce. 
+
+Purpose & Scope
+This document defines the design language, information architecture, navigation access, screen flows, and screen-level layout specifications for the StockLite project.
+It covers the Angular Web Admin dashboard and Flutter Mobile warehouse workflow, including visual foundations, Site Map, main user flows, screen states, layout zones, and mockup references.
+The approved Figma design file is the visual source of truth for all pixel-level decisions, including spacing, alignment, component placement, and screen appearance.
+Part 1 — Design Language
+1.1 Design Principles
+#
+Principle
+What It Means in Practice
+1
+Speed for warehouse operations
+Receiving, picking, and counting screens prioritize scan-first actions and reduce unnecessary confirmation steps.
+2
+Status always visible
+Every operational screen shows the current document status, scan result, discrepancy state, and next action.
+3
+Errors prevent wrong stock movement
+The UI blocks invalid QR, missing quantity, unresolved weight discrepancy, and unauthorized confirmation before stock changes occur.
+4
+Manager control without complexity
+Warnings and suggestions explain the reason and allow documented override instead of hiding business logic.
+5
+Consistent cross-device workflow
+Angular web admin manages setup and supervision; Flutter mobile executes fast warehouse tasks with the same terminology.
+1.2 Colour Palette
+Name
+Hex
+Usage
+Accent Blue 
+#3B6CF4 
+Primary buttons, links, focus states, active menu items, and selected elements.
+Primary Hover 
+#2F5DE0 
+Hover state for primary buttons and main interactive elements.
+Sidebar Background 
+#1E3FAB 
+Background colour of the admin sidebar. 
+Page Background 
+#F0F3F9 
+Main background colour of the content area. 
+Surface White 
+#FFFFFF 
+Cards, tables, forms, modals, and topbar background. 
+Border
+#CBD5E1
+Borders for inputs, tables, cards, outline buttons, and dividers. 
+Warning
+#F59E0B 
+At-risk states, low stock, bottleneck warnings
+Success
+#10B981 
+Success badges and confirmations
+Surface Light 
+#F8FAFC
+Page background and cards
+Mobile Green
+#16A34A
+Successful scan/confirmed state in Flutter mobile
+Mobile Orange
+#EA580C
+Pending scan, weight discrepancy, or required attention in mobile
+Error
+#EF4444 
+Validation errors and destructive actions
+Text Primary
+#111827
+Main text and labels
+Info
+#0EA5E9
+Neutral information banners
+1.3 Typography
+Style
+Size
+Weight
+Line Height
+Used For
+heading-1
+32px
+700
+1.2
+Main report title and major page titles.
+heading-2
+24px
+700
+1.3
+Section headings and modal title groups.
+heading-3
+20px
+600
+1.4
+Card titles and subsection headings.
+body-md
+14px
+400-500
+1.5
+Normal text, table cells, form input values, and descriptions.
+body-sm
+12px
+400-500
+1.4
+Helper text, timestamps, compact metadata, and secondary labels.
+label-md
+13px
+600
+1.4
+Form labels, filter labels, and short field captions.
+button-md
+14px
+600
+1.2
+Primary, secondary, and action buttons.
+badge-sm
+11-12px
+600
+1.2
+Status badges, alert count badges, and short state indicators.
+mono-code
+13px
+400-500
+1.4
+SKU, QR value, document code, location code, and IoT device code.
+1.4 Layout Grid & Spacing
+Token
+Value
+Usage
+xs
+4px
+Icon-to-label gap
+sm
+8px
+Related elements
+md
+16px
+Default card padding
+lg
+24px
+Section spacing
+xl
+32px
+Major section separation
+Breakpoint
+Width Range
+Columns
+Gutter
+Page Margin
+Mobile
+<768px
+4
+16px
+16px
+Tablet
+768–1024px
+8
+24px
+24px
+Desktop
+1025–1440px
+12
+24px
+32px
+Wide
+>1440px
+12
+32px
+max content 1200px
+
+1.5 Iconography
+Icon Meaning
+Use For
+Must NOT Be Used For
+Scan / QR
+Open scanner, validate QR label
+Printing QR label
+Scale
+Latest IoT weight, tare/reset screen
+Inventory quantity
+Warning
+Low stock, bottleneck, discrepancy
+Blocking validation error
+Check circle
+Confirmed, accepted, completed
+Selectable option
+Pencil
+Edit existing record
+Create new record
+Plus
+Create new record, add line
+Expand/collapse
+Trash
+Delete or deactivate where allowed
+Remove temporary unsaved row without confirmation
+Map pin
+Warehouse location and put-away
+Customer address
+Part 2 — Information Architecture
+2.1 User Roles & Navigation Access
+Role
+Visible Navigation Sections
+Landing Page After Login
+System Admin
+Dashboard; Inventory Monitoring; Products, Categories, Suppliers & SKUs; QR Label Printing; Inbound Orders; Outbound Orders; Stocktake & Inventory Adjustment; Inventory Transaction History; Alerts & Inbound Bottleneck Warning; IoT Device Management; Warehouse, Location & Capacity Management; User, Role & Permission Management; Reports & Analytics.
+Dashboard
+Warehouse Manager
+Dashboard; Inventory Monitoring; Products, Categories, Suppliers & SKUs; QR Label Printing; Inbound Orders; Outbound Orders; Stocktake & Inventory Adjustment; Inventory Transaction History; Alerts & Inbound Bottleneck Warning; IoT Device Management; Warehouse, Location & Capacity Management; Reports & Analytics.
+Dashboard
+Warehouse Staff
+Mobile Home & Task Queue; Mobile QR Scanner; Inbound Receiving QR + Scale; Outbound Pick/Pack QR + Scale; Mobile Cycle Count; Mobile Product Information; Mobile Activity History; Mobile Profile & Settings; Mobile Notifications.
+Mobile Home & Task Queue
+ESP32 IoT Scale
+No human navigation menu. API-only access for heartbeat, stable weight posting, and command status update.
+N/A — API endpoint access only
+2.2 Site Map
+
+[Root]│├── [P-01] Login / Sign In (Public) [DEEP]│├── [P-02] Dashboard (System Admin, Warehouse Manager) [PRIMARY]│ ├── [P-02a] KPI Cards & Inventory Summary (System Admin, Warehouse Manager) [SUB]│ ├── [P-02b] Low-stock Warning List (System Admin, Warehouse Manager) [SUB]│ └── [P-02c] Recent Activity / Operational Overview (System Admin, Warehouse Manager) [SUB]│├── [P-03] Products, Categories, Suppliers & SKUs (System Admin, Warehouse Manager) [PRIMARY]│ ├── [P-03a] Product Create / Edit Form (System Admin, Warehouse Manager) [DEEP — from P-03]│ ├── [P-03b] Product Detail (System Admin, Warehouse Manager) [DEEP — from P-03]│ ├── [P-03c] ProductVariant / SKU Management (System Admin, Warehouse Manager) [DEEP — from P-03]│ └── [P-03d] QR Label Preview / Printing (System Admin, Warehouse Manager) [DEEP — from P-03c]│├── [P-04] Inbound Documents (System Admin, Warehouse Manager, Warehouse Staff) [PRIMARY]│ ├── [P-04a] Inbound Document Detail (System Admin, Warehouse Manager, Warehouse Staff) [DEEP — from P-04]│ ├── [P-04b] Receiving QR + Scale (Warehouse Staff, Warehouse Manager) [DEEP — from P-04a]│ └── [P-04c] Put-away Suggestion (System Admin, Warehouse Manager) [DEEP — from P-04a]│├── [P-05] Outbound Documents (System Admin, Warehouse Manager, Warehouse Staff) [PRIMARY]│ ├── [P-05a] Outbound Document Detail (System Admin, Warehouse Manager, Warehouse Staff) [DEEP — from P-05]│ └── [P-05b] Pick-Pack QR + Scale (Warehouse Staff, Warehouse Manager) [DEEP — from P-05a]│├── [P-06] Stocktake / Cycle Count (Warehouse Manager, Warehouse Staff) [PRIMARY]│ ├── [P-06a] Stocktake Session Detail (Warehouse Manager, Warehouse Staff) [DEEP — from P-06]│ ├── [P-06b] Count Result Detail (Warehouse Manager, Warehouse Staff) [DEEP — from P-06a]│ └── [P-06c] Adjustment Approval (Warehouse Manager) [DEEP — from P-06b]│├── [P-07] Warehouse & Location Management (System Admin, Warehouse Manager) [PRIMARY]│ ├── [P-07a] Warehouse Create / Edit Form (System Admin, Warehouse Manager) [DEEP — from P-07]│ ├── [P-07b] Warehouse Detail (System Admin, Warehouse Manager) [DEEP — from P-07]│ └── [P-07c] Warehouse Area / Location Capacity View (System Admin, Warehouse Manager) [SUB]│├── [P-08] Reports & Analytics (System Admin, Warehouse Manager) [PRIMARY]│ ├── [P-08a] Inventory Movement Report (System Admin, Warehouse Manager) [SUB]│ ├── [P-08b] Turnover / Low-stock Report (System Admin, Warehouse Manager) [SUB]│ └── [P-08c] Export Report File (System Admin, Warehouse Manager) [DEEP — from P-08]│├── [P-09] Alerts & Inbound Bottleneck Warning (System Admin, Warehouse Manager) [PRIMARY]│ ├── [P-09a] Low-stock Alerts (System Admin, Warehouse Manager) [SUB]│ ├── [P-09b] Inbound Bottleneck Warning (System Admin, Warehouse Manager) [SUB]│ └── [P-09c] Alert Detail / Resolution (System Admin, Warehouse Manager) [DEEP — from P-09]│├── [P-10] Return Documents (System Admin, Warehouse Manager) [PRIMARY]│ ├── [P-10a] Return Document Detail / Review (System Admin, Warehouse Manager) [DEEP — from P-10]│ ├── [P-10b] Customer Return Inspection Result (System Admin, Warehouse Manager) [DEEP — from P-10]│ └── [P-10c] Return-to-Supplier Dispatch Review (System Admin, Warehouse Manager) [DEEP — from P-10]│├── [P-11] Users, Roles & Permission Management (System Admin) [PRIMARY]│ ├── [P-11a] User Create / Edit Form (System Admin) [DEEP — from P-11]│ ├── [P-11b] Role Assignment (System Admin) [DEEP — from P-11]│ └── [P-11c] Roles, Menus, and Action Permission Matrix (System Admin) [DEEP — from P-11]│├── [P-12] IoT Device Management (System Admin, Warehouse Manager) [PRIMARY]│ ├── [P-12a] IoT Scale Status Detail (System Admin, Warehouse Manager) [DEEP — from P-12]│ ├── [P-12b] Device Command / Calibration Status (System Admin, Warehouse Manager) [DEEP — from P-12]│ └── [P-12c] IoT Device Heartbeat / Connection Monitoring (System Admin, Warehouse Manager) [SUB]│└── Mobile Application│├── [P-00M] Mobile Login (Warehouse Staff, Warehouse Manager) [DEEP]│├── [P-01M] Mobile Home / Task Queue (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-01M-a] Quick Action Grid (Warehouse Staff, Warehouse Manager) [SUB]│ └── [P-01M-b] Recent Activity List (Warehouse Staff, Warehouse Manager) [SUB]│├── [P-04M] Mobile Inbound (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-04M-a] Inbound Task Detail (Warehouse Staff, Warehouse Manager) [DEEP — from P-04M]│ ├── [P-04M-b] QR / SKU Validation (Warehouse Staff, Warehouse Manager) [DEEP — from P-04M]│ └── [P-04M-c] Quantity, Weight, and Confirmation (Warehouse Staff, Warehouse Manager) [SUB]│├── [P-05M] Mobile Outbound (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-05M-a] Outbound Task Detail (Warehouse Staff, Warehouse Manager) [DEEP — from P-05M]│ ├── [P-05M-b] Pick / Pack QR Validation (Warehouse Staff, Warehouse Manager) [DEEP — from P-05M]│ └── [P-05M-c] Dispatch Confirmation (Warehouse Staff, Warehouse Manager) [SUB]│├── [P-06M] Mobile Cycle Count (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-06M-a] Count Session Detail (Warehouse Staff, Warehouse Manager) [DEEP — from P-06M]│ ├── [P-06M-b] Product Count List (Warehouse Staff, Warehouse Manager) [SUB]│ └── [P-06M-c] Discrepancy Note / Submit Count (Warehouse Staff, Warehouse Manager) [SUB]│├── [P-QR-M] Mobile QR Scanner (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-QR-M-a] Camera Scan View (Warehouse Staff, Warehouse Manager) [SUB]│ ├── [P-QR-M-b] Scan Success Result (Warehouse Staff, Warehouse Manager) [SUB]│ └── [P-QR-M-c] Invalid QR / Offline Validation State (Warehouse Staff, Warehouse Manager) [SUB]│├── [P-07M] Mobile Inventory Statistics (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-07M-a] KPI Cards (Warehouse Staff, Warehouse Manager) [SUB]│ ├── [P-07M-b] Weekly Activity Chart (Warehouse Staff, Warehouse Manager) [SUB]│ └── [P-07M-c] Top Product Movement List (Warehouse Staff, Warehouse Manager) [SUB]│├── [P-HIS-M] Mobile Operation History (Warehouse Staff, Warehouse Manager) [PRIMARY]│ └── [P-HIS-M-a] Operation History Detail (Warehouse Staff, Warehouse Manager) [DEEP — from P-HIS-M]│├── [P-PROD-M] Mobile Product Information (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-PROD-M-a] Product / SKU Lookup Result (Warehouse Staff, Warehouse Manager) [SUB]│ ├── [P-PROD-M-b] QR-based Product Detail (Warehouse Staff, Warehouse Manager) [DEEP — from P-QR-M]│ └── [P-PROD-M-c] Stock and Location Information (Warehouse Staff, Warehouse Manager) [SUB]│├── [P-NOTI-M] Mobile Notifications (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-NOTI-M-a] Notification Filter Tabs (Warehouse Staff, Warehouse Manager) [SUB]│ └── [P-NOTI-M-b] Notification Detail / Related Workflow (Warehouse Staff, Warehouse Manager) [DEEP — from P-NOTI-M]│├── [P-ACC-M] Mobile Profile Settings (Warehouse Staff, Warehouse Manager) [PRIMARY]│ ├── [P-ACC-M-a] Profile Information (Warehouse Staff, Warehouse Manager) [SUB]│ ├── [P-ACC-M-b] Personal Settings (Warehouse Staff, Warehouse Manager) [SUB]│ └── [P-ACC-M-c] Account Actions / Logout (Warehouse Staff, Warehouse Manager) [SUB]│└── [P-RET-M] Mobile Return / Hoàn trả hàng (Warehouse Staff, Warehouse Manager) [PRIMARY]├── [P-RET-M-a] Return Document Information (Warehouse Staff, Warehouse Manager) [SUB]├── [P-RET-M-b] Returned Product QR Validation (Warehouse Staff, Warehouse Manager) [DEEP — from P-RET-M]├── [P-RET-M-c] Return Condition / Routing Result (Warehouse Staff, Warehouse Manager) [SUB]└── [P-RET-M-d] Return Confirmation and Evidence Capture (Warehouse Staff, Warehouse Manager) [SUB]
+
+2.3 Navigation Patterns
+Attribute
+Angular Web Admin Specification
+Pattern
+The Angular Web Admin uses a fixed left sidebar and a sticky top bar for authenticated pages. 
+Sidebar width 
+The desktop sidebar uses a fixed width of 260px. 
+Sidebar content 
+The sidebar contains the application logo, dynamic navigation menu, expandable parent-child menu groups, and a user information card at the bottom. 
+Dynamic menu loading 
+Navigation items are loaded from the menu service. If menu loading from the server fails, the layout falls back to the authenticated user's cached menu data. 
+Nested navigation 
+Parent menu items can be expanded or collapsed. Child menu items are displayed under the parent menu with indentation and dot indicators. 
+Top bar 
+The top bar contains a mobile menu button, application brand text, global search input, notification button, and user menu. 
+Attribute
+Flutter Mobile Specification
+Pattern
+Bottom tab bar for Tasks, Scan, Scale, Profile; task detail uses top app bar
+Primary action
+Large scan/confirm button at bottom safe area
+Offline/weak network
+Show connection status and retry for server validation
+Touch target
+Minimum 44×44 px; scan/confirm controls at least 48px high
+Part 3 — Screen Flows
+Flow [F-01] — Sign in and access role-based workspace
+Related SRS Scenario
+SC-10 
+Primary Actor
+All users
+Entry Point
+P-01 Login / Sign In
+Success End State
+Authorized users land on Angular Dashboard or Mobile Task Queue according to role and menu permissions.
+Design File
+https://bom.so/IFKI2O
+ 
+
+Flow Diagram
+Flow Diagram — [F-01] [Entry Point: Login / Sign In (P-01)] │ ▼ [Enter credentials and submit] │ ├── [Invalid credentials / inactive user] │ ▼ │ [Show inline error and keep user on P-01] │ ▼ [Authenticate account and load role/menu permissions] │ ├── [Menu loading fails] │ ▼ │ [Fallback to cached menu data if available] │ ▼ [Redirect to Dashboard (P-02) or Mobile Task Queue] │ ▼ [End state: authorized workspace is available]
+ 
+Key Decision Points
+Branch
+Condition
+Outcome
+Branch 1
+Invalid credentials or inactive account
+Block login; show error message; do not clear input unnecessarily.
+Branch 2
+Role/menu permission cannot be loaded
+Show access error or fallback to cached authenticated menu data.
+Branch 3
+Session expires
+Redirect to Login and require re-authentication.
+ 
+Flow [F-02] — Product, ProductVariant/SKU, and QR label management
+Related SRS Scenario
+SC-01
+Primary Actor
+Admin, Warehouse Manager
+Entry Point
+P-03 Products / P-03c Product Variants
+Success End State
+Product master data, ProductVariant/SKU data, and QR value are saved and ready for warehouse operations.
+Design File
+https://bom.so/7V9kon
+ 
+
+Flow Diagram
+Flow Diagram — [F-02] [Entry Point: Products (P-03)] │ ▼ [Search/filter product list] │ ▼ [Create or edit product master data] │ ▼ [Open ProductVariant/SKU list (P-03c)] │ ▼ [Create/edit SKU attributes, category, unit, standard weight, QR/barcode value] │ ├── [Validation error] │ ▼ │ [Show inline error; keep form values] │ ▼ [Preview or print QR label] │ ▼ [End state: SKU is usable for receiving, dispatching, stocktake, and inventory tracking]
+ 
+Key Decision Points
+Branch
+Condition
+Outcome
+Branch 1
+Missing required product/SKU data
+Block save; highlight required fields.
+Branch 2
+Duplicate SKU or QR value
+Block save; show conflict message.
+Branch 3
+QR generation/preview fails
+Show retry option; keep ProductVariant data unchanged.
+Flow [F-03] — User, role, menu, and action permission management
+Related SRS Scenario
+SC-10 
+Primary Actor
+System Admin / Business Owner
+Entry Point
+P-11 Users , Menus, Actions
+Success End State
+User access, role assignment, navigation visibility, and permitted actions are configured correctly.
+Design File
+https://bom.so/EGawwk
+ 
+
+Flow Diagram
+Flow Diagram — [F-03] [Entry Point: Users (P-11)] │ ▼ [Create or edit user account] │ ▼ [Assign role / user status] │ ▼ [Open Roles, Menus, Actions] │ ▼ [Configure visible menus and allowed actions] │ ├── [Permission conflict / missing required role] │ ▼ │ [Show validation error and prevent save] │ ▼ [Save permission configuration] │ ▼ [End state: RBAC settings control what the user can access]
+ 
+Key Decision Points
+Branch
+Condition
+Outcome
+Branch 1
+User attempts unauthorized admin page
+Show permission error or redirect to safe page.
+Branch 2
+Inactive user selected
+Prevent login or show inactive state.
+Branch 3
+Permission save fails
+Show toast and allow retry without losing selections.
+ 
+Flow [F-04] — Inventory monitoring and transaction history review
+Related SRS Scenario
+SC-07
+Primary Actor
+ System Admin, Warehouse Manager
+Entry Point
+P-02 Inventory List / P-02b Inventory Transaction History
+Success End State
+Current stock and historical stock movements are visible and traceable.
+Design File
+https://bom.so/Ct0Hyg
+ 
+
+Flow Diagram
+Flow Diagram — [F-04] [Entry Point: Inventory List (P-02)] │ ▼ [Load stock levels by ProductVariant/SKU] │ ▼ [Search/filter by SKU, category, status, location, or low-stock state] │ ├── [No results] │ ▼ │ [Show empty state and clear filter option] │ ▼ [Open SKU/location detail (P-02a)] │ ▼ [Open transaction history (P-02b)] │ ▼ [Review import/export/stocktake/adjustment records] │ ▼ [End state: stock movement is auditable]
+ 
+Key Decision Points
+Branch
+Condition
+Outcome
+Branch 1
+Data fetch fails
+Show error state with retry action.
+Branch 2
+Filtered result empty
+Show no-results state with reset filters.
+Branch 3
+User lacks permission
+Hide restricted actions and show a read-only view.
+ 
+Flow [F-05] — Inbound receiving with QR, IoT scale, and put-away
+Related SRS Scenario
+SC-02, SC-03, SC-04 
+Primary Actor
+Warehouse Staff, Warehouse Manager
+Entry Point
+P-04 Inbound Documents / P-04b Mobile Receiving QR + Scale
+Success End State
+Inbound line is QR-validated, put-away location is accepted or overridden, stable IoT weight evidence is attached after location confirmation, inventory is increased at the confirmed location only after Final Confirm Receiving, and an inbound InventoryTransaction plus audit record is created. 
+Design File
+https://bom.so/5dKOX2
+ 
+
+Flow Diagram
+Flow Diagram — [F-05]
+[Entry Point: Approved Inbound Document Detail (P-04 / P-04a)]
+ │
+ ▼
+[Open mobile inbound receiving task (P-04M / P-04b)]
+ │
+ ▼
+[Scan QR/SKU label]
+ │
+ ├── [QR mismatch / wrong inbound line]
+ │ ▼
+ │ [Reject scan and show expected item]
+ │
+ ▼
+[Enter received quantity]
+ │
+ ├── [Invalid or missing quantity]
+ │ ▼
+ │ [Show validation error and keep draft unchanged]
+ │
+ ▼
+[Attach stable IoT scale weight (after quantity is recorded)]
+ │
+ ▼
+[Check tolerance: expectedWeight = unitWeight × receivedQuantity]
+ │
+ ├── [Weight outside tolerance]
+ │ ▼
+ │ [Flag discrepancy and require note / manager review]
+ │
+ ▼
+[Request put-away suggestion]
+ │
+ ├── [No suitable location / no capacity]
+ │ ▼
+ │ [Ask manager to split quantity or update capacity]
+ │
+ ▼
+[Accept suggested location or override with reason]
+ │
+ ├── [Override reason missing]
+ │ ▼
+ │ [Reject override until reason is entered]
+ │
+ ▼
+[Final Confirm Receiving]
+ │
+ ▼
+[Increase inventory at confirmed location and log inbound transaction]
+ │
+ ▼
+[End state: goods stored at confirmed location and audit is recorded] 
+ 
+Key Decision Points 
+Branch
+Condition
+Outcome 
+Branch 1
+Wrong QR, unknown SKU, or QR does not belong to the selected inbound line.
+Block line processing, show expected SKU/item, and request re-scan. No stock change is made.
+Branch 2
+Received quantity is missing, zero when not allowed, negative, or exceeds allowed tolerance.
+Show validation error and keep the receiving draft unchanged.
+Branch 3
+No suitable storage location has capacity for the received group.
+Show no-capacity state; ask manager to split quantity, update capacity, or manually choose another allowed location.
+Branch 4
+Staff overrides the suggested put-away location without a reason.
+Reject override until a reason is entered; store selected location, reason, and actor when accepted.
+Branch 5
+IoT weight verification is not complete (no stable weight evidence, or tolerance exceeded without manager review). 
+Disable Continue to Put-away and Final Confirm Receiving. Prompt staff to complete weight verification first.
+Branch 6
+Actual IoT weight differs from expected weight beyond tolerance.
+Show discrepancy warning, require note and manager review/override before final confirmation.
+Branch 7
+Final Confirm Receiving fails due to API, permission, stale status, or validation conflict.
+Keep the line in pending/ready-to-confirm state, show retry messages, and do not create duplicate InventoryTransaction.
+Flow [F-06] — Outbound picking, packing, and dispatching
+Related SRS Scenario
+SC-05 
+Primary Actor
+Warehouse Staff
+Entry Point
+P-05 Outbound Documents / P-05b Mobile Pick-Pack
+Success End State
+Shipment is confirmed, inventory is decreased, and transaction history is recorded.
+Design File
+https://bom.so/NJ3R2B
+ 
+
+Flow Diagram
+Flow Diagram — [F-06] [Entry Point: Outbound Documents (P-05)] │ ▼ [Open outbound detail (P-05a)] │ ▼ [Mobile staff scans SKU QR (P-05b)] │ ├── [Wrong item / insufficient stock] │ ▼ │ [Block picking; show shortage or expected SKU] │ ▼ [Confirm picked quantity] │ ▼ [Optional IoT scale verification] │ ├── [Package weight mismatch] │ ▼ │ [Show discrepancy and require correction/review] │ ▼ [Pack and confirm shipment] │ ▼ [End state: inventory is decreased and outbound transaction is recorded]
+ 
+Key Decision Points
+Branch
+Condition
+Outcome
+Branch 1
+Insufficient stock
+Block shipment; show shortage state.
+Branch 2
+Wrong QR scanned
+Reject scan and request correct SKU.
+Branch 3
+Dispatch confirmation fails
+Keep documents in a packed/ready state and allow retry.
+ 
+Flow [F-07] — Stocktake and inventory adjustment approval
+Related SRS Scenario
+SC-06 
+Primary Actor
+Warehouse Staff, Warehouse Manager
+Entry Point
+P-06 Cycle Count / Stocktake Mobile Screen
+Success End State
+Approved adjustment transaction is recorded with before-and-after quantity values.
+Design File
+https://bom.so/XIXkrd
+ 
+Flow Diagram
+Flow Diagram — [F-07] [Entry Point: Cycle Count (P-06)] │ ▼ [Manager creates stocktake session] │ ▼ [Staff scans SKU QR and enters counted quantity] │ ▼ [System compares counted quantity with system quantity] │ ├── [No discrepancy] │ ▼ │ [Mark line counted] │ ├── [Discrepancy found] │ ▼ │ [Create discrepancy review item] │ ▼ [Manager approves or rejects adjustment] │ ▼ [End state: accepted adjustment updates inventory and records audit trail]
+ 
+Key Decision Points
+Branch
+Condition
+Outcome
+Branch 1
+Counted quantity invalid
+Block submit; show quantity validation.
+Branch 2
+Discrepancy exceeds allowed threshold
+Require manager approval.
+Branch 3
+Adjustment rejected
+Keep original inventory; record rejection reason.
+ 
+Flow [F-08] — Dashboard, alerts, reports, and IoT monitoring
+Related SRS Scenario
+SC-07, SC-08
+Primary Actor
+Admin, Warehouse Manager
+Entry Point
+P-01 Dashboard
+Success End State
+User reviews operational KPIs, low-stock/bottleneck warnings, reports, and IoT device status.
+Design File
+https://bom.so/kx3G98
+ 
+
+Flow Diagram
+Flow Diagram — [F-08] [Entry Point: Dashboard (P-02)] │ ▼ [Load KPI cards, inventory summary, alerts, and recent activity] │ ├── [Low-stock alert] │ ▼ │ [Open Alerts (P-08) or Inventory (P-02)] │ ├── [Inbound bottleneck warning] │ ▼ │ [Open Warnings (P-08b)] │ ▼ [Open Reports & Analytics (P-07)] │ ▼ [Select date range and report type; export if required] │ ▼ [Open IoT Devices if weight/device status needs review] │ ▼ [End state: operational risks and reports are reviewed]
+
+Key Decision Points
+Branch
+Condition
+Outcome
+Branch 1
+Realtime connection disconnected
+Show connection state and retry indicator.
+Branch 2
+No report data
+Show no-data state with date-range adjustment option.
+Branch 3
+IoT device offline
+Show offline state and disable device command actions.
+Flow [F-09] — Web return document management and reverse logistics control
+Related SRS Scenario
+SC-11, SC-12
+Primary Actor
+System Admin, Warehouse Manager
+Entry Point
+P-01 Dashboard
+Success End State
+Return document status is updated. Customer-return items are restocked or quarantined after approval. Return-to-supplier documents are dispatched after approval. Inventory transaction history is recorded only after final confirmation. 
+Design File
+https://bom.so/yBHY6V
+ 
+Flow Diagram
+Flow Diagram — [F-09] [Entry Point: Dashboard (P-02)] │ ▼ [Select return type: Customer Return or Return-to-Supplier] │ ▼ [Create / open return document] │ ├── [Missing required data / invalid return type] │ ▼ │ [Show validation error; no stock change] │ ▼ [Manager approves / assigns return inspection task] │ ├── [Not approved / user lacks permission] │ ▼ │ [Stop processing; keep inventory unchanged] │ ▼ [Staff opens Mobile Return Inspection QR + Quarantine] │ ▼ [Scan returned item QR / SKU] │ ├── [Wrong QR or item not in return document] │ ▼ │ [Reject scan; request correct item] │ ▼ [Enter inspected quantity and item condition] │ ├── [Sellable / acceptable] │ ▼ │ [Request Put-away Suggestion] │ ▼ │ [Accept location or override with reason] │ ├── [Damaged / defective / not sellable] │ ▼ │ [Select Quarantine Location and defect reason] │ ▼ [Optional: attach stable IoT weight evidence] │ ▼ [Submit inspection result] │ ▼ [Return Review & Approval] │ ├── [Manager rejects] │ ▼ │ [Status = Rejected; no inventory update] │ ├── [Customer return approved] │ ▼ │ [Restock sellable qty / quarantine damaged qty] │ ▼ │ [Create inventory transaction log] │ ├── [Return-to-supplier approved] │ ▼ │ [Dispatch / move out approved qty] │ ▼ │ [Decrease or move inventory; create transaction log] │ ▼ [End state: return document finalized and movement is auditable]
+
+Key Decision Points
+Branch
+Condition
+Outcome
+Branch 1
+Customer return tab is active
+Show customer return documents, customer name/phone data where available, inspection status, restock/quarantine progress, and customer-return final approval path.
+Branch 2
+Return-to-supplier tab is active
+Show supplier return documents and supplier return workflow. Final confirmation dispatches items and decreases stock.
+Branch 3
+Data is still loading
+Display the loading state with skeleton rows and disabled actions that require loaded data.
+Branch 4
+No return document matches the selected type/filter
+Display empty state with the message "Chưa có phiếu hoàn trả nào" and a create-return CTA.
+Branch 5
+Return document API fails or connection fails
+Display error state with "Không tải được dữ liệu hoàn trả" and a Retry button.
+Branch 6
+User lacks return-management permission
+Hide or disable create/approve actions and show access-denied handling according to RBAC.
+Branch 7
+Return document is not approved yet
+Do not allow mobile inspection, dispatch, or stock-changing final confirmation.
+
+Part 4 — Screen Specifications
+4.0 — Shared Layout (Authenticated Shell)
+Shell layout structure┌───────────────────────────────────────────────────────────┐│Top bar: mobile menu, brand, search, notifications,user ││ │├───────────────────────────────────────────────────────────┤│ Sidebar │ Page heading + breadcrumbs │ │ navigation │ Page-specific KPI / table / form / cards ││ dynamic menu │ Toast container + realtime state ││ user card │ │└──────────────┴────────────────────────────────────────────┘
+
+Navigation items used in the current shell:
+Nav Item
+Icon
+Visible to Roles
+Shows Badge?
+Dashboard
+dashboard / chart
+System Admin, Manager
+No
+Products
+box / cube
+System Admin, Manager
+No
+Inbound
+inbound / plus-box
+System Admin, Manager, Warehouse Staff
+Possible
+Outbound
+outbound / arrow
+System Admin, Manager, Warehouse Staff
+Possible
+Stocktake
+clipboard / checklist
+System Admin, Warehouse Staff
+No
+Warehouse
+warehouse / map
+System Admin, Manager
+No
+Reports
+bar chart
+System Admin, Manager
+No
+Alerts
+bell / warning
+System Admin, Manager
+Yes
+Users
+users
+System Admin
+No
+Settings
+gear
+System Admin
+No
+
+ 
+4.01 — Login / Sign In
+Page ID
+P-01
+Screen name
+Login / Sign In
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4&m=dev
+SRS Feature
+FT-05
+SRS Scenario
+SC-10 
+Roles with access
+Public
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+An authentication request is being submitted.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-4203&m=dev
+Default
+Email and password fields are ready for input.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4&m=dev
+Validation Error
+Email or password is missing or invalid.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-4103&m=dev
+Locked / Inactive
+The account cannot access the system.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-4300&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────────────────────┐│ Zone A: Centered login card │ 
+│ ││[Logo] [System name] [Subtitle] │ 
+│ │├─────────────────────────────────────────────────────┤│ Zone B: Login form ││ [Email] [Password] [Forgot password link] │ ├─────────────────────────────────────────────────────┤│ Zone C: Primary action │ │ [Đăng nhập] │ └─────────────────────────────────────────────────────┘
+ 
+Zone descriptions:
+• Zone A: Displays the WMS-EC logo, product name, and subtitle.
+• Zone B: Contains email and password fields with supporting icons.
+• Zone C: Contains the full-width primary login button.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Enter credentials
+The user enters an email and password before submitting.
+SC-08
+Click “Đăng nhập”
+The system validates input and authenticates the account.
+AC
+Authentication fails
+The system preserves the form and displays an error message.
+NAC
+Click “Quên mật khẩu?”
+Navigate to password recovery if enabled.
+Optional
+Mockup
+
+ 
+4.02 — Dashboard
+Page ID
+P-02
+Screen name
+Dashboard
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-44&m=dev
+SRS Feature
+FT-01, FT-03, FT-04, FT-12
+SRS Scenario
+SC-06, SC-07
+Roles with access
+Admin, Warehouse Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+KPI cards and charts are being fetched.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-4502&m=dev
+Populated — default
+KPI cards, charts, category breakdown, and low-stock warnings are visible.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-44&m=dev
+Empty first use
+No operational data exists yet.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-4783&m=dev
+Realtime disconnected
+Dashboard remains visible but recent data may be stale.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-4984&m=dev
+Error
+One or more dashboard widgets fail to load.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-5496&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────────────────────┐│ Zone A: Page Heading ││ Dashboard + System Subtitle │├─────────────────────────────────────────────────────┤│ Zone B: KPI Cards ││ Total Products | Current Stock | Inbound | Outbound │├─────────────────────────────────────────────────────┤│ Zone C: Main Analytics Grid ││ Inventory Trend Chart + Category Donut Chart │├─────────────────────────────────────────────────────┤│ Zone D: Supporting Widgets ││ 7-day Trend Chart + Low-stock Warning List │└─────────────────────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows the dashboard title and shared top bar.
+• Zone B: Displays four KPI cards for key warehouse metrics.
+• Zone C: Shows inventory trend and category distribution charts.
+• Zone D: Shows weekly movement and low-stock items.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Review KPI cards
+The user gets a high-level operational summary.
+SC-06
+Review charts
+User evaluates inventory movement and category distribution.
+SC-06
+Review low-stock list
+The user identifies SKUs requiring attention.
+SC-06
+Use global search
+The system searches entities from the top bar.
+Global
+
+ 
+Mockup
+
+4.03 — Products
+Page ID
+P-03
+Screen name
+Products
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-494&m=dev
+SRS Feature
+FT-06
+SRS Scenario
+SC-01
+Roles with access
+Admin, Warehouse Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+The product table is being loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-5701&m=dev
+Populated — default
+Product list, search, actions, and pagination are visible.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-494&m=dev
+Empty
+No products exist or filters return no results.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-6249&m=dev
+Filtered
+Search text filters the table.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-6464&m=dev
+Error
+Product list or action fails.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-6799&m=dev
+ 
+Layout Description
+Layout zones┌───────────────────────────────────────────────────┐│ Zone A: Page Heading + Primary Action ││ Products [Add Product] │ ├───────────────────────────────────────────────────┤│ Zone B: Search / Controls ││ [Search by SKU or product name] │├───────────────────────────────────────────────────┤│ Zone C: Product Table ││ SKU | Product Name | Category | Unit | Stock │ │ Status | Actions │├───────────────────────────────────────────────────┤│ Zone D: Footer / Pagination ││ Count Summary + Page Controls │└───────────────────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows the module heading and Add Product button.
+• Zone B: Contains a search field for SKU or product name.
+• Zone C: Product data is shown in a table with category chips, stock quantity, status badge, and action icons.
+• Zone D: Shows item count and pagination controls.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Search by SKU/name
+Table reloads or filters matching products.
+SC-01
+Click “Thêm sản phẩm”
+Open create product form or modal.
+AC
+Click row action
+Open view, edit, or delete action for the selected row.
+AC/NAC
+Change page
+Load the next/previous product page.
+List
+ 
+
+Mockup
+ 
+4.04 — Inbound Documents
+Page ID
+P-04
+Screen name
+Inbound Documents
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-960&m=dev
+SRS Feature
+FT-02, FT-07, FT-09, FT-11
+SRS Scenario
+SC-02
+Roles with access
+System Admin, Warehouse Manager, Warehouse Staff
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+Inbound documents are being loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-7019&m=dev
+Draft / Ready
+Documents are ready for review or receiving.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-960&m=dev
+Receiving
+A document is being processed item by item.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-7725&m=dev
+Confirmed
+Inbound documents are confirmed and inventory is updated.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-7279&m=dev
+Error
+Document list or receiving action fails.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-7511&m=dev
+ 
+Layout Description
+Layout zones┌────────────────────────────────────────────────────────┐│ Zone A: Page Heading + Primary Action ││ Inbound Documents [Create Inbound] │├────────────────────────────────────────────────────────┤│ Zone B: Filters / Search ││ [Search] [Status] [Supplier] [Date Range] │├────────────────────────────────────────────────────────┤│ Zone C: Inbound Document Table ││ Document No | Supplier | Date | Total Items ││ Status | Actions │├────────────────────────────────────────────────────────┤│ Zone D: Footer / Pagination │└────────────────────────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Follows the same header + primary action pattern as Products.
+• Zone B: Provides document filters for search, status, supplier, and date.
+• Zone C: Lists inbound documents with status badges and row actions.
+• Zone D: Shows pagination for large document lists.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Create inbound document
+Open the inbound creation form.
+SC-02
+Open document detail
+Navigate to inbound detail and line items.
+SC-02
+Confirm receiving
+The system validates QR/quantity/weight before updating inventory.
+AC
+Apply filters
+Reload the document list based on filter values.
+List
+
+Mockup
+
+ 
+4.05 — Outbound Documents
+Page ID
+P-05
+Screen name
+Outbound Documents
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1248&m=dev
+SRS Feature
+FT-02, FT-07, FT-09, FT-11
+SRS Scenario
+SC-05
+Roles with access
+System Admin, Warehouse Manager, Warehouse Staff
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+Outbound documents are being loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-8052&m=dev
+Draft / Ready
+Documents are ready for picking.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1248&m=dev
+Picking / Packed
+Warehouse staff is processing the outbound document.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-8568&m=dev
+Shipped
+Shipment is confirmed and inventory is decreased.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-9198&m=dev
+Error
+Document list or dispatch action fails.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=115-9441&m=dev
+ 
+Layout Description
+Layout zones┌──────────────────────────────────────────────────┐│ Zone A: Page Heading + Primary Action ││ Outbound Documents [Create Outbound] │├──────────────────────────────────────────────────┤│ Zone B: Filters / Search │ │ [Search] [Status] [Customer] [Date Range] │├──────────────────────────────────────────────────┤│ Zone C: Outbound Document Table ││ Document No | Customer | Ship Date | Total Items ││ Status | Actions │ ├──────────────────────────────────────────────────┤│ Zone D: Footer / Pagination │└──────────────────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Mirrors the inbound document management screen.
+• Zone B: Provides search and filters by status, customer, and date.
+• Zone C: Shows dispatch documents with status and row actions.
+• Zone D: Displays pagination or list summary.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Create outbound document
+Open the outbound creation form.
+SC-04
+Open document detail
+Navigate to outbound detail or picking screen.
+SC-04
+Confirm dispatch
+The system validates picked lines and decreases inventory.
+AC
+Apply filters
+Reload list with matching documents.
+List
+
+ Mockup
+
+4.06 — Stocktake / Cycle Count
+Page ID
+P-06
+Screen name
+Stocktake / Cycle Count
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1536&m=dev
+SRS Feature
+FT-10, FT-11
+SRS Scenario
+SC-06
+Roles with access
+Warehouse Manager, Warehouse Staff
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+Stocktake sessions and selected results are loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-9661&m=dev
+Session list
+List of stocktake slips is displayed.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1536&m=dev
+Counting
+Actual quantity fields are editable.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-9936&m=dev
+Discrepancy review
+Difference values are highlighted for review.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-10239&m=dev
+Approved
+Stocktake confirmation is completed.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-10552&m=dev
+ 
+Layout Description
+Layout zones┌───────────────────────────────────────────────────────┐│ Zone A: Page Heading + Primary Action ││ Stocktake [Create Slip] │├───────────────────────────────────────────────────────┤│ Zone B: Stocktake Session List ││ Slip No | Warehouse | Date | Status │├───────────────────────────────────────────────────────┤│ Zone C: Selected Result Detail ││ Summary Fields + SKU Count Table ││ SKU | Product | System Qty | Actual Qty | Difference │├───────────────────────────────────────────────────────┤│ Zone D: Footer Actions ││ [Cancel] [Confirm Count] │└───────────────────────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows the Kiểm kho title and Tạo phiếu kiểm button.
+• Zone B: Lists existing stocktake slips and their status.
+• Zone C: Displays selected stocktake result with editable actual quantity and difference chips.
+• Zone D: Provides Cancel and Confirm Stocktake actions.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Create stocktake slip
+Start a new stocktake session.
+SC-05
+Select a slip
+Load the result details for that stocktake slip.
+SC-05
+Edit actual quantity
+Recalculate discrepancy for the SKU row.
+SC-05
+Confirm stocktake
+Record the approved count/adjustment.
+AC
+Mockup 
+4.07 — Warehouse
+Page ID
+P-07
+Screen name
+Warehouse
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1815&m=dev
+SRS Feature
+FT-14
+SRS Scenario
+SC-09
+Roles with access
+System Admin, Warehouse Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+Warehouse cards and area tables are loading.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-12286&m=dev
+Populated — default
+Warehouse cards and area lists are displayed.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1815&m=dev
+Empty
+No warehouse has been configured.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-12494&m=dev
+Near capacity
+Warehouse or area capacity is near the configured threshold.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-12709&m=dev
+Error
+Warehouse data cannot be loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-13233&m=dev
+ 
+Layout Description
+Layout zones ┌─────────────────────────────────────────────────────┐ │ Zone A: Page heading + primary action │ │ Warehouse [Add Warehouse] │ ├─────────────────────────────────────────────────────┤ │ Zone B: Warehouse overview cards │ │ Warehouse name, address, manager, zones, racks, │ │ status, capacity usage │ ├─────────────────────────────────────────────────────┤ │ Zone C: Warehouse area table │ │ Area Code | Area Name | Warehouse | Racks | Empty | │ │ |Fill Rate │ └─────────────────────────────────────────────────────┘
+ 
+Zone descriptions:
+• Zone A: Uses the standard page heading and primary button pattern.
+• Zone B: Shows warehouse cards in a two-column grid with capacity progress bars.
+• Zone C: Lists warehouse areas with fill rate chips and operational information.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Click “Thêm kho hàng”
+Open create warehouse form or modal.
+SC-03
+Click edit/delete
+Modify or remove a warehouse record.
+System Admin
+Review capacity bar
+Identify warehouse nearing capacity.
+SC-03
+Review area table
+Check area-level capacity.
+SC-06
+
+Mockup
+
+4.08 — Reports & Analytics
+Page ID
+P-08
+Screen name
+Reports & Analytics
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-2281&m=dev
+SRS Feature
+FT-04, FT-11
+SRS Scenario
+SC-06
+Roles with access
+System Admin, Warehouse Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+Report widgets and tables are being loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-13451&m=dev
+Populated — default
+Filters, KPI widgets, charts, and report tables are visible.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-2281&m=dev
+No data
+Selected filters return no report data.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-13704&m=dev
+Filtered
+Report data is updated after changing filters.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-13926&m=dev
+Export error
+Report export fails.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-14971&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────────────────────────┐│ Zone A: Page Heading + Export Action ││ Reports & Analytics [Export] │├─────────────────────────────────────────────────────────┤│ Zone B: Filters ││ [Date Range] [Warehouse] [Report Type] [Apply] │├─────────────────────────────────────────────────────────┤│ Zone C: Report Charts / KPI Cards ││ Inventory Movement | Turnover | Low-stock | Discrepancy │├─────────────────────────────────────────────────────────┤│ Zone D: Report Detail Table ││ Date | Inbound | Outbound | Adjustment | Notes │└─────────────────────────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Uses the standard heading with an export action.
+• Zone B: Contains filters for report range and type.
+• Zone C: Reuses the Dashboard chart/card pattern for analytics.
+• Zone D: Provides detailed report rows for audit and review.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Apply filters
+Reload charts and tables by selected conditions.
+SC-06
+Review KPI/chart
+Understand inventory performance and discrepancies.
+SC-06
+Click Export
+Export the currently selected report.
+AC
+No data returned
+Display empty state while preserving filter values.
+NAC
+ 
+
+Mockup 
+4.09 — Alerts & Warnings
+Page ID
+P-09
+Screen name
+Alerts & Warnings
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-2760&m=dev
+SRS Feature
+FT-03, FT-12
+SRS Scenario
+SC-07
+Roles with access
+System Admin, Warehouse Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+Alert cards, rules, and list items are being loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-15521&m=dev
+Populated — default
+Severity cards, rule switches, and alert feed are visible.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-2760&m=dev
+No active alert
+No current warnings are available.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-15733&m=dev
+Resolved / Read
+Processed alerts are shown as read or handled.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-15977&m=dev
+Error
+Rule update or alert fetch fails.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-16436&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────────────────────┐│ Zone A: Page heading ││ Alerts │├─────────────────────────────────────────────────────┤│ Zone B: Summary cards ││ Critical | Warning | Information | Processed │├─────────────────────────────────────────────────────┤│ Zone C: Alert rules ││ Rule cards with icon, description, and toggle │├─────────────────────────────────────────────────────┤│ Zone D: Alert list ││ Type badge | Title | Description | Time | Dismiss │└─────────────────────────────────────────────────────┘
+ 
+Zone descriptions:
+• Zone A: Shows the Cảnh báo page title.
+• Zone B: Displays alert counts grouped by severity/status.
+• Zone C: Displays configurable alert rules with switches.
+• Zone D: Lists active alerts with badges, timestamps, and dismiss actions.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Toggle a rule
+Enable or disable the selected alert rule.
+SC-07
+Click “Thêm quy tắc”
+Open rule creation flow.
+Optional
+Mark all as read
+Update unread alerts to read status.
+SC-07
+Dismiss alert
+Remove the alert from active display.
+SC-07
+ 
+
+Mockup
+ 
+4.10 — Return Documents
+Page ID
+P-10
+Screen name
+Return Docs Management
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=199-31&m=dev
+SRS Feature
+FT-16, FT-01, FT-07, FT-08, FT-11, FT-15 
+SRS Scenario
+SC-11, SC-12
+Roles with access
+System Admin, Warehouse Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+Return document list, filters, and summary cards are loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-11542&m=dev
+Populated — default
+The return document list is visible with Customer Return and Return-to-Supplier tabs.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=199-31&m=dev
+No data
+No return documents match the selected type, status, warehouse, or search filter.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-11487&m=dev
+Error
+Return document list or action cannot be loaded because API request fails.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-12076&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────────────────────────┐│ Zone A: Page heading + actions ││ Return Docs | Create | Assign │ ├─────────────────────────────────────────────────────────┤│ Zone B: Return type and primary action ││ Khách hoàn hàng | Xuất trả NCC [+ Tạo phiếu hoàn hàng] │├─────────────────────────────────────────────────────────┤│ Zone C: Return status summary cards ││Chờ duyệt | Đang kiểm hàng | Đã duyệt | Hoàn tất│ │ ├─────────────────────────────────────────────────────────┤│ Zone D: Return document table ││ Populated table │├─────────────────────────────────────────────────────────┤│ Zone E: Table row actions and status badges │ │ Code| Customer/sup| date| Kho| Số SP| status| action │ 
+└─────────────────────────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Displays the page title, breadcrumb, global search, notification icon, and current admin/manager account menu. 
+• Zone B: Allows users to switch between Customer Returns and Return-to-Supplier. The create button starts a new return document using the currently selected return type. 
+• Zone C: Summarizes return workload by status, such as pending approval, under inspection, approved, and completed. 
+• Zone D: Main data region. It renders the populated table, loading skeleton, empty state, or error state according to the current data condition. 
+• Zone E: Displays return code, customer/supplier, date, warehouse, number of item lines, status badge, and row action to open the detail/review screen. 
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Click + Tạo phiếu hoàn hàng 
+Open return document creation form. Default return type follows the active tab. 
+SC-11 / SC-12
+Approve final return after inspection 
+Update status and create stock transactions only after final approval/dispatch confirmation. 
+FT-01, FT-11, FT-16 
+Click document code or Xem 
+Open return document detail or review screen for the selected returnDocumentId.
+Return Review & Approval 
+No data returned
+Display empty state while preserving filter values.
+NAC
+ 
+
+Mockup
+
+4.11 — Users
+Page ID
+P-11
+Screen name
+Users
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3145&m=dev
+SRS Feature
+FT-05
+SRS Scenario
+SC-10
+Roles with access
+System Admin
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading
+User summary cards, table, and permission matrix are loaded.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-16648&m=dev
+Populated — default
+User metrics, user table, and permission matrix are displayed.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3145&m=dev
+Empty
+No user accounts exist yet.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-16951&m=dev
+Filtered
+Search filters users by name or email.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-17202&m=dev
+Error
+User data or action cannot be completed.
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=116-17654&m=dev
+ 
+Layout Description
+Layout zones┌──────────────────────────────────────────────────────────────┐│ Zone A: Page Heading + Summary Cards ││ Users + Total | Active | Managers | Staff │├──────────────────────────────────────────────────────────────┤│ Zone B: Search + Primary Action ││ [Search by name/email] [Add User] │├──────────────────────────────────────────────────────────────┤│ Zone C: User Table ││ User | Email | Role | Warehouse | Status | Last Login ││ Actions │├──────────────────────────────────────────────────────────────┤│ Zone D: Permission Matrix ││ Feature / Role Access Matrix │└──────────────────────────────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows user management KPIs.
+• Zone B: Provides search and Add User action.
+• Zone C: Displays users with avatar initials, role badges, warehouse assignment, status, and action icons.
+• Zone D: Shows permission access by role.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Search by name/email
+Filter the user list.
+SC-08
+Click “Thêm người dùng”
+Open create user form or modal.
+SC-08
+Click row action
+View, edit, or delete selected users.
+System Admin
+Review permission matrix
+Check role-based access at a glance.
+SC-08
+
+Mockup
+
+4.12 — Mobile Login
+Page ID
+P-00M 
+Screen name
+Mobile Login
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3641&m=dev
+SRS Feature
+FT-05
+SRS Scenario
+SC-10
+Roles with access
+Warehouse Staff, Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Default 
+The user opens the mobile application before signing in. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3641&m=dev
+Loading 
+The user taps “Đăng nhập” and authentication is processed. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=103-134&m=dev
+Invalid Credentials 
+Login fails because email or password is incorrect. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=155-472&m=dev
+Offline 
+Network connection is unavailable during login. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=155-644&m=dev
+
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: App logo and identity │
+│ WMS-EC logo + application subtitle │
+├─────────────────────────────────────┤
+│ Zone B: Login form │
+│ Email input│Password input │
+├─────────────────────────────────────┤
+│ Zone C: Primary action │
+│ [Đăng nhập] │
+├─────────────────────────────────────┤
+│ Zone D: App version │ │ │
+│ 2.3.0 WMS-EC Mobile │ │ │
+└─────────────────────────────────────┘
+ 
+Zone descriptions:
+• Zone A: Displays the WMS-EC logo, app name, and subtitle for the warehouse mobile application.
+• Zone B: Contains email and password input fields with supporting icons.
+• Zone C: Contains the main green login button.
+• Zone D: Displays the current mobile app version. 
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Enter email and password 
+The user fills in login credentials. 
+SC-08
+Tap “Đăng nhập” 
+The system validates input and authenticates the account. 
+SC-08
+Login success 
+Navigate to the Mobile Home screen. 
+SC-08
+Login failure 
+Show error message and keep the user on the login screen. 
+NAC 
+Network unavailable 
+Show offline or retry messages. 
+NAC 
+
+Mockup
+
+4.13 — Mobile Home
+Page ID
+P-10M 
+Screen name
+Mobile Home 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3707&m=dev
+SRS Feature
+FT-01, FT-02, FT-10 
+SRS Scenario
+SC-02, SC-04, SC-05, SC-06 
+Roles with access
+Warehouse Staff, Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+Home data and recent activities are loading. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=155-746&m=dev
+Populated — default 
+Staff header, quick actions, and recent activity list are displayed. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3709&m=dev
+Empty Activity 
+No recent warehouse activity is available. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=155-897&m=dev
+Realtime Disconnected 
+Home data is visible but may not be updated in real time. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=155-1096&m=dev
+Error 
+Home data cannot be loaded. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=155-1353&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: User greeting header │
+│ Staff name, role, active warehouse │
+├─────────────────────────────────────┤
+│ Zone B: Quick action grid │
+│ Nhập kho | Xuất kho | Kiểm kho │
+│ Quét QR | Thống kê | Lịch sử │
+├─────────────────────────────────────┤
+│ Zone C: Recent activity list │
+│ Latest inbound/outbound/count logs │
+├─────────────────────────────────────┤
+│ Zone D: Bottom navigation │
+│ Trang chủ | Thông báo | Tài khoản │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows the logged-in staff name, role, and active warehouse location.
+• Zone B: Displays six workflow shortcuts for warehouse operations.
+• Zone C: Lists recent activities with status icons, timestamps, and quantity changes.
+• Zone D: Provides persistent bottom navigation for main mobile pages. 
+Key Interactions
+User Action
+What Happens
+Notes
+Tap “Nhập kho” 
+The user fills in login credentials. 
+SC-02 
+Tap “Xuất kho” 
+The system validates input and authenticates the account. 
+SC-04 
+Tap “Kiểm kho” 
+Navigate to the Mobile Home screen. 
+SC-05 
+Tap “Quét QR” 
+Show error message and keep the user on the login screen. 
+FT-08 
+Network unavailable 
+Show offline or retry messages. 
+Mobile navigation 
+Mockup
+
+4.14 — Mobile Inbound 
+Page ID
+P-04M 
+Screen name
+Mobile Inbound 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3894&m=dev
+SRS Feature
+FT-02, FT-09, FT-11 
+SRS Scenario
+SC-02, SC-03 
+Roles with access
+Warehouse Staff, Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+Inbound document information is loading. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=104-60&m=dev
+Inputting — default 
+Product, quantity, weight, and note fields are displayed. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3894&m=dev
+Weight Discrepancy 
+Actual scale weight differs from expected weight. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=104-166&m=dev
+Validation Error 
+Quantity or required field is invalid. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=104-321&m=dev
+Success 
+Inbound transaction is confirmed successfully. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4098&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Screen header │
+│ Nhập kho + status badge │
+├─────────────────────────────────────┤
+│ Zone B: Document / product info │
+│ Supplier, document code, product │
+│ SKU, expected weight, actual weight │
+├─────────────────────────────────────┤
+│ Zone C: Quantity control │
+│ Minus | Quantity | Plus │
+├─────────────────────────────────────┤
+│ Zone D: Note input │
+│ Receiving note / discrepancy note │
+├─────────────────────────────────────┤
+│ Zone E: Primary action │
+│ [Xác nhận nhập kho] │
+├─────────────────────────────────────┤
+│ Zone F: Bottom navigation │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows screen title and current receiving status.
+• Zone B: Displays inbound document details, product information, and IoT scale weight.
+• Zone C: Allows staff to adjust received quantity using plus/minus buttons or direct input.
+• Zone D: Allows staff to enter notes for discrepancies or receiving conditions.
+• Zone E: Contains the main confirmation button.
+• Zone F: Keeps the mobile bottom navigation visible. 
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Review product information 
+Staff verifies the correct product before receiving. 
+SC-02 
+Adjust received quantity 
+Received quantity is updated. 
+SC-02 
+Enter note 
+Save receiving note or discrepancy explanation. 
+SC-03 
+Tap “Xác nhận nhập kho” 
+Confirm inbound transactions and increase inventory. 
+SC-02 
+Weight discrepancy detected 
+Show warning and require note/review before confirmation. 
+NAC 
+
+Mockup
+
+4.15 — Mobile Outbound 
+Page ID
+P-05M 
+Screen name
+Mobile Outbound 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4194&m=dev
+SRS Feature
+FT-02, FT-08, FT-11 
+SRS Scenario
+SC-05
+Roles with access
+Warehouse Staff, Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+Outbound document data is loading. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=104-474&m=dev
+Inputting — default 
+Product, customer, quantity, and note fields are displayed. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4194&m=dev
+Wrong Item 
+Scanned QR does not match the expected outbound item. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=104-574&m=dev
+Insufficient Stock 
+Available stock is lower than required quantity. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=104-727&m=dev
+Success 
+Outbound transaction is confirmed successfully. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4292&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Screen header │
+│ Xuất kho + status badge │
+├─────────────────────────────────────┤
+│ Zone B: Document / product info │
+│ Customer, document code, product │
+│ SKU, available stock │
+├─────────────────────────────────────┤
+│ Zone C: Quantity control │
+│ Minus | Quantity | Plus │
+├─────────────────────────────────────┤
+│ Zone D: Note input │
+│ Picking / packing note │
+├─────────────────────────────────────┤
+│ Zone E: Primary action │
+│ [Xác nhận xuất kho] │
+├─────────────────────────────────────┤
+│ Zone F: Bottom navigation │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows outbound screen title and processing status.
+• Zone B: Displays outbound documents, product, customer, and stock information.
+• Zone C: Allows staff to confirm picked/exported quantity.
+• Zone D: Supports notes for picking, packing, or exception cases.
+• Zone E: Contains the main outbound confirmation button.
+• Zone F: Provides persistent mobile navigation. 
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Review outbound information 
+Warehouse Staff verifies product and customer before export. 
+SC-04 
+Adjust quantity 
+Exported quantity is updated. 
+SC-04 
+Tap “Xác nhận xuất kho” 
+Confirm outbound transactions and decrease inventory. 
+SC-04 
+Wrong QR scanned 
+Reject item and show expected product. 
+NAC 
+Insufficient stock 
+Block confirmation and show shortage message. 
+NAC 
+Mockup
+
+4.16 — Mobile Cycle Count 
+Page ID
+P-06M 
+Screen name
+Mobile Cycle Count 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=105-851&m=dev
+SRS Feature
+FT-10, FT-11 
+SRS Scenario
+SC-06
+Roles with access
+Warehouse Staff, Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+Cycle count session data is loading. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=105-851&m=dev
+Counting — default 
+Warehouse Staff enters actual counted quantities. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4389&m=dev
+Discrepancy 
+Actual quantity differs from system quantity. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=105-982&m=dev
+Validation Error 
+The actual quantity is invalid or missing. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=105-1168&m=dev
+Submitted 
+The count result is submitted for review. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=105-1310&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Screen header │
+│ Kiểm kho + status badge │
+├─────────────────────────────────────┤
+│ Zone B: Count session info │
+│ Warehouse, count code, date │
+├─────────────────────────────────────┤
+│ Zone C: Product count list │
+│ Product | System Qty | Actual Qty │
+│ Difference │
+├─────────────────────────────────────┤
+│ Zone D: Note input │
+│ Discrepancy explanation │
+├─────────────────────────────────────┤
+│ Zone E: Primary action │
+│ [Xác nhận kiểm kho] │
+├─────────────────────────────────────┤
+│ Zone F: Bottom navigation │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Displays the cycle count title and current session status.
+• Zone B: Shows warehouse and count session information.
+• Zone C: Lists items to be counted, including system quantity, actual quantity, and difference.
+• Zone D: Allows staff to explain discrepancy if needed.
+• Zone E: Contains the final confirmation button.
+• Zone F: Keeps bottom navigation available. 
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Enter actual quantity 
+The system calculates the difference automatically. 
+SC-05 
+Difference appears 
+Discrepancy value is highlighted. 
+SC-05 
+Enter note 
+Warehouse Staff provides a reason for the mismatch. 
+SC-05 
+Tap “Xác nhận kiểm kho” 
+Submit count result for manager review/approval. 
+SC-05 
+Invalid quantity 
+Block confirmation and show validation messages. 
+NAC 
+Mockup
+
+4.17 — Mobile QR Scanner 
+Page ID
+P-QR-M 
+Screen name
+Mobile QR Scanner 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4526&m=dev
+SRS Feature
+FT-08 
+SRS Scenario
+SC-02, SC-04, SC-05 
+Roles with access
+Warehouse Staff , Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Scanning — default 
+The camera is open and ready to scan QR. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4526&m=dev
+Scan Success 
+QR code is detected and matched successfully. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-1438&m=dev
+Invalid QR 
+QR code is unreadable or not related to current workflow. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-1555&m=dev
+Camera Permission Denied 
+The user has not allowed camera access. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-1651&m=dev
+Offline Validation 
+QR is scanned but server validation is unavailable. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-1745&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Top scanner controls │
+│ Flashlight | Camera switch │
+├─────────────────────────────────────┤
+│ Zone B: Camera preview │
+│ QR scan target frame │
+├─────────────────────────────────────┤
+│ Zone C: Scan guidance │
+│ Instruction text │
+├─────────────────────────────────────┤
+│ Zone D: Scan action / fallback │
+│ [Quét ngay] | Manual input/gallery │
+├─────────────────────────────────────┤
+│ Zone E: Bottom navigation │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Provides scanner controls such as flashlight and camera switching.
+• Zone B: Shows live camera preview with QR target box.
+• Zone C: Gives short instruction for scanning.
+• Zone D: Contains scan button and fallback input options.
+• Zone E: Keeps mobile navigation visible. 
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Point camera at QR 
+System scans and validates QR code. 
+FT-08 
+Tập “Quét ngay” 
+Trigger QR scanning manually. 
+FT-08 
+Tap flashlight 
+Turn device flash on/off. 
+Mobile control 
+Invalid QR scanned 
+Show error and allow re-scan. 
+NAC 
+
+Mockup
+
+4.18 — Mobile Inventory Statistics 
+Page ID
+P-07M 
+Screen name
+Mobile Inventory Statistics 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4629&m=dev
+SRS Feature
+FT-04, FT-11 
+SRS Scenario
+SC-06
+Roles with access
+Warehouse Staff, Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+Statistic cards and charts are loading. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-1844&m=dev
+Populated — default 
+KPI cards, charts, and top product list are displayed. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4629&m=dev
+No Data 
+The selected period has no warehouse activity. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-1950&m=dev
+Filtered 
+The user changes the warehouse or time period filter. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-2059&m=dev
+Error 
+Statistic data cannot be loaded. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-2279&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Header │
+│ Thống kê kho + warehouse/time info │
+├─────────────────────────────────────┤
+│ Zone B: KPI cards │
+│ Nhập kho | Xuất kho | Tồn kho │
+├─────────────────────────────────────┤
+│ Zone C: Weekly chart │
+│ Inbound/outbound bar chart │
+├─────────────────────────────────────┤
+│ Zone D: Top product list │
+│ Product name + movement quantity │
+├─────────────────────────────────────┤
+│ Zone E: Bottom navigation │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows the statistics page title and selected reporting context.
+• Zone B: Displays key warehouse metrics such as inbound, outbound, and stock level.
+• Zone C: Shows weekly warehouse activity in chart format.
+• Zone D: Lists top products by inbound/outbound movement.
+• Zone E: Provides persistent mobile navigation. 
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Review KPI cards 
+The user checks key warehouse performance quickly. 
+SC-06 
+View chart 
+The user understands the inbound/outbound trend. 
+SC-06 
+Review top products 
+Users identify products with high stock movement. 
+SC-06 
+Pull to refresh 
+Reload latest statistical data. 
+Mobile 
+No data returned 
+Show empty state and keep selected filter. 
+NAC 
+Mockup
+
+4.19 — Mobile Operation History
+Page ID
+P-HIS-M 
+Screen name
+Mobile Operation History 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4824&m=dev
+SRS Feature
+FT-11 
+SRS Scenario
+SC-06 
+Roles with access
+Warehouse Staff, Manager
+ 
+
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+Operation history is loading. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-3081&m=dev
+Populated — default 
+Operation records are displayed. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4824&m=dev
+Empty 
+No operation history is available. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-3214&m=dev
+Error 
+History data cannot be loaded. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-3325&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Header │
+│ Lịch sử thao tác │
+├─────────────────────────────────────┤
+│ Zone B: History list │
+│ Operation cards with icon, type, │
+│ product, quantity, and timestamp │
+├─────────────────────────────────────┤
+│ Zone C: Bottom navigation │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows the page title.• Zone B: Displays operation history as vertical cards. Each card includes operation type, product, document code, quantity, and timestamp.• Zone C: Provides persistent mobile navigation.
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Scroll history list 
+Load and view older operation records. 
+SC-06
+Tap a history card 
+Open related transaction/document details if available. 
+SC-06
+Pull to refresh 
+Reload latest operation history. 
+Mobile 
+Data load fails 
+Show error state with retry option. 
+NAC 
+Mockup
+
+4.20 — Mobile Notifications
+Page ID
+P-NOTI-M 
+Screen name
+Mobile Notifications 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4984&m=dev
+SRS Feature
+FT-03, FT-12 
+SRS Scenario
+SC-06, SC-07 
+Roles with access
+Warehouse Staff, Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+The notification list is loading. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-2391&m=dev
+Populated — default 
+Notifications are displayed by category/status. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4984&m=dev
+Empty 
+No notifications are available. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-2537&m=dev
+Read / Processed 
+Notification has already been viewed or handled. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-2648&m=dev
+Error 
+Notification data cannot be loaded. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-2829&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Header │
+│ Thông báo + read all action │
+├─────────────────────────────────────┤
+│ Zone B: Filter tabs │
+│ Tất cả | Chưa đọc | Cảnh báo │
+├─────────────────────────────────────┤
+│ Zone C: Notification list │
+│ Alert cards with icon, title, │
+│ description, timestamp, status │
+├─────────────────────────────────────┤
+│ Zone D: Bottom navigation │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Shows notification page title and optional read-all action.
+• Zone B: Allows users to filter notifications by all, unread, or warning types.
+• Zone C: Displays notification cards with severity icon, message, time, and unread indicator.
+• Zone D: Provides persistent bottom navigation. 
+ 
+
+Key Interactions
+User Action
+What Happens
+Notes
+Tap filter tab 
+Notification list updates by selected category. 
+SC-07 
+Tap notification card 
+Open notification detail or related workflow. 
+SC-07 
+Mark as read 
+Remove the unread indicator. 
+SC-07 
+Pull to refresh 
+Reload latest notifications. 
+Mobile 
+Notification load fails 
+Show error state with retry action. 
+NAC 
+Mockup
+
+4.21 — Mobile Profile Settings 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+Account information is loading. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-3435&m=dev
+Populated — default 
+Profile, statistics, and settings are visible. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-5132&m=dev
+Update Success 
+The user setting is saved successfully. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-3654&m=dev
+Error 
+Profile or setting update fails. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=109-3890&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Profile header │
+│ Avatar, name, role, email │
+├─────────────────────────────────────┤
+│ Zone B: User activity summary │
+│ Inbound count | Outbound count │
+│ Cycle count activity │
+├─────────────────────────────────────┤
+│ Zone C: Assigned warehouse │
+│ Current warehouse / working area │
+├─────────────────────────────────────┤
+│ Zone D: Settings list │
+│ Notification | Dark mode | Language │
+├─────────────────────────────────────┤
+│ Zone E: Account actions │
+│ Change password | Help | Logout │
+├─────────────────────────────────────┤
+│ Zone F: Bottom navigation │
+└─────────────────────────────────────┘
+
+ 
+Zone descriptions:
+• Zone A: Displays user avatar, name, email, and role.
+• Zone B: Summarizes personal warehouse operation activity.
+• Zone C: Shows assigned warehouse or working location.
+• Zone D: Lists personal settings such as notification, dark mode, and language.
+• Zone E: Provides account-level actions such as change password, help, and logout.
+• Zone F: Provides persistent bottom navigation. 
+ 
+Key Interactions
+User Action
+What Happens
+Notes
+Toggle notification setting 
+Enable or disable mobile notifications. 
+User setting 
+Toggle dark mode 
+Change app display mode. 
+User setting 
+Tap change password 
+Navigate to the password update screen. 
+SC-08
+Tap help/support 
+Open support information. 
+Optional 
+Tap logout 
+End session and return to Mobile Login. 
+SC-08
+
+Mockup
+
+4.22 — Mobile Return 
+Page ID
+P-RET-M 
+Screen name
+Mobile Return 
+Design file
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=118-59&m=dev
+SRS Feature
+FT-01,FT-07, FT-08,FT-11, FT-16
+SRS Scenario
+SC-11, SC-12 
+Roles with access
+Staff, Manager
+ 
+Screen States
+State
+When It Appears
+Design File Frame
+Loading 
+Return document or returned item data is being loaded. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=118-209&m=dev
+Inputting — default 
+Warehouse Staff reviews return document information and enters returned quantity. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=118-59&m=dev
+QR Validation 
+Warehouse Staff scans returned product QR before accepting the item. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=118-311&m=dev
+Return Routing 
+The system suggests return handling results such as restock, damage, inspection, or reject. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=118-474&m=dev
+Error 
+Returned item, QR, quantity, or return condition is invalid. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=118-614&m=dev
+Success 
+Return transaction is confirmed successfully. 
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=120-725&m=dev
+ 
+Layout Description
+Layout zones┌─────────────────────────────────────┐
+│ Zone A: Header + return status │
+│ Hoàn trả hàng + status badge │
+├─────────────────────────────────────┤
+│ Zone B: Return document information │
+│ Return No, Customer, Order No, Date │
+├─────────────────────────────────────┤
+│ Zone C: Returned product detail │
+│ SKU, Product, Expected Qty, Actual │
+├─────────────────────────────────────┤
+│ Zone D: QR scan + condition result │
+│ QR status, item condition, routing │
+├─────────────────────────────────────┤
+│ Zone E: Note / evidence input │ 
+│ Return reason, damage note, photo │
+├─────────────────────────────────────┤
+│ Zone F: Primary action │
+│ [Xác nhận hoàn trả] │
+├─────────────────────────────────────┤
+│ Zone G: Bottom navigation │
+└─────────────────────────────────────┘ 
+
+ 
+Zone descriptions:
+• Zone A: Shows the screen title, current return status, and back navigation.• Zone B: Displays return document information such as return number, customer, original order number, and return date.• Zone C: Shows returned product information including SKU, product name, expected quantity, actual returned quantity, and warehouse location.• Zone D: Allows staff to scan QR and review the system’s return routing suggestion such as restock, damage, inspection, or reject.• Zone E: Captures return reason, staff note, damage explanation, and optional photo evidence.• Zone F: Confirms the return transaction after validation.• Zone G: Provides persistent bottom navigation for mobile workflow.
+Key Interactions
+User Action
+What Happens
+Notes
+Open return document 
+System loads return documents and related product lines. 
+SC-04 
+Scan product QR 
+The system validates the returned product against the return document. 
+FT-08 
+Wrong QR scanned 
+Show error and request correct returned item. 
+NAC 
+Enter returned quantity 
+The system validates the actual returned quantity against the expected quantity. 
+SC-04 
+Select item condition 
+The user chooses Restock, Damaged, Inspection, or Reject. 
+Return workflow 
+Add return note / evidence 
+Staff records reason or damage evidence for audit trail. 
+FT-11 
+Tap “Xác nhận hoàn trả” 
+The system confirms return and records return transaction history. 
+AC 
+Return accepted for restock 
+Inventory is increased or items are moved to available stock. 
+SC-06 
+Return marked damaged / inspection 
+Item is routed to hold/inspection instead of available stock. 
+Return workflow 
+Confirmation success 
+Show success screen and update operation history. 
+FT-11 
+
+Mockup
+
+Part 5 — Responsive & Accessibility Rules
+5.1 — Navigation 
+
+Breakpoint
+Angular Web Admin Behaviour
+Desktop (>= 1025px)
+Use a fixed left sidebar of approximately 260px and a sticky top bar. Menu icons, labels, nested groups, notification button, global search, and user menu are visible. Main content uses the remaining width with a maximum content width on wide screens.
+Tablet (768-1024px)
+Use compact navigation. The sidebar may collapse to icon-only or become a drawer depending on available width. The top bar remains sticky; search can shrink into an icon/button if space is limited. Nested menus keep the same permission-based visibility.
+Mobile (< 768px)
+Hide the desktop sidebar. A hamburger button opens an overlay drawer. The top bar should show only the menu button, page title or brand, notification action, and user menu. Avoid placing full admin tables as the main mobile pattern.
+5.2 Content Layout
+
+Breakpoint
+Layout Behaviour
+Examples in StockLite
+Desktop
+Use 12-column layouts, multi-column card grids, full-width data tables, side-by-side filters, and modal forms where appropriate. Dashboard and report screens can use 2-3 column KPI/card groups.
+Dashboard KPI cards; Products & SKUs tables; Inbound / Outbound document lists; Reports & Analytics charts; Users and Warehouse management.
+Tablet
+Use 8-column layouts. Reduce dense grids to two columns. Move long filter sets into two-row toolbars or collapsible filter panels. Preserve important status badges and action buttons.
+Inventory monitoring, Alerts, Product search/filter panels, Stocktake overview, and IoT status cards.
+Mobile web
+Use a single-column layout. Full-width form fields, stacked cards, compact headings, and sticky primary actions. Avoid exposing dense admin-only tables unless horizontal scrolling is explicitly selected.
+Operational summaries, simple lookup/detail pages, and notification/profile screens.
+Flutter Mobile
+Use task-first single-column screens. Prioritize the current document, scan result, quantity/weight input, discrepancy status, and next action. Secondary data is moved to expandable details or a separate detail page.
+Mobile Inbound, Mobile Outbound, Mobile Cycle Count, Mobile QR Scanner, Mobile Product Information, and Mobile Operation History.
+Wide desktop (> 1440px)
+Keep content readable by limiting the main content width and increasing gutters rather than stretching every card/table across the full screen.
+Dashboard, reports, and admin management screens use max content width while tables can still use available width when needed.
+
+5.3 Data Tables
+
+Table / List Type
+Desktop and Tablet Pattern
+Mobile Pattern
+Required Visible Fields on Mobile
+Dashboard KPI and alert lists
+Grid cards and compact lists; no horizontal table required unless drilling into detail.
+Card reflow.
+KPI name, value, trend/status, alert severity, and primary action.
+Products, Categories, Suppliers, ProductVariant/SKU
+Full table with search, filters, status, and row actions. The tablet may scroll horizontally.
+Card reflow for lookup; admin-heavy editing can open a detail page or full-screen form.
+SKU/product name, code, category, status, QR/scan action, and primary row action.
+Inbound Documents
+Full table with document code, supplier, expected quantity, received quantity, status, date, and actions.
+Task cards.
+Document code, supplier/source, status, pending quantity, assigned warehouse/location, and Receive/Continue action.
+Outbound Documents
+Full table with outbound code, customer/order reference, pick status, pack status, dispatch status, and actions.
+Task cards.
+Outbound code, status, picking progress, priority/date, and Pick/Pack action.
+Stocktake / Cycle Count
+Full table with session, scope, expected count, counted quantity, discrepancy, status, and approval action.
+Task cards.
+Session code, location/SKU scope, count status, discrepancy flag, and Count/Submit action.
+Inventory Transaction History / Audit Trail
+Horizontal scroll is allowed because many traceability columns may be required.
+Read-only cards with expandable metadata or detailed navigation.
+Transaction type, SKU, quantity change, location, timestamp, and user/device.
+Users, Roles, Menus, Permissions
+Full table and matrix views remain web-admin focused.
+Do not force full permission matrix onto mobile; show read-only summary or redirect to web admin when editing is required.
+User name, role, status, last activity, and permitted action if available.
+
+5.4 Typography Scaling 
+Breakpoint
+Heading Adjustment
+Body / Label Rule
+StockLite Notes
+Desktop
+Use the full type scale defined in Part 1.3.
+body-md 14px, label-md 13px, badge-sm 11-12px, mono-code 13px.
+Suitable for dashboard, reports, and management tables.
+Tablet
+heading-1 reduces to heading-2 size where page width is constrained. heading-2 and heading-3 remain readable and may wrap.
+Body, label, badge, and code sizes remain unchanged.
+Avoid reducing table text below the defined body-md size; use scroll or card reflow instead.
+Mobile
+heading-1 becomes approximately 24px; heading-2 becomes approximately 20px; heading-3 becomes approximately 16-18px.
+Body text remains 14px. Helper text may use body-sm but must not replace primary values. Buttons remain at least 14px and semibold.
+SKU codes, QR values, document codes, quantity, weight, and discrepancy messages must remain readable during warehouse operations.
+5.5 Forms, Filters, and Modals 
+
+Area
+Desktop
+Tablet
+Mobile / Flutter
+Search and filters
+Inline search bar and advanced filter row above the table.
+Filters may wrap into two rows or collapse into a filter panel.
+Use a filter drawer or separate filter screen. Keep Clear and Apply actions sticky at the bottom.
+Create / Edit forms
+Use one or two columns depending on field complexity. Related fields can sit side by side.
+Use one or two columns; priority fields stay above the fold.
+Use a single-column form. Every field is full width. Keep Save/Confirm action visible at the bottom.
+Bulk actions
+The bulk action toolbar appears above the table after rows are selected.
+The toolbar can become compact with icon + label actions.
+Avoid complex bulk actions on mobile unless the task is operationally required. Use confirmation pages for irreversible changes.
+Modals
+Use small, medium, or large modal widths depending on content.
+Use medium/full-width modal when content is dense.
+Use full-screen modal, bottom sheet, or dedicated page. Do not squeeze large forms into small dialogs.
+Primary actions
+Top-right page action or row-level action depending on context.
+Top-right or sticky bottom action when the form is long.
+Sticky bottom primary action, especially for scan/confirm workflows.
+
+5.6 Mobile Operational Workflow Rules
+Rule
+Specification
+Scan-first layout
+Mobile receiving, picking, packing, and stocktake screens must place QR scanning or scan results near the top of the workflow. The next required action must be visually obvious.
+Weight and quantity visibility
+Received quantity, picked quantity, IoT weight, tolerance status, and discrepancy state must remain visible before confirmation.
+Bottom safe-area action
+Primary operational buttons such as Scan, Confirm Receiving, Confirm Pick, Confirm Pack, Submit Count, and Retry Validation should be placed near the bottom safe area and remain reachable with one hand.
+Offline or weak network
+Show connection status and retry options for server validation. Do not silently discard scan, weight, or count input.
+Task card priority
+Mobile task cards show code, status, priority/date, assigned warehouse or location, progress, and the next action. Detailed metadata moves to a detailed view.
+5.7 Accessibility-Related Responsive Rules 
+Rule
+Specification
+Reason
+Touch targets
+All mobile interactive elements must use at least 44 x 44 px touch targets. Scan and confirm controls should be at least 48px high.
+Prevents missed taps during warehouse work and supports gloved or one-handed use.
+Status badges
+Document, stock, alert, and discrepancy status must use both colour and text. Icons may support the state but cannot be the only signal.
+Users must understand status even if colour perception or screen conditions are limited.
+Error visibility
+Validation errors appear inline near the field and may also appear as a toast for action-level failure. The system must not clear user input on validation failure.
+Users can correct the exact problem without repeating warehouse input.
+Loading states
+Data loading uses skeletons or spinners. Blocking actions disable the action button and show progress until the server responds.
+Prevents duplicate submissions and accidental stock movement.
+Focus and keyboard support
+Web admin screens keep logical focus order when columns collapse, filters move to a drawer, or dialogs become full-screen.
+Responsive layout must not break keyboard navigation or form completion.
+Readable codes and numbers
+SKU codes, document codes, quantity values, weight readings, and location codes must not be truncated without a tooltip/detail option.
+Warehouse decisions depend on exact identifiers and quantities.
+
+Appendix A — Screen Inventory Summary
+Page ID
+Screen Name 
+SRS Feature
+Flow(s) 
+Spec Section 
+Design Frame 
+Status 
+P-01
+Login / Sign In
+FT-05
+F-01
+4.01
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4&m=dev
+Draft
+P-02
+Dashboard
+FT-01, FT-03, FT-04, FT-12
+F-01, F-08
+4.02
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-44&m=dev
+Draft
+P-03
+Products
+FT-06, FT-15
+F-02
+4.03
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-494&m=dev
+Draft
+P-04
+Inbound Documents
+FT-02, FT-07, FT-09, FT-11
+F-05
+4.04
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-960&m=dev
+Draft
+P-05
+Outbound Documents
+FT-02, FT-07, FT-09, FT-11
+F-06
+4.05
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1248&m=dev
+Draft
+P-06
+Stocktake / Cycle Count
+FT-10, FT-11
+F-07
+4.06
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1536&m=dev
+Draft
+P-07
+Warehouse
+FT-14
+F-05, F-08
+4.07
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-1815&m=dev
+Draft
+P-08
+Reports & Analytics
+FT-04, FT-11
+F-08
+4.08
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-2281&m=dev
+Draft
+P-09
+Alerts & Warnings
+FT-03, FT-12
+F-08
+4.09
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-2760&m=dev
+Draft
+P-10
+Return Documents 
+FT-16, FT-01, FT-07, FT-08, FT-11, FT-15 
+F-09
+4.10
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=199-31&m=dev
+Draft
+P-11
+Users
+FT-05
+F-03
+4.11
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3145&m=dev
+Draft
+P-00M
+Mobile Login
+FT-05
+F-01
+4.11
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3641&m=dev
+Draft
+P-01M
+Mobile Home
+FT-01, FT-02, FT-10
+F-01, F-05, F-06, F-07
+4.12
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3707&m=dev
+Draft
+P-04M
+Mobile Inbound
+FT-02, FT-09, FT-11
+F-05
+4.13
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3894&m=dev
+Draft
+P-05M
+Mobile Outbound
+FT-02, FT-08, FT-11
+F-06
+4.14
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4194&m=dev
+Draft
+P-06M
+Mobile Cycle Count
+FT-10, FT-11
+F-07
+4.15
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=105-851&m=dev
+Draft
+P-QR-M
+Mobile QR Scanner
+FT-08
+F-05, F-06, F-07
+4.16
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4526&m=dev
+Draft
+P-07M
+Mobile Inventory Statistics
+FT-04, FT-11
+F-04, F-08
+4.17
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4629&m=dev
+Draft
+P-HIS-M
+Mobile Operation History
+FT-11
+F-04
+4.18
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-4824&m=dev
+Draft
+P-PROD-M
+Mobile Product Information
+FT-06, FT-08
+F-02, F-04
+4.19
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-3992&m=dev
+Draft
+P-ACC-M
+Mobile Profile Settings
+FT-05
+F-01
+4.20
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=1-5132&m=dev
+Draft
+P-RET-M
+Mobile Return 
+FT-16, FT-08, FT-11
+F-09
+4.21
+https://www.figma.com/design/G44mcZzX9BhwYuSqBu7Dny/WMS-giao-di%E1%BB%87n?node-id=118-59&m=dev
+Draft
+ 
+ 
+
