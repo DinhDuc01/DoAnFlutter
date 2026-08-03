@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 
+/// Thanh điều hướng phía dưới cùng dành cho màn hình lịch sử hoạt động (Operation History Bottom Bar).
 class OperationHistoryBottomBar extends StatelessWidget {
+  /// Khởi tạo [OperationHistoryBottomBar].
   const OperationHistoryBottomBar({super.key});
 
   @override

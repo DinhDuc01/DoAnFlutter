@@ -3,16 +3,21 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/warehouse_report.dart';
 
-class TopInboundProductsCard extends StatelessWidget {
-  const TopInboundProductsCard({
+/// Thẻ hiển thị các sản phẩm nhập kho nhiều nhất (Top Inbound Products Card).
+/// Sử dụng biểu đồ thanh tiến trình LinearProgressIndicator để mô phỏng tương quan số lượng giữa các sản phẩm.
+class TopThuMuaProductsCard extends StatelessWidget {
+  /// Khởi tạo [TopThuMuaProductsCard] nhận danh sách sản phẩm nhập nhiều nhất.
+  const TopThuMuaProductsCard({
     required this.products,
     super.key,
   });
 
-  final List<TopInboundProduct> products;
+  /// Danh sách sản phẩm nhập nhiều nhất.
+  final List<TopThuMuaProduct> products;
 
   @override
   Widget build(BuildContext context) {
+    // Tính toán lượng nhập lớn nhất để làm mốc tỷ lệ 100% cho thanh tiến trình
     final maxQuantity = products.fold<int>(
       1,
       (max, product) => product.quantity > max ? product.quantity : max,
@@ -21,17 +26,17 @@ class TopInboundProductsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surfaceFor(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Sản phẩm nhập nhiều nhất',
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryFor(context),
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -49,13 +54,17 @@ class TopInboundProductsCard extends StatelessWidget {
   }
 }
 
+/// Widget hiển thị thông tin sản phẩm và một thanh tiến trình tương ứng tỉ lệ nhập hàng.
 class _ProductProgressRow extends StatelessWidget {
   const _ProductProgressRow({
     required this.product,
     required this.maxQuantity,
   });
 
-  final TopInboundProduct product;
+  /// Thông tin sản phẩm.
+  final TopThuMuaProduct product;
+
+  /// Giá trị sản phẩm có lượng nhập nhiều nhất.
   final int maxQuantity;
 
   @override
@@ -72,8 +81,8 @@ class _ProductProgressRow extends StatelessWidget {
                 product.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: AppColors.textPrimaryFor(context),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -88,6 +97,7 @@ class _ProductProgressRow extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
+        // Thanh tiến trình ngang mô phỏng tỷ lệ nhập hàng
         ClipRRect(
           borderRadius: BorderRadius.circular(999),
           child: LinearProgressIndicator(

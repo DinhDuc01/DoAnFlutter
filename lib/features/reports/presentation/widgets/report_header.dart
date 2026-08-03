@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../../models/warehouse_report.dart';
 
+/// Widget Header cho màn hình thống kê báo cáo kho hàng (Report Header).
+/// Hiển thị tiêu đề, tên kho hàng và khoảng thời gian báo cáo với dải màu gradient xanh dương.
 class ReportHeader extends StatelessWidget {
+  /// Khởi tạo [ReportHeader] nhận thông tin báo cáo kho.
   const ReportHeader({
     required this.report,
     super.key,
   });
 
+  /// Thông tin báo cáo kho hàng.
   final WarehouseReport report;
 
   @override
@@ -37,6 +41,7 @@ class ReportHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
+          // Tiêu đề chính của header
           const Text(
             'Tổng quan hoạt động',
             style: TextStyle(
@@ -46,6 +51,7 @@ class ReportHeader extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
+          // Tên kho và chu kỳ báo cáo
           Text(
             '${report.warehouseName} — ${report.periodLabel}',
             style: const TextStyle(

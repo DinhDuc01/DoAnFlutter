@@ -14,7 +14,7 @@ class StockLiteApp extends StatelessWidget {
       valueListenable: ThemeController.mode,
       builder: (context, themeMode, _) {
         return MaterialApp(
-          title: 'StockLite',
+          title: 'Tuấn Mây Mobile',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,

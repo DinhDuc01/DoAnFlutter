@@ -77,7 +77,8 @@ Danh sách route:
 | `/history` | Lịch sử thao tác | Có UI |
 | `/notifications` | Thông báo | Có UI |
 | `/account` | Tài khoản | Có UI |
-| `/products/detail` | Thông tin sản phẩm | Placeholder |
+ | `/products/detail` | Thông tin sản phẩm | Placeholder |
+ | `/xay-xat` | Hoàn tất xay và đóng bao | Có UI đầy đủ, repository mock |
 
 ## 3. Test kỹ thuật bắt buộc
 
@@ -197,6 +198,7 @@ Test cases:
 | HOME-04 | Action Nhập kho | Điều hướng `/inbound` |
 | HOME-05 | Action Xuất kho | Điều hướng `/outbound` |
 | HOME-06 | Action Kiểm kho | Điều hướng `/inventory` |
+| HOME-06A | Action Xay xát | Điều hướng `/xay-xat`, không mở nhầm tab Kho |
 | HOME-07 | Action Quét QR | Điều hướng `/scan-qr` |
 | HOME-08 | Action Thống kê | Điều hướng `/reports` placeholder |
 | HOME-09 | Action Lịch sử | Điều hướng `/history` |
@@ -211,7 +213,7 @@ UI cần kiểm:
 - Recent activity card không overflow.
 - Bottom nav không che nội dung.
 
-## 7. Inbound / Nhập kho
+ ## 7. Inbound / Nhập kho
 
 Source:
 

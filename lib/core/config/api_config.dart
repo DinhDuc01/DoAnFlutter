@@ -1,10 +1,11 @@
+/// Cau hinh ket noi API.
 class ApiConfig {
   const ApiConfig._();
 
-  // Android emulator maps host machine localhost to 10.0.2.2.
-  // For a physical phone, override this with your machine LAN IP.
+  /// Co the override khi chay app:
+  /// flutter run --dart-define=API_BASE_URL=https://your-api-url
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://10.0.2.2:7260',
+    defaultValue: 'https://backend-do-an-api-new.onrender.com',
   );
 }

@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/theme/app_colors.dart';
 import '../../models/app_notification.dart';
 
+/// Thẻ hiển thị một thông báo riêng lẻ (Notifications Card).
+/// Hỗ trợ hiển thị chấm chưa đọc, nội dung thông báo, khoảng thời gian gửi và nút tắt thông báo.
 class NotificationsCard extends StatelessWidget {
+  /// Khởi tạo [NotificationsCard] nhận thông tin thông báo và sự kiện khi đóng.
   const NotificationsCard({
     required this.notification,
     required this.onDismissed,
     super.key,
   });
 
+  /// Đối tượng chứa thông tin của thông báo.
   final AppNotification notification;
+
+  /// Callback kích hoạt khi nhấn nút đóng "X" thông báo.
   final VoidCallback onDismissed;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colorScheme.outlineVariant),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -32,6 +39,7 @@ class NotificationsCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Icon đại diện bên trái kèm màu sắc đặc trưng
           Container(
             width: 38,
             height: 38,
@@ -46,6 +54,7 @@ class NotificationsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+          // Phần nội dung thông báo chính
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -57,13 +66,14 @@ class NotificationsCard extends StatelessWidget {
                         notification.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                        style: TextStyle(
+                          color: colorScheme.onSurface,
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
+                    // Chấm nhỏ báo hiệu thông báo chưa đọc
                     if (!notification.isRead)
                       Container(
                         width: 7,
@@ -80,16 +90,16 @@ class NotificationsCard extends StatelessWidget {
                   notification.message,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant,
                     fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   notification.timeAgo,
-                  style: const TextStyle(
-                    color: Color(0xFF9CA3AF),
+                  style: TextStyle(
+                    color: colorScheme.onSurfaceVariant.withValues(alpha: 0.75),
                     fontSize: 12,
                   ),
                 ),
@@ -97,14 +107,15 @@ class NotificationsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
+          // Nút bấm "X" để tắt / ẩn thông báo
           InkWell(
             onTap: onDismissed,
             borderRadius: BorderRadius.circular(999),
-            child: const Padding(
-              padding: EdgeInsets.all(4),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
               child: Icon(
                 Icons.close,
-                color: Color(0xFFD1D5DB),
+                color: colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
                 size: 16,
               ),
             ),

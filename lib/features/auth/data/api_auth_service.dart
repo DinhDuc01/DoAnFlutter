@@ -1,126 +1,89 @@
-import 'dart:convert';
-import 'dart:io';
-
-import '../../../core/config/api_config.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/json_reader.dart';
 import '../models/auth_session.dart';
 import 'auth_service.dart';
 
+/// Lớp hiện thực (Implementation) của [AuthService] sử dụng REST API thực tế để đăng nhập.
 class ApiAuthService implements AuthService {
   ApiAuthService({
-    HttpClient? httpClient,
-    this.baseUrl = ApiConfig.baseUrl,
-  }) : _httpClient = httpClient ?? _createHttpClient();
+    ApiClient? apiClient,
+  }) : _apiClient = apiClient ?? ApiClient();
 
-  final HttpClient _httpClient;
-  final String baseUrl;
+  final ApiClient _apiClient;
+
+  Future<void> logout(AuthSession session) async {
+    final json = await _apiClient.post(
+      '/api/v1/auth/logout',
+      token: session.accessToken,
+      body: {'refreshToken': session.refreshToken},
+    );
+    if (JsonReader.boolean(json, 'isSucceeded') == false) {
+      throw AuthException(
+        JsonReader.string(json, 'message') ?? 'Đăng xuất thất bại',
+      );
+    }
+  }
 
   @override
   Future<AuthSession> login({
     required String email,
     required String password,
   }) async {
+    // Kiểm tra dữ liệu đầu vào cơ bản
     if (email.trim().isEmpty || password.isEmpty) {
       throw const AuthException('Vui lòng nhập tài khoản và mật khẩu');
     }
 
     try {
-      final uri = Uri.parse('$baseUrl/api/v1/auth/login');
-      final request = await _httpClient.postUrl(uri);
-      request.headers.contentType = ContentType.json;
-      request.headers.set(HttpHeaders.acceptHeader, ContentType.json.mimeType);
-      request.write(
-        jsonEncode({
-          'Username': email.trim(),
-          'Password': password,
-        }),
+      // Backend nhận username/password và trả accessToken + userInfo.
+      final json = await _apiClient.post(
+        '/api/v1/auth/login', // Điểm cuối (endpoint) API đăng nhập
+        body: {
+          'username': email.trim(),
+          'password': password,
+        },
       );
 
-      final response = await request.close();
-      final body = await response.transform(utf8.decoder).join();
-      final decoded = jsonDecode(body);
-
-      if (decoded is! Map<String, dynamic>) {
-        throw const AuthException('Phản hồi đăng nhập không hợp lệ');
-      }
-
-      final isSucceeded = _readBool(decoded, 'isSucceeded') ?? response.statusCode == 200;
-      if (!isSucceeded || response.statusCode < 200 || response.statusCode >= 300) {
+      // Đọc cờ trạng thái từ JSON phản hồi
+      final isSucceeded = JsonReader.boolean(json, 'isSucceeded') ?? false;
+      if (!isSucceeded) {
         throw AuthException(
-          _readString(decoded, 'message') ?? 'Đăng nhập thất bại',
+          JsonReader.string(json, 'message') ?? 'Đăng nhập thất bại',
         );
       }
 
-      final resources = _readMap(decoded, 'resources');
+      // Đọc thông tin tài nguyên (resources) trả về
+      final resources = JsonReader.map(json, 'resources');
       if (resources == null) {
-        throw const AuthException('API đăng nhập không trả về dữ liệu phiên');
+        throw const AuthException('API đăng nhập không trả dữ liệu phiên');
       }
 
-      final userInfo = _readMap(resources, 'userInfo');
+      // Đọc thông tin chi tiết người dùng (userInfo)
+      final userInfo = JsonReader.map(resources, 'userInfo');
       if (userInfo == null) {
-        throw const AuthException('API đăng nhập không trả về thông tin người dùng');
+        throw const AuthException(
+            'API đăng nhập không trả thông tin người dùng');
       }
 
+      // Khởi tạo và trả về đối tượng AuthSession từ dữ liệu API đã parse thành công
       return AuthSession(
-        accessToken: _readString(resources, 'accessToken') ?? '',
-        refreshToken: _readString(resources, 'refreshToken') ?? '',
+        accessToken: JsonReader.string(resources, 'accessToken') ?? '',
+        refreshToken: JsonReader.string(resources, 'refreshToken') ?? '',
         user: AuthUser(
-          id: _readInt(userInfo, 'id') ?? 0,
-          fullName: _readString(userInfo, 'fullName') ?? '',
-          email: _readString(userInfo, 'email') ?? email.trim(),
-          avatarUrl: _readString(userInfo, 'avatarUrl'),
+          id: JsonReader.integer(userInfo, 'id') ?? 0,
+          fullName: JsonReader.string(userInfo, 'fullName') ?? '',
+          email: JsonReader.string(userInfo, 'email') ?? email.trim(),
+          avatarUrl: JsonReader.string(userInfo, 'avatarUrl'),
         ),
       );
     } on AuthException {
       rethrow;
-    } on SocketException {
-      throw AuthException('Không kết nối được API đăng nhập tại $baseUrl');
-    } on HandshakeException {
-      throw const AuthException('Chứng chỉ HTTPS local chưa được tin cậy');
-    } on FormatException {
-      throw const AuthException('API đăng nhập trả về JSON không hợp lệ');
-    } on HttpException catch (error) {
+    } on ApiException catch (error) {
+      // Chuyển tiếp lỗi phát sinh từ API client sang ngoại lệ AuthException
       throw AuthException(error.message);
     } catch (error) {
+      // Xử lý các lỗi hệ thống không xác định khác
       throw AuthException('Không đăng nhập được: $error');
     }
-  }
-
-  static HttpClient _createHttpClient() {
-    final client = HttpClient();
-    client.badCertificateCallback = (certificate, host, port) {
-      return (host == '10.0.2.2' || host == 'localhost' || host == '127.0.0.1') && port == 7260;
-    };
-    return client;
-  }
-
-  static Object? _readValue(Map<String, dynamic> json, String key) {
-    for (final entry in json.entries) {
-      if (entry.key.toLowerCase() == key.toLowerCase()) {
-        return entry.value;
-      }
-    }
-    return null;
-  }
-
-  static Map<String, dynamic>? _readMap(Map<String, dynamic> json, String key) {
-    final value = _readValue(json, key);
-    return value is Map<String, dynamic> ? value : null;
-  }
-
-  static String? _readString(Map<String, dynamic> json, String key) {
-    final value = _readValue(json, key);
-    return value is String ? value : null;
-  }
-
-  static int? _readInt(Map<String, dynamic> json, String key) {
-    final value = _readValue(json, key);
-    if (value is int) return value;
-    if (value is num) return value.toInt();
-    return null;
-  }
-
-  static bool? _readBool(Map<String, dynamic> json, String key) {
-    final value = _readValue(json, key);
-    return value is bool ? value : null;
   }
 }

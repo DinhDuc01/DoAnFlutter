@@ -1,0 +1,2108 @@
+﻿
+Software Requirements Specification
+Warehouse Management Application for SME E-Commerce Businesses
+ STOCKLITE - REPORT 3.0
+Project Name
+Warehouse Management Application for SME E-Commerce Businesses
+Vision & Scope Ref
+SU26_StockLite_Report1_Vision_Scope v1.1
+RTW Ref
+SU26_StockLite_Report3.1_RTW_v1.1.xlsx
+SRS Version
+v1.1.0
+Date Created
+03/06/2026
+Last Updated
+20/06/2026
+Author(s)
+SEP490-G60
+Reviewer(s)
+Tô Thanh Hải
+Status
+Approved
+
+Table Of Content
+ TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3,Heading 4,4,Heading 5,5,Heading 6,6,"Table Of Content2
+Document Change History4
+List of Figures5
+List of Table6
+Definition and Acronyms10
+Part 0 — Document Overview12
+Part 1 — System Overview12
+1.1 System Objective & Business Context12
+1.2 Technical Scope12
+1.3 System Roles14
+1.4 Glossary15
+1.5 Feature Traceability Bridge (V&S → SRS)15
+Part 2 — Scenario / Narrative16
+SC-01 - Configure product variants and QR labels16
+SC-02 - Create and approve inbound document18
+SC-03 - Receive inbound goods with QR and IoT verification20
+SC-04 - Store received goods using put-away suggestion22
+SC-05 - Pick, pack, and ship outbound goods23
+SC-06 - Perform cycle count and stock adjustment26
+SC-07 - Monitor real-time inventory, reports, and low-stock alerts28
+SC-08 - Review inbound bottleneck warning30
+SC-09 - Maintain warehouse locations and supplier master data31
+SC-10 - Manage users and permissions33
+SC-11 - Process customer / inbound returns35
+SC-12 - Process return-to-supplier37
+Scenario List39
+Part 3 — Feature Description40
+FT-01 - Real-Time Inventory Tracking40
+FT-02 - Inbound / Outbound Management with Approval40
+FT-03 - Low Stock Alerts41
+FT-04 - Inventory Reporting & Analytics42
+FT-05 - Role-Based Access Control42
+FT-06 - Product & Category Management43
+FT-07 - QR Warehouse Operations44
+FT-08 - Flutter Mobile Warehouse App44
+FT-09 - IoT Scale Verification45
+FT-10 - Stocktake & Inventory Adjustment46
+FT-11 - Inventory Transaction History47
+FT-12 - Rule-Based Inbound Bottleneck Warning47
+FT-13 - Put-away Location Suggestion48
+FT-14 - Warehouse & Location Management49
+FT-15 - Supplier Management50
+FT-16 - Returns Management (Reverse Logistics)50
+Part 4 — Data Requirements51
+4.1 Core Entities51
+1. User & Access Management52
+2. Product Catalog Management53
+3. Supply Chain Partners & Facilities53
+4. Inbound & Outbound Logistics53
+5. Inventory Control & Auditing54
+6. IoT Hardware Integration55
+7. Communications & Logs56
+8. System Configurations & Media56
+9. Return / Reverse Logistics Management56
+4.2 State Transitions58
+Part 5 — Business Rules Summary60
+Part 6 — Non-Functional Requirements63
+Appendices64
+Appendix A — RTW.xlsx Reference64
+Appendix B — Diagram Index65
+
+Document Change History
+Version
+Date
+Changes
+Author
+v1.0.0
+03/06/2026
+Initial SRS baseline for StockLite Report 3.
+LongTD/NhanDND
+v1.0.1
+14/06/2026
+Add information, context diagram, use case diagram, and activity diagram
+LongTD
+v1.1.0
+20/06/2026
+Fix name of role Admin to System Admin
+NhanDND
+
+List of Figures
+Figure No.
+Title
+Page
+Figure 1
+System Context Diagram - StockLite MVP Boundary
+7
+Figure 2
+High-Level Use Case Diagram
+8
+Figure 3
+Activity Diagram - SC-01 Configure product variants and QR labels
+11
+Figure 4
+Activity Diagram - SC-02 Create and approve inbound document
+12
+Figure 5
+Activity Diagram - SC-03 Receive inbound goods with QR and IoT verification
+14
+Figure 6
+Activity Diagram - SC-04 Store received goods using put-away suggestion
+16
+Figure 7
+Activity Diagram - SC-05 Pick, pack, and ship outbound goods
+17
+Figure 8
+Activity Diagram - SC-06 Perform cycle count and stock adjustment
+19
+Figure 9
+Activity Diagram - SC-07 Monitor real-time inventory, reports, and low-stock alerts
+21
+Figure 10
+Activity Diagram - SC-08 Review inbound bottleneck warning
+22
+Figure 11
+Activity Diagram - SC-09 Maintain warehouse locations and supplier master data
+23
+Figure 12
+Activity Diagram - SC-10 Manage users and permissions
+25
+Figure 13
+Activity Diagram - SC-11 Process customer / inbound returns
+27
+Figure 14
+Activity Diagram - SC-12 Process return-to-supplier
+28
+Figure 15
+Entity Relationship Diagram
+52
+
+List of Table
+
+Table No.
+Title
+Page
+Table 1
+Technical Scope
+9
+Table 2
+System Roles
+11
+Table 3
+Glossary
+12
+Table 4
+Feature Traceability Bridge (V&S to SRS)
+13
+Table 5
+SC-01 Scenario Details - Configure product variants and QR labels
+13
+Table 6
+SC-01 Key Exception / Alternate Flows - Configure product variants and QR labels
+14
+Table 7
+SC-02 Key Exception / Alternate Flows - Create and approve inbound document
+
+15
+Table 8
+SC-02 Scenario Details - Create and approve inbound document
+16
+Table 9
+SC-03 Scenario Details - Receive inbound goods with QR and IoT verification
+16
+Table 10
+SC-03 Key Exception / Alternate Flows - Receive inbound goods with QR and IoT verification
+18
+Table 11
+SC-04 Scenario Details - Store received goods using put-away suggestion
+19
+Table 12
+SC-04 Key Exception / Alternate Flows - Store received goods using put-away suggestion
+20
+Table 13
+SC-05 Scenario Details - Pick, pack, and ship outbound goods
+20
+Table 14
+SC-05 Key Exception / Alternate Flows - Pick, pack, and ship outbound goods
+22
+Table 15
+SC-06 Scenario Details - Perform cycle count and stock adjustment
+22
+Table 16
+SC-06 Key Exception / Alternate Flows - Perform cycle count and stock adjustment
+23
+Table 17
+SC-07 Scenario Details - Monitor real-time inventory, reports, and low-stock alerts
+24
+Table 18
+SC-07 Key Exception / Alternate Flows - Monitor real-time inventory, reports, and low-stock alerts
+25
+Table 19
+SC-08 Scenario Details - Review inbound bottleneck warning
+26
+Table 20
+SC-08 Key Exception / Alternate Flows - Review inbound bottleneck warning
+27
+Table 21
+SC-09 Scenario Details - Maintain warehouse locations and supplier master data
+27
+Table 22
+SC-09 Key Exception / Alternate Flows - Maintain warehouse locations and supplier master data
+28
+Table 23
+SC-10 Scenario Details - Manage users and permissions
+28
+Table 24
+SC-10 Key Exception / Alternate Flows - Manage users and permissions
+30
+Table 25
+SC-11 Scenario Details - Process customer / inbound returns
+30
+Table 26
+SC-11 Key Exception / Alternate Flows - Process customer / inbound returns
+31
+Table 27
+SC-12 Scenario Details - Process return-to-supplier
+32
+Table 28
+SC-12 Key Exception / Alternate Flows - Process return-to-supplier
+33
+Table 29
+Scenario List
+33
+Table 30
+FT-01 Feature Summary - Real-Time Inventory Tracking
+34
+Table 31
+FT-01 Acceptance / Negative / Boundary Criteria - Real-Time Inventory Tracking
+34
+Table 32
+FT-02 Feature Summary - Inbound / Outbound Management with Approval
+34
+Table 33
+FT-02 Acceptance / Negative / Boundary Criteria - Inbound / Outbound Management with Approval
+35
+Table 34
+FT-03 Feature Summary - Low Stock Alerts
+35
+Table 35
+FT-03 Acceptance / Negative / Boundary Criteria - Low Stock Alerts
+35
+Table 36
+FT-04 Feature Summary - Inventory Reporting & Analytics
+35
+Table 37
+FT-04 Acceptance / Negative / Boundary Criteria - Inventory Reporting & Analytics
+36
+Table 38
+FT-05 Feature Summary - Role-Based Access Control
+36
+Table 39
+FT-05 Acceptance / Negative / Boundary Criteria - Role-Based Access Control
+36
+Table 40
+FT-06 Feature Summary - Product & Category Management
+36
+Table 41
+FT-06 Acceptance / Negative / Boundary Criteria - Product & Category Management
+37
+Table 42
+FT-07 Feature Summary - QR Warehouse Operations
+37
+Table 43
+FT-07 Acceptance / Negative / Boundary Criteria - QR Warehouse Operations
+37
+Table 44
+FT-08 Feature Summary - Flutter Mobile Warehouse App
+38
+Table 45
+FT-08 Acceptance / Negative / Boundary Criteria - Flutter Mobile Warehouse App
+38
+Table 46
+FT-09 Feature Summary - IoT Scale Verification
+38
+Table 47
+FT-09 Acceptance / Negative / Boundary Criteria - IoT Scale Verification
+38
+Table 48
+FT-10 Feature Summary - Stocktake & Inventory Adjustment
+39
+Table 49
+FT-10 Acceptance / Negative / Boundary Criteria - Stocktake & Inventory Adjustment
+39
+Table 50
+FT-11 Feature Summary - Inventory Transaction History
+39
+Table 51
+FT-11 Acceptance / Negative / Boundary Criteria - Inventory Transaction History
+40
+Table 52
+FT-12 Feature Summary - Rule-Based Inbound Bottleneck Warning
+40
+Table 53
+FT-12 Acceptance / Negative / Boundary Criteria - Rule-Based Inbound Bottleneck Warning
+40
+Table 54
+FT-13 Feature Summary - Put-away Location Suggestion
+40
+Table 55
+FT-13 Acceptance / Negative / Boundary Criteria - Put-away Location Suggestion
+41
+Table 56
+FT-14 Feature Summary - Warehouse & Location Management
+41
+Table 57
+FT-14 Acceptance / Negative / Boundary Criteria - Warehouse & Location Management
+41
+Table 58
+FT-15 Feature Summary - Supplier Management
+42
+Table 59
+FT-15 Acceptance / Negative / Boundary Criteria - Supplier Management
+42
+Table 60
+FT-16 Feature Summary - Returns Management (Reverse Logistics)
+42
+Table 61
+FT-16 Acceptance / Negative / Boundary Criteria - Returns Management (Reverse Logistics)
+43
+Table 62
+Core Entities - User & Access Management
+45
+Table 63
+Core Entities - Product Catalog Management
+45
+Table 64
+Core Entities - Supply Chain Partners & Facilities
+46
+Table 65
+Core Entities - Inbound & Outbound Logistics
+46
+Table 66
+Core Entities - Inventory Control & Auditing
+47
+Table 67
+Core Entities - IoT Hardware Integration
+47
+Table 68
+Core Entities - Communications & Logs
+48
+Table 69
+Core Entities - System Configurations & Media
+48
+Table 70
+Core Entities - Return / Reverse Logistics Management
+49
+Table 71
+State Transitions
+50
+Table 72
+Business Rules Summary
+51
+Table 73
+Non-Functional Requirements
+52
+Table 74
+Appendix A - RTW.xlsx Reference
+53
+Table 75
+Appendix B - Diagram Index
+54
+
+Definition and Acronyms 
+Acronym
+Definition
+AC
+Acceptance Criterion
+AI
+Artificial Intelligence
+AP
+Accounts Payable
+API
+Application Programming Interface
+BCrypt
+Password hashing algorithm used for secure password storage
+BR
+Business Rule
+BV
+Boundary Value
+COD
+Cash on Delivery
+EF Core
+Entity Framework Core
+ESP32
+Espressif 32-bit microcontroller platform used for IoT scale integration
+FCM
+Firebase Cloud Messaging
+FE
+Feature code from Vision & Scope
+FEFO
+First Expired, First Out
+FIFO
+First In, First Out
+FT
+Feature code in the SRS
+ID
+Identifier
+IoT
+Internet of Things
+IP
+Internet Protocol
+JSON
+JavaScript Object Notation
+JTI
+JWT ID / unique token identifier
+JWT
+JSON Web Token
+ML
+Machine Learning
+MVP
+Minimum Viable Product
+NAC
+Negative Acceptance Criterion
+NFR
+Non-Functional Requirement
+OCR
+Optical Character Recognition
+OS
+Operating System
+PO
+Purchase Order
+QR
+Quick Response Code
+QC
+Quality Control
+RBAC
+Role-Based Access Control
+REST
+Representational State Transfer
+RTW
+Requirement Traceability Worksheet
+SC
+Scenario code
+SKU
+Stock Keeping Unit
+SME
+Small and Medium-sized Enterprise
+SMS
+Short Message Service
+SO
+Sales Order
+SRS
+Software Requirements Specification
+ST
+Stocktake
+UC
+Use Case
+UI
+User Interface
+URL
+Uniform Resource Locator
+V&S
+Vision & Scope
+WMS
+Warehouse Management System
+
+Part 0 — Document Overview
+This Software Requirements Specification defines StockLite requirements for Report 3. It translates the approved Vision & Scope and Project Plan baseline into system scenarios, activity diagrams, feature behaviour, data requirements, acceptance criteria, business rules, non-functional requirements and RTW traceability. The RTW workbook is the control artifact used to map features, use cases, scenarios, permissions, data entities, business rules, NFRs and tests.
+The document is limited to the MVP scope: one active warehouse per business account, Angular Web Admin, Flutter warehouse mobile app, .NET 8 Web API, QR-based warehouse execution, ESP32 scale verification, SignalR realtime updates, and rule-based decision support. Marketplace synchronization, accounting, payment, courier API integration, advanced AI/ML optimization, multi-warehouse transfer and financial return handling are outside MVP scope.
+Part 1 — System Overview
+1.1 System Objective & Business Context
+StockLite is a lightweight warehouse management system for Vietnamese SME e-commerce sellers. It replaces spreadsheet/chat/paper tracking with controlled inbound, outbound, stocktake, returns, QR scanning, IoT weight verification, inventory transaction logging, reporting, low-stock alerts, bottleneck warnings and put-away suggestions.
+1.2 Technical Scope
+Dimension
+In Technical Scope
+Notes
+Modules
+Authentication/RBAC, master data, product/category/ProductVariant, QR warehouse operations, inbound/outbound approval, inventory, stocktake, reports, alerts, IoT scale, warehouse/location, supplier, returns, bottleneck warning, put-away suggestion
+Single-warehouse MVP per account; multi-warehouse transfer is deferred.
+Integrations
+ESP32 IoT scale REST API, QR scanner/printer, SignalR realtime hub, optional notification provider
+IoT devices send weight only; business context is attached by workflow.
+Tech Stack
+.NET 8 Web API, Clean Architecture, EF Core, MySQL, Angular Web Admin, Flutter Mobile, SignalR, JWT/BCrypt
+Controllers must not contain business logic.
+Data Boundary
+Users, roles, products, ProductVariants, QR labels, warehouse locations, suppliers, inbound/outbound, returns, inventory, transactions, IoT logs, alerts, warnings, suggestions, audit logs
+Accounting, marketplace and courier data are excluded.
+ Table 1: Technical Scope
+
+Figure 1. System Context Diagram — StockLite MVP Boundary
+StockLite is a centralized smart warehouse management system (WMS) designed to digitalize, automate, and optimize the internal logistics and operational workflows of modern warehouses. This system replaces fragmented, manual inventory tracking with an integrated digital interface for managing multi-tier warehouse configurations, automated stocktakes, task assignments, and real-time operations. To optimize interactions and bridge the gap between digital management and physical operations, the system seamlessly integrates with third-party automation hardware and services. This includes IoT Scale Devices for automated weight-based validation, QR Printers for instant product/variant physical labeling, and an external Notification Service to dispatch real-time operational alerts and system notifications. The primary goal of StockLite is to provide an optimal management environment where warehouse managers can effectively plan capacity, monitor performance, and mitigate bottlenecks, while warehouse staff benefit from clear, automated step-by-step operational guidance.
+Interaction with External Entities:
+Warehouse Manager: Authenticated administrative users who hold high-level control over warehouse operations. They review system-generated inventory reports, handle pending approvals, analyze operational bottlenecks, assign staff to specific duties, and utilize analytics for warehouse capacity planning.
+Warehouse Staff: On-the-ground operational users who execute day-to-day warehouse tasks. They receive clear system instructions for material handling and supply feedback to the system by submitting real-time execution data such as picking, receiving, and physical stocktaking.
+System Admin: System administrators responsible for the platform's baseline configuration. They handle user provisioning, set up initial warehouse layouts, define operational system rules, and monitor system health via audit logs.
+IoT Scale Devices: External hardware components integrated into the warehouse infrastructure. They constantly feedback physical measurement data to the system and respond to remote operational commands or calibration protocols initiated by StockLite.
+QR Printer: External hardware peripherals utilized for physical labeling. The system triggers print jobs directly to these devices to generate tracking stickers for inventory tracking, while the printers report back job execution status or hardware errors.
+Notification Service: A third-party communication gateway or service infrastructure responsible for routing automated alerts (via Email, SMS, or Push notifications) to relevant stakeholders based on triggers set within StockLite.
+1.3 System Roles
+
+Role
+Access Level
+Primary Feature Areas
+System Admin / Business Owner
+Internal web
+All modules, tenant settings, users, roles, permissions, master data, approvals, reports and audit logs.
+Warehouse Manager
+Internal web
+Approval, inventory, inbound/outbound review, stocktake adjustment, warnings, put-away override, reports.
+Warehouse Staff
+Mobile / limited web
+Create documents, QR scan, receiving, put-away, picking, packing, stocktake, returns, IoT weight interaction.
+ESP32 IoT Scale
+API only
+Posts stable weight evidence and processes stored tare/reset/calibration commands.
+QR Printer / Scanner
+Peripheral
+Prints QR labels and scans labels during warehouse execution.
+ Table 2: System Roles
+
+Figure 2. High-Level Use Case Diagram
+
+1.4 Glossary
+Term
+Definition
+Used in
+ProductVariant
+Stocked/sellable SKU under a Product. SKU belongs to ProductVariant, not Product.
+FT-06, FT-08
+QR Label
+Encoded identifier for ProductVariant and optional lot/quantity context used for scan-based workflows.
+FT-07, FT-08
+IoT Weight Evidence
+Stable non-zero weight from ESP32 scale attached to receiving/packing for verification only.
+FT-09
+InventoryTransaction
+Immutable record of inbound, outbound, adjustment, or count correction movement.
+FT-01, FT-11
+Put-away Suggestion
+Rule-based recommended storage location for received goods.
+FT-13
+Bottleneck Warning
+Rule-based warning that planned inbound workload may exceed storage or labour capacity.
+FT-12
+ Table 3: Glossary
+1.5 Feature Traceability Bridge (V&S → SRS)
+V&S Feature
+Feature Name in V&S
+Maps to SRS
+Status
+FE-01
+Real-Time Inventory Tracking
+FT-01
+Specified
+FE-02
+Inbound / Outbound Management with Approval
+FT-02
+Specified
+FE-03
+Low Stock Alerts
+FT-03
+Specified
+FE-04
+Inventory Reporting & Analytics
+FT-04
+Specified
+FE-05
+Role-Based Access Control
+FT-05
+Specified
+FE-06
+Product & Category Management
+FT-06
+Specified
+FE-07
+QR Warehouse Operations
+FT-07
+Specified
+FE-08
+Flutter Mobile Warehouse App
+FT-08
+Specified
+FE-09
+IoT Scale Verification
+FT-09
+Specified
+FE-10
+Stocktake & Inventory Adjustment
+FT-10
+Specified
+FE-11
+Inventory Transaction History
+FT-11
+Specified
+FE-12
+Rule-Based Inbound Bottleneck Warning
+FT-12
+Specified
+FE-13
+Put-away Location Suggestion
+FT-13
+Specified
+FE-14
+Warehouse & Location Management
+FT-14
+Specified
+FE-15
+Supplier Management
+FT-15
+Specified
+FE-16
+Returns Management (Reverse Logistics)
+FT-16
+Specified
+ Table 4: Feature Traceability Bridge (V&S → SRS)
+Part 2 — Scenario / Narrative
+Each scenario below is expressed as a concise business narrative and an activity diagram. The diagram is the primary representation of the flow; the text table states actors, preconditions, postconditions and traceability links.
+SC-01 - Configure product variants and QR labels
+Field
+ Value
+Business Flow
+Configure SKU master data
+Primary Actor
+Warehouse Manager / System Admin
+Pre-condition
+Product/category/unit master data is available.
+Post-condition
+ProductVariant is saved with SKU, minimum stock level, unit weight, and QR label ready for printing.
+Related Feature
+FT-06, FT-07
+Related UC
+UC-03, UC-04
+Table 5: SC-01 Scenario Details - Configure product variants and QR labels
+Narrative: Manager prepares the product catalogue, creates ProductVariant records, enters SKU, unit of measure, minimum stock level and expected unit weight, then generates or stores QR code information for later warehouse scans.
+
+Figure 3. Activity Diagram - SC-01 Configure product variants and QR labels
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Duplicate SKU
+Reject save and keep draft unchanged.
+Missing unit weight while IoT is required
+Require a valid unit weight or mark IoT verification as not required.
+Table 6: SC-01 Key Exception / Alternate Flows - Configure product variants and QR labels
+
+SC-02 - Create and approve inbound document
+Field
+Value
+Business Flow
+Plan supplier receiving
+Primary Actor
+Warehouse Staff + Warehouse Manager
+Pre-condition
+Supplier and ProductVariant data are available or supplier can be quick-created.
+Post-condition
+Inbound documents are approved for receiving or rejected with reason.
+Related Feature
+FT-02, FT-12, FT-15
+Related UC
+UC-06, UC-07, UC-08, UC-21
+Table 7: SC-02 Key Exception / Alternate Flows - Configure product variants and QR labels
+Narrative: Staff creates an inbound document, selects/quick-creates supplier, enters expected items and receiving date, and submits it. The system evaluates bottleneck warning data before manager approval.
+
+Figure 4. Activity Diagram - SC-02 Create and approve inbound document
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Missing supplier/item
+Reject submission and show required fields.
+Bottleneck warning critical
+Show warning level and affected workload; do not block document creation.
+Table 8: SC-02 Scenario Details - Create and approve inbound document
+
+SC-03 - Receive inbound goods with QR and IoT verification
+Field
+Value
+Business Flow
+Receive goods from supplier
+Primary Actor
+Warehouse Staff
+Pre-condition
+Inbound documents are approved and ready for receiving; QR labels are available.
+Post-condition
+Received quantity and IoT weight are verified per line/receiving group; goods are held pending put-away. No inventory change occurs yet — stock is increased only at final confirmation in SC-04.
+Related Feature
+FT-02, FT-07, FT-08, FT-09
+Related UC
+UC-09, UC-10
+ Table 9: SC-03 Scenario Details - Receive inbound goods with QR and IoT verification
+Narrative: After approval, staff open the mobile receiving task and scan the QR/SKU for each line. Staff record the received quantity (which may differ from the ordered quantity) and may split a received line into multiple receiving groups for checking, weighing and quality handling. For each group, staff attach stable IoT weight evidence; the system compares expected weight (unit weight × quantity) against actual weight. Verified quantities are held pending put-away and final confirmation in SC-04.
+
+Figure 5. Activity Diagram - SC-03 Receive inbound goods with QR and IoT verification
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+QR mismatch
+Block receiving for the line and show a mismatch message.
+Weight outside tolerance
+Flag discrepancy and require manager review before confirmation.
+Short / over / damaged / failed-QC
+Record a discrepancy reason and route the affected quantity to a quarantine (non-available) location instead of available stock.
+ Table 10: SC-03 Key Exception / Alternate Flows - Receive inbound goods with QR and IoT verification
+SC-04 - Store received goods using put-away suggestion
+Field
+Value
+Business Flow
+Assign put-away location and confirm receiving
+Primary Actor
+Warehouse Staff / Warehouse Manager
+Pre-condition
+Verified receiving groups from SC-03 are awaiting a storage location; receiving is not yet finally confirmed.
+Post-condition
+Each receiving group is assigned an accepted or overridden location; on final receiving confirmation, inventory increases at the confirmed location(s) and an inbound transaction is logged. Receiving groups are aggregated into inventory balances by ProductVariant and Location.
+Related Feature
+FT-01, FT-02, FT-08, FT-11, FT-13, FT-14
+Related UC
+UC-12, UC-11
+ Table 11: SC-04 Scenario Details - Store received goods using put-away suggestion
+Narrative: During receiving and before final confirmation, the system recommends a suitable location for each verified receiving group using category compatibility, available capacity, current occupancy and priority. Staff accept the suggestion or override it with a reason. After locations are assigned, staff perform the single final receiving confirmation: inventory is increased at each confirmed location, receiving groups are aggregated into inventory balances by ProductVariant and Location, and an inbound InventoryTransaction plus audit record are created.
+
+Figure 6. Activity Diagram - SC-04 Store received goods using put-away suggestion
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+No location has capacity
+Return no suggestion and ask the manager to split quantity or update capacity.
+Override without reason
+Reject override until a reason is entered.
+ Table 12: SC-04 Key Exception / Alternate Flows - Store received goods using put-away suggestion
+SC-05 - Pick, pack, and ship outbound goods
+Field
+Value
+Business Flow
+Dispatch customer order
+Primary Actor
+Warehouse Staff + Warehouse Manager
+Pre-condition
+Outbound documents are approved and stock is available/reserved.
+Post-condition
+Picked quantity is validated, optional weight evidence is attached, and inventory decreases after shipment confirmation.
+Related Feature
+FT-01, FT-02, FT-07, FT-08, FT-09, FT-11
+Related UC
+UC-13, UC-14, UC-15, UC-16
+Table 13: SC-05 Scenario Details - Pick, pack, and ship outbound goods
+Narrative: Staff creates an outbound document, manager approval reserves stock, mobile staff picks by QR scan, optional IoT weight verification checks packing accuracy, and final confirmation decreases inventory.
+
+Figure 7. Activity Diagram - SC-05 Pick, pack, and ship outbound goods
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Insufficient stock
+Prevent approval/confirmation and mark lines as short.
+Wrong QR scanned
+Reject scan and keep picked quantity unchanged.
+ Table 14: SC-05 Key Exception / Alternate Flows - Pick, pack, and ship outbound goods
+
+SC-06 - Perform cycle count and stock adjustment
+Field
+Value
+Business Flow
+Count inventory by location
+Primary Actor
+Warehouse Staff + Warehouse Manager
+Pre-condition
+A count session is created for selected locations or ProductVariants.
+Post-condition
+Count result is saved; approved discrepancy creates adjustment transaction and audit log.
+Related Feature
+FT-01, FT-07, FT-08, FT-10, FT-11
+Related UC
+UC-17, UC-18
+Table 15: SC-06 Scenario Details - Perform cycle count and stock adjustment
+Narrative: Staff scans location and QR labels, enters counted quantities, and submits results. Manager reviews discrepancies and approves or rejects stock adjustment with reason.
+
+Figure 8. Activity Diagram - SC-06 Perform cycle count and stock adjustment
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Negative count
+Reject entry immediately.
+Manager rejects adjustment
+Keep count records but do not change inventory.
+Table 16: SC-06 Key Exception / Alternate Flows - Perform cycle count and stock adjustment
+SC-07 - Monitor real-time inventory, reports, and low-stock alerts
+Field
+Value
+Business Flow
+Monitor warehouse status
+Primary Actor
+Warehouse Manager 
+Pre-condition
+Inventory transactions and minimum stock levels exist.
+Post-condition
+Dashboard shows current stock, low-stock alerts, recent movements, and reports.
+Related Feature
+FT-01, FT-03, FT-04
+Related UC
+UC-19, UC-20
+Table 17: SC-07 Scenario Details - Monitor real-time inventory, reports, and low-stock alerts
+Narrative: Manager opens the dashboard and reviews current quantity, low-stock panels, movement summaries and reports. SignalR updates dashboard clients after confirmed stock transactions.
+
+Figure 9. Activity Diagram - SC-07 Monitor real-time inventory, reports, and low-stock alerts
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Realtime disconnected
+Show disconnected state and allow manual refresh.
+No low-stock item
+Show empty state rather than hiding the panel.
+Table 18: SC-07 Key Exception / Alternate Flows - Monitor real-time inventory, reports, and low-stock alerts
+
+SC-08 - Review inbound bottleneck warning
+
+Field
+Value
+Business Flow
+Detect overloaded receiving plan
+Primary Actor
+Warehouse Manager
+Pre-condition
+Inbound documents, location capacity, and staff capacity data are configured.
+Post-condition
+Warning level is displayed when workload exceeds configured thresholds; document remains manually controlled.
+Related Feature
+FT-12, FT-14
+Related UC
+UC-21
+Table 19: SC-08 Scenario Details - Review inbound bottleneck warning
+Narrative: When inbound documents are submitted or reviewed, StockLite compares expected receiving workload against available storage and labour capacity, then shows Normal, Warning, or Critical level.
+
+Figure 10. Activity Diagram - SC-08 Review inbound bottleneck warning
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Capacity config missing
+Mark warning incomplete and show missing fields.
+Threshold exceeded
+Show level and affected inbound documents but do not auto-cancel.
+Table 20: SC-08 Key Exception / Alternate Flows - Review inbound bottleneck warning
+SC-09 - Maintain warehouse locations and supplier master data
+Field
+Value
+Business Flow
+Maintain operational master data
+Primary Actor
+System Admin / Warehouse Manager
+Pre-condition
+The user has master-data permission.
+Post-condition
+Warehouse locations or suppliers are created, updated, or safely deactivated.
+Related Feature
+FT-14, FT-15
+Related UC
+UC-05, UC-06
+Table 21: SC-09 Scenario Details - Maintain warehouse locations and supplier master data
+Narrative: System Admin or manager maintains single warehouse structure, storage locations, capacity rules, category compatibility, and supplier records used by inbound and return-to-supplier documents.
+
+ Figure 11. Activity Diagram - SC-09 Maintain warehouse locations and supplier master data
+
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Location capacity invalid
+Reject save until capacity is positive.
+Referenced supplier deletion
+Block deletion and allow deactivation only.
+Table 22: SC-09 Key Exception / Alternate Flows - Maintain warehouse locations and supplier master data
+
+SC-10 - Manage users and permissions
+Field
+Value
+Business Flow
+Administer access control
+Primary Actor
+System Admin / Business Owner
+Pre-condition
+The user is authenticated as System Admin or Business Owner.
+Post-condition
+Roles and permissions are assigned; unauthorized requests are denied by UI and API.
+Related Feature
+FT-05
+Related UC
+UC-01, UC-02
+Table 23: SC-10 Scenario Details - Manage users and permissions
+Narrative: System Admin creates accounts, assigns roles, activates/deactivates users, and the system enforces authorization at both client navigation and backend API levels.
+
+Figure 12. Activity Diagram - SC-10 Manage users and permissions
+
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+User lacks permission
+Return access denied and do not execute action.
+Inactive user attempts login
+Authentication fails and no token is issued.
+Table 24: SC-10 Key Exception / Alternate Flows - Manage users and permissions
+SC-11 - Process customer / inbound returns
+Field
+Value
+Business Flow
+Reverse logistics - customer return
+Primary Actor
+Warehouse Staff + Warehouse Manager
+Pre-condition
+Returned goods arrive from the customer; original outbound document may be referenced.
+Post-condition
+Passed items are restocked, failed items are quarantined, and inbound-return transactions are logged.
+Related Feature
+FT-16, FT-01, FT-07, FT-08, FT-11
+Related UC
+UC-22, UC-23
+Table 25: SC-11 Scenario Details - Process customer / inbound returns
+Narrative: Staff creates an inbound-return document, manager approves it, goods are inspected, and final confirmation either restocks usable items or routes damaged/failed-QC items to quarantine.
+
+Figure 13. Activity Diagram - SC-11 Process customer / inbound returns
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Return not approved
+Stop processing and keep stock unchanged.
+Failed QC
+Route item to quarantine location and record return reason.
+Table 26: SC-11 Key Exception / Alternate Flows - Process customer / inbound returns
+
+SC-12 - Process return-to-supplier
+Field
+Value
+Business Flow
+Reverse logistics - supplier return
+Primary Actor
+Warehouse Staff + Warehouse Manager
+Pre-condition
+Supplier exists; goods to return are available or quarantined.
+Post-condition
+Goods are QR-picked, dispatched to supplier, inventory decreases, and return-to-supplier transaction is logged.
+Related Feature
+FT-16, FT-15, FT-01, FT-07, FT-08, FT-11
+Related UC
+UC-24, UC-25
+Table 27: SC-12 Scenario Details - Process return-to-supplier
+Narrative: Staff creates a return-to-supplier document, manager approves it, warehouse staff pick the specified goods by QR scan and confirm dispatch. Stock decreases only after final confirmation.
+
+Figure 14. Activity Diagram - SC-12 Process return-to-supplier
+Key Exception / Alternate Flows:
+Trigger
+System Response / Outcome
+Wrong QR scanned
+Reject scan and keep quantity unchanged.
+Insufficient available/quarantine stock
+Block dispatch confirmation.
+Table 28: SC-12 Key Exception / Alternate Flows - Process return-to-supplier
+
+Scenario List
+ID
+Scenario Name
+Primary Actor
+Maps to Feature(s)
+Priority
+SC-01
+Configure product variants and QR labels
+Warehouse Manager / System Admin
+FT-06, FT-07
+High
+SC-02
+Create and approve inbound document
+Warehouse Staff + Warehouse Manager
+FT-02, FT-12, FT-15
+High
+SC-03
+Receive inbound goods with QR and IoT verification
+Warehouse Staff
+FT-02, FT-07, FT-08, FT-09
+High
+SC-04
+Store received goods using put-away suggestion
+Warehouse Staff / Warehouse Manager
+FT-01, FT-02, FT-08, FT-11, FT-13, FT-14
+High
+SC-05
+Pick, pack, and ship outbound goods
+Warehouse Staff + Warehouse Manager
+FT-01, FT-02, FT-07, FT-08, FT-09, FT-11
+High
+SC-06
+Perform cycle count and stock adjustment
+Warehouse Staff + Warehouse Manager
+FT-01, FT-07, FT-08, FT-10, FT-11
+High
+SC-07
+Monitor real-time inventory, reports, and low-stock alerts
+Warehouse Manager 
+FT-01, FT-03, FT-04
+High
+SC-08
+Review inbound bottleneck warning
+Warehouse Manager
+FT-12, FT-14
+High
+SC-09
+Maintain warehouse locations and supplier master data
+System Admin / Warehouse Manager
+FT-14, FT-15
+High
+SC-10
+Manage users and permissions
+System Admin / Business Owner
+FT-05
+High
+SC-11
+Process customer / inbound returns
+Warehouse Staff + Warehouse Manager
+FT-16, FT-01, FT-07, FT-08, FT-11
+High
+SC-12
+Process return-to-supplier
+Warehouse Staff + Warehouse Manager
+FT-16, FT-15, FT-01, FT-07, FT-08, FT-11
+High
+
+Table 29: Scenario List
+
+Part 3 — Feature Description
+FT-01 - Real-Time Inventory Tracking
+Field
+Value
+Source Feature (V&S)
+FE-01
+Related Scenario
+SC-04, SC-05, SC-06, SC-07, SC-11, SC-12
+Related UC
+UC-09, UC-11, UC-16, UC-18, UC-19, UC-22, UC-23, UC-24, UC-25
+Summary
+Maintains accurate on-hand and available quantity by ProductVariant and location. Inventory changes only through confirmed transactions.
+Table 30: FT-01 Feature Summary - Real-Time Inventory Tracking
+System Behaviour: StockLite maintains current on-hand and reserved quantity for every ProductVariant at each warehouse location. Quantities change only when an inbound, outbound, return, stocktake-adjustment or authorized manual-adjustment transaction is finally confirmed; draft or scanned records never alter stock. Each confirmed change writes exactly one InventoryTransaction (before/after quantity, reference document, actor, timestamp) in a single business transaction, and a SignalR inventory event is published to connected dashboard clients only after commit.
+Type
+ID
+Criterion
+AC
+AC-01-01
+When a stock-changing transaction (inbound, outbound, return, stocktake, manual adjustment) is confirmed, the system updates QuantityOnHand for the affected ProductVariant/Location and broadcasts the new balance to connected Angular clients within 5 seconds.
+AC
+AC-01-02
+When an authorized user opens the dashboard, the system displays on-hand and available quantity per ProductVariant for the active warehouse, where available = on-hand - reserved - quarantine.
+AC
+AC-01-03
+When a workflow step is performed but not yet confirmed, the system does not change any inventory balance.
+NAC
+AC-01-N1
+When a transaction is cancelled or rejected, the system makes no inventory change.
+Table 31: FT-01 Acceptance / Negative / Boundary Criteria - Real-Time Inventory Tracking
+FT-02 - Inbound / Outbound Management with Approval
+Field
+Value
+Source Feature (V&S)
+FE-02
+Related Scenario
+SC-02, SC-03, SC-04, SC-05
+Related UC
+UC-07, UC-08, UC-09, UC-11, UC-13, UC-14, UC-15, UC-16
+Summary
+Supports staff-created inbound/outbound documents, manager/ system admin approval, reservation, execution, discrepancy handling, and final confirmation.
+Table 32: FT-02 Feature Summary - Inbound / Outbound Management with Approval
+System Behaviour: Staff create inbound and outbound documents that require manager/system admin approval before execution. The system validates supplier/customer and item data, enforces the document state machine (Draft → Submitted → Approved/Rejected → execution → Confirmed/Cancelled), reserves stock on outbound approval, and allows partial receiving/picking with a recorded discrepancy reason. The put-away location is assigned during receiving, and inventory increases only at final receiving confirmation, at the confirmed location; outbound decreases only after shipment confirmation. Each confirmation creates the matching InventoryTransaction and audit record.
+Type
+ID
+Criterion
+AC
+AC-02-01
+When a manager approves an outbound order, the system increases QuantityReserved by the approved quantity per line so available quantity decreases, without changing QuantityOnHand.
+AC
+AC-02-02
+When an inbound document reaches final receiving confirmation, the system increases QuantityOnHand only at the confirmed put-away location and creates one InventoryTransaction per line.
+AC
+AC-02-03
+When an outbound shipment is confirmed, the system decreases QuantityOnHand and releases the corresponding reservation for each shipped line.
+NAC
+AC-02-N1
+When a reservation or dispatch would make available quantity negative, the system rejects the action and records no stock change.
+BV
+AC-02-B1
+When received quantity exceeds ordered quantity, the system requires manager approval and a recorded override reason before confirmation.
+Table 33: FT-02 Acceptance/Negative / Boundary Criteria - Inbound / Outbound Management with Approval
+FT-03 - Low Stock Alerts
+Field
+Value
+Source Feature (V&S)
+FE-03
+Related Scenario
+SC-07
+Related UC
+UC-19, UC-20
+Summary
+Detects ProductVariant quantity below configurable minimum stock level and notifies authorized users.
+Table 34: FT-03 Feature Summary - Low Stock Alerts
+System Behaviour: After every confirmed stock change, StockLite compares available quantity against the configured MinStockLevel for each ProductVariant and raises a low-stock alert when it falls below the threshold. The system never creates a duplicate active alert for the same ProductVariant/location, surfaces alerts on the dashboard and via realtime notification to permitted users, and marks an alert resolved when quantity recovers or a manager closes it.
+
+Type
+ID
+Criterion
+AC
+AC-03-01
+When the available quantity of a ProductVariant falls below its configured MinStockLevel after a confirmed inventory transaction, the system creates one active Low Stock Alert within 5 seconds.
+AC
+AC-03-02
+When an active Low Stock Alert already exists for the same ProductVariant and Location, the system does not create a duplicate alert.
+AC
+AC-03-03
+When the available quantity becomes greater than or equal to MinStockLevel, the system marks the corresponding active alert as resolved within 5 seconds.
+AC
+AC-03-04
+When an authorized user opens the dashboard, the system displays all active Low Stock Alerts with ProductVariant, current available quantity, MinStockLevel, location and status.
+NAC
+AC-03-N1
+When available quantity is at or above MinStockLevel, the system does not create a Low Stock Alert.
+Table 35: FT-03 Acceptance / Negative / Boundary Criteria - Low Stock Alerts
+FT-04 - Inventory Reporting & Analytics
+Field
+Value
+Source Feature (V&S)
+FE-04
+Related Scenario
+SC-07
+Related UC
+UC-19, UC-20
+Summary
+Provides daily, weekly, and monthly reports on stock movement, low stock, discrepancy, adjustment, and warehouse execution summary.
+Table 36: FT-04 Feature Summary - Inventory Reporting & Analytics
+System Behaviour: StockLite generates inventory-movement, stock-turnover, low-stock, discrepancy and adjustment-summary reports for a selected date range, computed from confirmed InventoryTransaction data and current balances. Reports are read-only, restricted to authorized roles, and can be filtered and exported; no report operation changes stock.
+Type
+ID
+Criterion
+AC
+AC-04-01
+When an authorized user runs a report for a valid date range, the system returns results computed only from confirmed InventoryTransaction records and current balances.
+AC
+AC-04-02
+When the user applies filters (warehouse, date range, status, search), the export reflects exactly the same filter criteria shown on screen.
+AC
+AC-04-03
+When a report is generated or exported, the system performs no stock change.
+NAC
+AC-04-N1
+When the start date is later than the end date, the system rejects the request with a validation error and returns no report.
+NAC
+AC-04-N2
+When a user without report permission requests a report, the system returns 403 and no data.
+Table 37: FT-04 Acceptance / Negative / Boundary Criteria - Inventory Reporting & Analytics
+FT-05 - Role-Based Access Control
+Field
+Value
+Source Feature (V&S)
+FE-05
+Related Scenario
+SC-10
+Related UC
+UC-01, UC-02
+Summary
+Authenticates users, issues JWT tokens, and enforces role/permission checks on web, mobile, and backend APIs.
+Table 38: FT-05 Feature Summary - Role-Based Access Control
+System Behaviour: StockLite authenticates users with JWT and enforces role-based authorization on every web, mobile and API request at both navigation and backend levels. Inactive users cannot obtain a token. System Admin/Business Owner can create accounts, assign roles and activate/deactivate users; all role and permission changes are written to the audit log with actor, timestamp and affected user.
+Type
+ID
+Criterion
+AC
+AC-05-01
+When an authenticated user calls a protected API for which their role has no Permission (Menu + Action), the system returns 403 regardless of client-side menu visibility.
+AC
+AC-05-02
+When an inactive or soft-deleted user attempts to log in, the system denies authentication and issues no token.
+AC
+AC-05-03
+When an admin changes a user's role or permission, the system writes an audit log entry with actor, timestamp and affected user.
+NAC
+AC-05-N1
+When a request carries an expired or revoked token, the system rejects it with 401.
+BV
+AC-05-B1
+When a user holds multiple roles, the system grants the union of all permitted actions.
+Table 39: FT-05 Acceptance / Negative / Boundary Criteria - Role-Based Access Control
+FT-06 - Product & Category Management
+Field
+Value
+Source Feature (V&S)
+FE-06
+Related Scenario
+SC-01
+Related UC
+UC-03
+Summary
+Manages product, category, unit of measure, and ProductVariant/SKU records. SKU belongs to ProductVariant, not parent Product.
+Table 40: FT-06 Feature Summary - Product & Category Management
+System Behaviour: StockLite manages product master data — categories, units of measure, products and ProductVariant/SKU records (SKU, unit weight, MinStockLevel, active status). SKU is stored on ProductVariant, never on the parent Product. The system rejects a duplicate SKU within the business account and keeps the draft unchanged, and validates required master-data fields before save.
+Type
+ID
+Criterion
+AC
+AC-06-01
+When a user creates a ProductVariant with a SKU already used in the business account, the system rejects it because SKU must be unique.
+AC
+AC-06-02
+When a parent Product is created, the system does not allow it to hold stock; only ProductVariant is stock-keeping.
+AC
+AC-06-03
+When a ProductVariant or Location is set inactive, the system removes it from selection in new documents but keeps it visible in historical references.
+NAC
+NAC-06-01
+Missing or invalid required data is rejected; existing data remains unchanged.
+NAC
+NAC-06-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-06-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 41: FT-06 Acceptance / Negative / Boundary Criteria - Product & Category Management
+FT-07 - QR Warehouse Operations
+Field
+Value
+Source Feature (V&S)
+FE-07
+Related Scenario
+SC-01, SC-03, SC-05, SC-06, SC-11, SC-12
+Related UC
+UC-04, UC-09, UC-15, UC-17, UC-22, UC-25
+Summary
+Generates/stores QR values for ProductVariant/SKU and verifies correct SKU during receiving, put-away, picking, stocktake, and returns.
+Table 42: FT-07 Feature Summary - QR Warehouse Operations
+System Behaviour: StockLite generates or stores a unique QR value for each ProductVariant and uses QR scanning to verify the correct SKU during inbound receiving, outbound picking/packing, stocktake and returns. A scan must resolve to exactly one active ProductVariant/label context before any inventory-changing confirmation is allowed; a mismatch blocks the affected line and leaves recorded quantities unchanged.
+Type
+ID
+Criterion
+AC
+AC-07-01
+When a QR code is scanned during receiving, picking, counting or returns, the system proceeds only if the decoded value matches the expected ProductVariant.
+AC
+AC-07-02
+When the same QR is scanned again within the configured debounce window, the system does not create a duplicate inventory-changing action.
+AC
+AC-07-03
+When a QR is scanned, the system returns a validation result within 2 seconds for 95% of requests.
+NAC
+AC-07-N1
+When the scanned QR does not match the expected ProductVariant, the system blocks the action and shows a mismatch error.
+NAC
+NAC-07-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-07-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 43: FT-07 Acceptance / Negative / Boundary Criteria - QR Warehouse Operations
+
+FT-08 - Flutter Mobile Warehouse App
+Field
+Value
+Source Feature (V&S)
+FE-08
+Related Scenario
+SC-03, SC-04, SC-05, SC-06, SC-11, SC-12
+Related UC
+UC-09, UC-12, UC-15, UC-16, UC-17, UC-22, UC-25, UC-26
+Summary
+Provides warehouse-floor mobile workflows for task queue, QR scan, receiving, put-away, picking, packing, stocktake, IoT weight evidence, and returns.
+Table 44: FT-08 Feature Summary - Flutter Mobile Warehouse App
+System Behaviour: The Flutter mobile app provides guided warehouse-floor execution — QR scanning, inbound receiving, put-away confirmation, outbound picking/packing, stocktake counting, latest IoT weight retrieval and final operation confirmation. It calls the same authenticated, role-checked APIs as the web admin; common receiving/picking actions complete within a small number of taps after a valid scan.
+Type
+ID
+Criterion
+AC
+AC-08-01
+When a valid QR is scanned, the system completes a common receiving/picking action in no more than 3 primary taps.
+AC
+AC-08-02
+When a device reconnects after being offline, the system does not duplicate previously queued scan actions on the server.
+AC
+AC-08-03
+When a user looks up a product on mobile, the system returns the result within 3 seconds under normal network conditions.
+NAC
+AC-08-N1
+When a staff user attempts an action outside their permitted role, the mobile app receives 403 and performs no change.
+NAC
+NAC-08-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-08-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 45: FT-08 Acceptance / Negative / Boundary Criteria - Flutter Mobile Warehouse App
+FT-09 - IoT Scale Verification
+Field
+Value
+Source Feature (V&S)
+FE-09
+Related Scenario
+SC-03, SC-05
+Related UC
+UC-10, UC-16
+Summary
+Receives stable non-zero weight from ESP32 scale and compares actual weight with expected weight for receiving and packing verification.
+Table 46: FT-09 Feature Summary - IoT Scale Verification
+System Behaviour: The ESP32 scale posts stable, non-zero weight to the backend ingestion REST endpoint over Wi-Fi using HTTP POST (JSON over HTTPS). No MQTT broker is used in MVP; downstream web push to the dashboard is handled separately by SignalR. (device code, weight, unit, isStable, timestamp);; business context is attached by the workflow. StockLite computes expected weight (unit weight × quantity), compares it against the actual weight within a configurable tolerance band (default ±5%, stored in SystemConfig key IOT_WEIGHT_TOLERANCE_PERCENT and overridable per ProductCategory), and flags a discrepancy for manager review before confirmation. Weight is verification evidence only and never updates inventory; weight posts are idempotent to avoid duplicate evidence.
+Type
+ID
+Criterion
+AC
+AC-09-01
+When a step requires weight verification, the system computes expected weight = unit weight x quantity and compares it with the latest stable IoT weight within the configured tolerance band (default +/-5%, stored in SystemConfig).
+AC
+AC-09-02
+When |actual - expected| / expected is within the tolerance band, the system marks the weight check Passed and allows confirmation to proceed.
+AC
+AC-09-03
+When the deviation exceeds the tolerance band, the system flags a discrepancy and blocks final confirmation until a manager reviews and records a decision.
+AC
+AC-09-04
+When a weight post is received, the system never changes any inventory balance; it is stored as verification evidence only.
+NAC
+AC-09-N1
+When an IoT post is unstable or zero, the system does not attach it as verification evidence.
+BV
+AC-09-B1
+When the deviation is exactly equal to the tolerance band, the system treats the check as Passed.
+Table 47: FT-09 Acceptance / Negative / Boundary Criteria - IoT Scale Verification
+FT-10 - Stocktake & Inventory Adjustment
+Field
+Value
+Source Feature (V&S)
+FE-10
+Related Scenario
+SC-06
+Related UC
+UC-17, UC-18
+Summary
+Supports count sessions by location/SKU, discrepancy comparison, manager-approved adjustment, and audit logging.
+Table 48: FT-10 Feature Summary - Stocktake & Inventory Adjustment
+System Behaviour: Managers create stocktake sessions and assign counting by location/QR. Staff submit counted quantities (zero or positive only); the system compares counted versus system quantity and any discrepancy requires manager approval with a reason before an adjustment InventoryTransaction is created. Approved adjustments and rejections are recorded with actor, timestamp and before/after quantities.
+Type
+ID
+Criterion
+AC
+AC-10-01
+When a stocktake line is submitted, the system computes variance = ActualQuantity - SystemQuantity.
+AC
+AC-10-02
+When a non-zero variance is approved by a manager with a reason, the system creates an adjustment InventoryTransaction and updates on-hand.
+AC
+AC-10-03
+When a stocktake adjustment is not approved, the system makes no inventory change.
+NAC
+AC-10-N1
+When the counted quantity is negative, the system rejects the line.
+NAC
+NAC-10-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-10-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 49: FT-10 Acceptance / Negative / Boundary Criteria - Stocktake & Inventory Adjustment
+
+FT-11 - Inventory Transaction History
+Field
+Value
+Source Feature (V&S)
+FE-11
+Related Scenario
+SC-04, SC-05, SC-06, SC-11, SC-12
+Related UC
+UC-11, UC-16, UC-18, UC-23, UC-25
+Summary
+Stores immutable movement records with source document, ProductVariant, location, before/after quantity, actor, timestamp, and reason where applicable.
+Table 50: FT-11 Feature Summary - Inventory Transaction History
+System Behaviour: StockLite records every confirmed inventory-changing event — inbound receiving, outbound shipment, inbound return, return-to-supplier, stocktake adjustment and authorized manual adjustment — as an immutable InventoryTransaction storing reference document/item, ProductVariant, location, before/after quantity, weight-evidence link, timestamp and user. Records are append-only and form the source of truth for reporting and audit.
+Type
+ID
+Criterion
+AC
+AC-11-01
+When any stock change is confirmed, the system appends one immutable InventoryTransaction with source reference, ProductVariant, Location, before/after quantity, actor and timestamp.
+AC
+AC-11-02
+When an InventoryTransaction exists, the system never updates or deletes it (append-only).
+AC
+AC-11-03
+When a Warehouse Staff opens activity history, the system shows only records generated by their own account; authorized roles see broader history.
+NAC
+NAC-11-01
+Missing or invalid required data is rejected; existing data remains unchanged.
+NAC
+NAC-11-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-11-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 51: FT-11 Acceptance / Negative / Boundary Criteria - Inventory Transaction History
+FT-12 - Rule-Based Inbound Bottleneck Warning
+Field
+Value
+Source Feature (V&S)
+FE-12
+Related Scenario
+SC-02, SC-08
+Related UC
+UC-21
+Summary
+Compares inbound workload with capacity and staff workload to warn managers about receiving congestion. Warning is advisory only.
+Table 52: FT-12 Feature Summary - Rule-Based Inbound Bottleneck Warning
+System Behaviour: On inbound submission and approval, StockLite compares scheduled inbound workload (planned quantity, expected date) against configured storage and labour capacity and returns a level — Normal (< 70%), Warning (70–90%) or Critical (> 90%) — based on utilization = scheduled load ÷ configured capacity. The warning is advisory: it shows the level and affected documents but never blocks creation or auto-cancels inbound documents. If capacity configuration is missing, the warning is marked incomplete with the missing fields listed.
+Type
+ID
+Criterion
+AC
+AC-12-01
+When an inbound document is submitted or approved, the system computes utilization = scheduled inbound load / configured capacity and returns Normal (< 70%), Warning (70-90%) or Critical (> 90%). Thresholds are configurable in SystemConfig.
+AC
+AC-12-02
+When the level is Warning or Critical, the system keeps exactly one active bottleneck Alert and lists affected documents; when Normal, it resolves any existing active bottleneck alert.
+AC
+AC-12-03
+When a warning is produced, the system never blocks, reserves, cancels or modifies any inbound document (advisory only).
+NAC
+AC-12-N1
+When capacity configuration is missing, the system marks the warning Incomplete and lists the missing fields instead of computing a level.
+NAC
+NAC-12-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-12-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 53: FT-12 Acceptance / Negative / Boundary Criteria - Rule-Based Inbound Bottleneck Warning
+
+FT-13 - Put-away Location Suggestion
+Field
+Value
+Source Feature (V&S)
+FE-13
+Related Scenario
+SC-04
+Related UC
+UC-12
+Summary
+Suggests suitable storage location based on ProductVariant, category compatibility, available capacity, occupancy, and location priority; override requires reason.
+Table 54: FT-13 Feature Summary - Put-away Location Suggestion
+System Behaviour: During inbound receiving — after QR/SKU validation and before final receiving confirmation — StockLite ranks candidate storage locations by category compatibility, available capacity, current occupancy and priority, and returns the best suggestion for each verified receiving group. Staff accept it or override with a reason (selected location, reason and actor are stored). Inventory is increased at the confirmed location only after final receiving confirmation; when no location has enough capacity the system returns no suggestion and asks the manager to split quantity or update capacity.
+
+Type
+ID
+Criterion
+AC
+AC-13-01
+When staff request a put-away suggestion for a verified receiving group, the system considers only locations passing all hard filters: IsActive = true; IsQuarantine = false; AllowedCategoryId is null or matches the variant category; and remaining capacity (MaxCapacity - CurrentOccupancy) >= group quantity.
+AC
+AC-13-02
+Among qualifying locations, the system ranks by Score = 0.40 x CapacityFit + 0.30 x OccupancyFit + 0.20 x CategoryMatch + 0.10 x PriorityNorm (each term normalized to 0-1) and returns the highest-scoring location; ties break by lower Priority number, then lower CurrentOccupancy, then lowest LocationId.
+AC
+AC-13-03
+When staff override the suggestion, the system stores the selected location, the reason and the actor.
+AC
+AC-13-04
+When no location passes the hard filters, the system returns no suggestion and prompts the manager to split quantity or update capacity.
+NAC
+NAC-13-01
+Missing or invalid required data is rejected; existing data remains unchanged.
+NAC
+NAC-13-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-13-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 55: FT-13 Acceptance / Negative / Boundary Criteria - Put-away Location Suggestion
+FT-14 - Warehouse & Location Management
+Field
+Value
+Source Feature (V&S)
+FE-14
+Related Scenario
+SC-04, SC-08, SC-09
+Related UC
+UC-05, UC-12, UC-21
+Summary
+Manages the single active warehouse and internal zones/racks/slots/bins with capacity, occupancy, category rules, and priority.
+Table 56: FT-14 Feature Summary - Warehouse & Location Management
+System Behaviour: StockLite configures the single active warehouse and its internal structure — zones, racks/shelves and slots/bins, each with maximum capacity, allowed category and put-away priority. The system rejects non-positive capacity, and this master data is the foundation for inventory-by-location tracking, put-away suggestion and bottleneck warning.
+Type
+ID
+Criterion
+AC
+AC-14-01
+When a second warehouse is set active, the system rejects it; exactly one active warehouse is allowed.
+AC
+AC-14-02
+When a Location holding on-hand stock is set inactive, the system blocks it unless all stock is moved or a manager records an override reason.
+AC
+AC-14-03
+When a Location has IsQuarantine = true, the system never offers it as a normal put-away destination.
+NAC
+NAC-14-01
+Missing or invalid required data is rejected; existing data remains unchanged.
+NAC
+NAC-14-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-14-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 57: FT-14 Acceptance / Negative / Boundary Criteria - Warehouse & Location Management
+FT-15 - Supplier Management
+Field
+Value
+Source Feature (V&S)
+FE-15
+Related Scenario
+SC-02, SC-09, SC-12
+Related UC
+UC-06, UC-07, UC-24
+Summary
+Maintains supplier records for inbound and return-to-supplier documents. Suppliers can be deactivated but not deleted while referenced.
+Table 58: FT-15 Feature Summary - Supplier Management
+System Behaviour: StockLite maintains reusable supplier master records for Inbound Orders and Return-to-Supplier Orders. Only active suppliers can be selected when users create or update a new inbound or Return-to-Supplier document. When a supplier has been referenced by an existing document, the system preserves the supplier record and linked historical documents for traceability. An authorized user may deactivate the supplier to prevent its use in future documents, but the system must block physical deletion while historical references exist.
+Customer information is not maintained as reusable master data in the MVP. OutboundOrder stores CustomerName, CustomerPhone, and CustomerAddress as delivery information for the individual outbound document. 
+Type
+ID
+Criterion
+AC
+AC-15-01
+When an authorized user deactivates a supplier referenced by an Inbound Order or Return-to-Supplier Order, the system marks the supplier as inactive, preserves historical document references, and prevents the supplier from being selected for new documents. 
+AC
+AC-15-02
+When an authorized user creates or updates an Inbound Order or Return-to-Supplier Order, the system displays only active suppliers for selection. 
+AC 
+AC-15-03 
+When an authorized user creates a supplier with valid required data and a unique supplier code, the system saves the supplier record and makes it available for new inbound and Return-to-Supplier documents. 
+NAC
+NAC-15-01
+When a user submits a supplier with missing required data, invalid email or phone format, or a duplicate supplier code, the system rejects the request, displays field-level validation messages, and does not change existing data. 
+NAC
+NAC-15-02
+When a user attempts to select an inactive supplier for a new Inbound Order or Return-to-Supplier Order, the system rejects the selection and requires an active supplier. 
+NAC
+NAC-15-03 
+When an unauthorized user attempts to create, update, deactivate, or delete a supplier, the system returns access denied and does not execute the operation. 
+BV
+BV-15-01
+Supplier code, supplier name, contact details, and address values must not exceed their configured database field lengths. Whitespace-only required values are invalid. 
+BV
+BV-15-02 
+A supplier code must be unique among non-deleted supplier records. 
+Table 59: FT-15 Acceptance / Negative / Boundary Criteria - Supplier Management
+FT-16 - Returns Management (Reverse Logistics)
+Field
+Value
+Source Feature (V&S)
+FE-16
+Related Scenario
+SC-11, SC-12
+Related UC
+UC-22, UC-23, UC-24, UC-25
+Summary
+Supports customer/inbound returns and return-to-supplier flows with approval, inspection, quarantine/restock, QR picking, confirmation, and transaction logging.
+Table 60: FT-16 Feature Summary - Returns Management (Reverse Logistics)
+System Behaviour: StockLite handles two reverse-logistics flows. Customer/inbound returns: staff create an inbound-return document (optionally referencing the outbound), a manager approves it, goods are inspected, passed items are restocked and failed-QC items routed to a quarantine/non-available location with a reason; stock increases only after final confirmation and an inbound-return transaction is logged. Return-to-supplier: staff create a return-to-supplier document, a manager approves it, goods are QR-picked and dispatched, and stock decreases only after dispatch confirmation. Refunds, credit/AP and carrier-pickup automation are out of MVP scope.
+Type
+ID
+Criterion
+AC
+AC-16-01
+When a customer-return document is approved and inspection completed, the system restocks only the passed (good) quantity to a valid non-quarantine location and routes failed-QC quantity to a quarantine location with a reason; on-hand increases only after final confirmation.
+AC
+AC-16-02
+For each return item, the system requires accepted quantity + damaged quantity to not exceed the inspected/returned quantity.
+AC
+AC-16-03
+When a return-to-supplier document is confirmed for dispatch, the system decreases on-hand by the actual returned quantity and logs an outbound-return transaction; approval alone changes no inventory.
+AC
+AC-16-04
+When any return is processed, the system performs no financial settlement (refund/credit/AP) because that is out of MVP scope.
+NAC
+NAC-16-01
+Missing or invalid required data is rejected; existing data remains unchanged.
+NAC
+NAC-16-02
+Unauthorized users receive access denied and the operation is not executed.
+BV
+BV-16-01
+Quantity and capacity values must be zero or positive where applicable; stock-changing confirmation must not create negative available stock unless handled by approved adjustment or return rules.
+Table 61: FT-16 Acceptance / Negative / Boundary Criteria - Returns Management (Reverse Logistics)
+Part 4 — Data Requirements
+4.1 Core Entities
+
+Figure 15: Entity Relationship Diagram
+User & Access Management
+Entity
+Key Attributes
+Purpose
+User
+Id, Username, Email, PasswordHash, FirstName, LastName, UserStatusId, AvatarId
+Authentication and actor identity
+UserStatus
+Id, Name, Color
+User account status
+Role
+Id, Name, Description
+Defines access level
+UserRole
+Id, UserId, RoleId
+Maps users to roles
+Menu
+Id, ParentId, TreeIds, MenuType, Name, Url, Icon, SortOrder, IsAdminOnly
+Menu structure for RBAC
+Action
+Id, Name, Description
+Available system actions
+ActionInMenu
+Id, ActionId, MenuId
+Defines which actions belong to each menu
+Permission
+Id, MenuId, RoleId, ActionId
+Granular authorization rule
+UserDevice 
+Id, UserId, DeviceName, Platform, OsVersion, AppVersion, DeviceToken, UserAgent 
+Registered mobile/web device used for push notifications and session tracking. 
+UserSession 
+Id, UserId, UserDeviceId, RefreshToken, AccessTokenJti, IsUsed, IsRevoked, ExpirationDate 
+Stores login session and refresh token lifecycle for secure authentication. 
+UserVerificationToken 
+Id, UserId, Code, Purpose, IsUsed, ExpirationDate 
+Stores verification tokens for account verification, password reset, or security-related flows. 
+Table 62: Core Entities - User & Access Management
+Product Catalog Management
+
+Entity Name
+Key Attributes
+Purpose 
+ProductCategory
+Id, Name, ParentId, TreeIds, SortOrder
+Product category hierarchy
+Product
+Id, ProductCategoryId, Name, Description, IsActive
+Parent product master record; SKU is not stored here
+ProductVariant
+Id, ProductId, UnitOfMeasureId, SKU, QRCode, CostPrice, SalePrice, Weight, AttributeValues, ImageId, IsActive, MinStockLevel
+Sellable/stocked SKU unit
+ProductAttribute
+Id, Name, Description
+Product attribute definition
+UnitOfMeasure
+Id, Name, Symbol
+Unit used by product variant quantity
+Table 63: Core Entities - Product Catalog Management
+
+Supply Chain Partners & Facilities
+Entity Name
+Key Attributes
+Purpose
+Supplier
+Id, Name, Code, ContactPerson, Phone, Email, Address, TaxCode, IsActive
+Inbound partner
+Warehouse
+Id, Code, Name, Address, IsActive
+Warehouse master record
+Location
+Id, WarehouseId, ZoneName, ShelfRow, ShelfLevel, SlotCode, MaxCapacity, CurrentOccupancy, AllowedCategoryId, Priority, IsQuarantine, IsActive, Description
+Storage location inside warehouse
+Table 64: Core Entities - Supply Chain Partners & Facilities
+Inbound & Outbound Logistics
+Entity Name
+Key Attributes
+Purpose
+InboundOrder
+Id, WarehouseId, SupplierId, InboundOrderStatusId, POCode, Note, TotalAssetValue, ExpectedDate, CompletedDate, DeliveryNoteId
+Inbound document header
+InboundOrderItem
+Id, InboundOrderId, ProductVariantId, QuantityOrdered, QuantityReceived, UnitCostPrice, ExpectedWeightKg, ActualWeightKg, QRScanned, Note
+Inbound line detail
+InboundOrderStatus
+Id, Name, Color
+Inbound document status
+DeliveryNote
+Id, InboundOrderId, TrackingCode, CarrierName, SenderName, ReceiverName, DeclaredWeight, CODAmount, RawOcrText, OriginalImageFileId, IsConfirmed
+Delivery/OCR evidence linked to inbound
+OutboundOrder
+Id, WarehouseId, OutboundOrderStatusId, SOCode, CustomerName, CustomerPhone, CustomerAddress, Note, TotalDispatchedValue, CompletedDate, AssignedUserId
+Outbound document header and customer delivery information
+OutboundOrderItem
+Id, OutboundOrderId, ProductVariantId, QuantityOrdered, QuantityPicked, UnitCostPrice, ExpectedWeightKg, ActualWeightKg, QRScanned, Note
+Outbound line detail
+OutboundOrderStatus
+Id, Name, Color
+Outbound document status
+Table 65: Core Entities - Inbound & Outbound Logistics
+Inventory Control & Auditing
+Entity Name
+Key Attributes
+Purpose
+Inventory
+Id, WarehouseId, LocationId, ProductVariantId, CostPrice, QuantityOnHand,
+QuantityReserved, RowVersion, LastStockTakeDate
+Note: Inventory represents current state only and does not store a source-document
+foreign key. Provenance of any stock change is traced through
+InventoryTransaction.ReferenceType / ReferenceId / ReferenceItemId, which already
+point back to the originating inbound, outbound, return or stocktake document.
+Current on-hand balance by warehouse/location/variant
+InventoryTransaction
+Id, InventoryId, WarehouseId, LocationId, ProductVariantId, TransactionType, ReferenceType, ReferenceId, ReferenceItemId, Quantity, BeforeQuantity, AfterQuantity, WeightKg, IotWeightLogId, Note
+Immutable stock movement record
+StockTake
+Id, WarehouseId, StockTakeStatusId, STCode, Note, StartedDate, CompletedDate, ApprovedBy
+Stock count session
+StockTakeItem
+Id, StockTakeId, ProductVariantId, SystemQuantity, ActualQuantity, Note, QRScanned
+Stock count line
+StockTakeStatus
+Id, Name, Color
+Stocktake status
+StockAlertConfig
+Id, WarehouseId, ProductVariantId, MinThreshold, IsActive
+Configures low-stock threshold
+Table 66: Core Entities - Inventory Control & Auditing
+IoT Hardware Integration
+Entity Name
+Key Attributes
+Purpose 
+IotDevice
+Id, WarehouseId, DeviceName, DeviceCode, DeviceType, Location, LastHeartbeat, IsOnline, IsActive
+Registered ESP32 scale
+IotWeightLog
+Id, IoTDeviceId, ProductVariantId, ReferenceType, ReferenceId, ReferenceItemId, WeightKg, RawValue, Unit, IsStable, MeasuredAt, ReceivedAt, IsConfirmed, ConfirmedBy, ConfirmedAt
+Weight evidence from IoT scale
+IotDeviceCommand
+Id, IoTDeviceId, CommandCode, CommandType, Payload, Status, RequestedByUserId, RequestedAt, PickedUpAt, ExecutedAt, ExpiredAt, RetryCount
+Remote TARE/RESET/CALIBRATE command queue
+Table 67: Core Entities - IoT Hardware Integration
+
+Communications & Logs
+Entity Name
+Key Attributes
+Purpose
+Notification
+Id, NotificationCategoryId, NotificationTypeId, DirectionId, Title, Content
+In-app notification content
+NotificationCategory
+Id, Name, Color
+Notification category
+NotificationType
+Id, Name, Description
+Notification type
+UserNotification
+Id, UserId, NotificationId, IsRead
+User notification read state
+FcmNotificationLog
+Id, UserId, UserDeviceId, Title, Body, DataPayload, TriggerType, ReferenceType, ReferenceId, IsSent, SentAt, ErrorMessage
+Firebase push sending log
+AuditLog
+Id, Action, TargetType, TargetId, DataBefore, DataAfter, Description, IpAddress, UserAgent
+Traceability for security and operations
+ActivityLog
+Id, ActivityLogType, Action, TargetType, TargetId, Description, IpAddress, UserAgent
+Activity and request logging
+Table 68: Core Entities - Communications & Logs
+System Configurations & Media
+Entity Name
+Key Attributes
+Purpose
+FileUpload
+Id, FolderUploadId, FileName, FileType, FileSize, FileKey
+Uploaded file metadata
+FolderUpload
+Id, FolderName, FolderPath, ParentId, TreeIds
+File folder structure
+SystemConfig
+Id, Name, Description, ConfigKey, ConfigValue
+Dynamic system configuration
+Table 69: Core Entities - System Configurations & Media
+Return / Reverse Logistics Management
+Entity Name
+Key Attributes
+Purpose
+CustomerReturnOrderStatus 
+Id, Name, Color 
+Defines lifecycle statuses for Customer Return orders. 
+CustomerReturnOrder 
+Id, WarehouseId, CustomerReturnOrderStatusId, OutboundOrderId, ReturnCode, ReturnReason, Note, ApprovedDate, ApprovedBy, CompletedDate 
+Header record for goods returned by a customer. OutboundOrderId links the return to its original outbound order when available. 
+CustomerReturnOrderItem 
+Id, CustomerReturnOrderId, ProductVariantId, QuantityReturned, QuantityGood, QuantityDamaged, QualityStatus, DamageReason, RestockLocationId, QuarantineLocationId, QRScanned, Note 
+Stores inspection and routing results for each returned SKU. Sellable quantity is routed through RestockLocationId; damaged or failed-QC quantity is routed through QuarantineLocationId. 
+ReturnToSupplierOrderStatus 
+Id, Name, Color 
+Defines lifecycle statuses for Return-to-Supplier orders. 
+ReturnToSupplierOrder 
+Id, WarehouseId, SupplierId, ReturnToSupplierOrderStatusId, InboundOrderId, ReturnCode, Note, ApprovedDate, ApprovedBy, CompletedDate 
+Header record for goods returned from the warehouse to a supplier. InboundOrderId links the return to the original inbound order when available. 
+ReturnToSupplierOrderItem 
+Id, ReturnToSupplierOrderId, ProductVariantId, QuarantineLocationId, QuantityToReturn, QuantityActualReturned, DamageReason, QRScanned, Note 
+Stores each SKU selected for supplier return, including actual dispatched quantity and its source quarantine location where applicable. 
+IotWeightLog 
+Id, IoTDeviceId, ProductVariantId, ReferenceType, ReferenceId, ReferenceItemId, WeightKg, IsStable, IsConfirmed, ConfirmedBy, ConfirmedAt 
+Existing shared evidence table. Optional return weight evidence is linked through ReferenceType, ReferenceId, and ReferenceItemId; it is not stored as a direct foreign key in the return-item tables. 
+Location 
+Id, WarehouseId, IsActive, IsQuarantine, MaxCapacity, CurrentOccupancy, AllowedCategoryId, Priority 
+Provides valid restock and quarantine destinations. A quarantine location is identified by IsQuarantine = true. 
+Table 70: Core Entities - Return / Reverse Logistics Management
+
+4.2 State Transitions
+Entity / Process
+Allowed States
+Important Rules
+Inbound Document
+Draft → Submitted → Approved / Rejected → Receiving → Partially Received / Fully Received → Confirmed / Cancelled
+Inventory increases only after final receiving confirmation. Put-away location must be assigned during receiving before the document reaches Confirmed state.
+Outbound Document
+Draft → Submitted → Approved / Rejected → Reserved → Picking → Packed → Shipped / Cancelled
+Reserved quantity must not cause available inventory to become negative. Inventory decreases only after shipment or dispatch confirmation.
+Customer Return Order (CustomerReturnOrderStatus)
+Draft → Submitted → Pending Inspection → Pending Approval → Approved → Closed. Rejections may occur from Submitted, Pending Inspection, or Pending Approval.
+Inspection is performed against CustomerReturnOrderItem; no separate ReturnInspection entity is used. QR validation is required unless an authorized manual verification is recorded. Good quantity requires an active non-quarantine restock location. Damaged quantity requires an active quarantine location and damage reason. Inventory changes only after final approval.
+Return-to-Supplier Order (ReturnToSupplierOrderStatus)
+Draft → Submitted → Approved → Picking → Dispatched → Closed. Rejected may occur before approval; Cancelled may occur before dispatch.
+Return-to-Supplier does not use the Customer Return inspection lifecycle. Approval authorizes picking but does not change inventory. Inventory decreases only after confirmed dispatch with valid actual returned quantities.
+Stocktake Session
+Draft → Counting → Submitted → Manager Review → Approved Adjustment / Rejected → Closed
+Inventory adjustment requires manager approval and an approval or rejection reason. Stocktake variance equals ActualQuantity - SystemQuantity.
+Low Stock Alert (Alert)
+Active → Acknowledged → Resolved
+A Low Stock alert is created when available quantity is at or below the configured threshold. Only one active Low Stock alert may exist for the same Warehouse and ProductVariant. The alert is resolved when stock recovers above the threshold or an authorized manager closes it.
+Inbound Bottleneck Alert (Alert)
+Active Warning / Active Critical → Acknowledged → Resolved
+Normal, Warning, and Critical are evaluation results. Only Warning or Critical requires an active Alert record; Normal resolves the existing active bottleneck alert. The warning is advisory only and must not cancel, block, reserve, or modify inbound documents.
+IoT Device
+Registered → Online ↔ Offline → Maintenance / Disabled
+Device online status is derived from the latest valid heartbeat. A device without a valid heartbeat within the configured timeout becomes Offline. Offline or Disabled devices cannot receive TARE, RESET, or CALIBRATE commands.
+IoT Device Command
+Pending → Picked Up → Executed / Failed / Expired
+Only Pending commands may be picked up or expired. A command is marked Expired when ExpiredAt is reached without a valid completion result. Executed, Failed, and Expired are terminal states.
+Notification Delivery (FcmNotificationLog)
+Created / Unsent → Sent. Unsent → Retry Eligible → Sent / Soft-Deleted
+The same notification-log record is retried; a new log must not be inserted for the same delivery attempt. Successful delivery sets IsSent = true. Permanent failures set IsDeleted = true. The current schema does not store RetryCount or NextRetryAt.
+User Session (UserSession)
+Active → Revoked / Expired
+Expired sessions are invalidated by setting IsRevoked = true. Valid unexpired sessions must remain usable.
+User Verification Token (UserVerificationToken)
+Valid → Used / Expired → Soft-Deleted
+Only expired or already used tokens may be removed from active use. Valid unused tokens remain usable until ExpirationDate. Cleanup sets IsDeleted = true.
+
+Table 71: State Transitions
+Part 5 — Business Rules Summary
+BR ID
+Rule Summary
+BR-01
+Inventory can change only through confirmed inbound, outbound, return, stocktake adjustment, or authorized manual adjustment transactions. Each confirmed stock movement must create a corresponding InventoryTransaction. 
+BR-02
+On-hand quantity is maintained by ProductVariant and location.
+BR-03
+Available quantity equals on-hand quantity minus reserved quantity minus non-available/quarantine quantity. Reservation or dispatch must not cause available quantity to become negative. 
+BR-04
+Inbound stock increases only after final receiving confirmation.
+BR-05
+Outbound approval reserves stock; shipment confirmation decreases stock and releases reservation.
+BR-06
+Partial, short, over, damaged, or discrepancy quantities must store a reason. Receiving quantity that exceeds ordered quantity requires manager approval and a recorded override reason. 
+BR-07
+Low-stock alert is triggered when available quantity is below MinStockLevel.
+BR-08
+Low-stock alerts must not duplicate an active alert for the same ProductVariant/location.
+BR-09
+Reports are generated from transaction history and current inventory balances.
+BR-10
+Only authorized roles may view or perform operational, administrative, reporting, and audit actions according to assigned Role, Menu, and Action permissions. 
+BR-11
+All protected APIs require JWT and server-side role/action authorization. Client-side menu hiding or disabled buttons must not be treated as authorization enforcement. 
+BR-12
+Inactive users cannot log in or receive a valid token.
+BR-13
+SKU must be unique per business account.
+BR-14
+ProductVariant is the stock-keeping entity; parent Product must not be used as SKU.
+BR-15
+Suppliers referenced by existing inbound/return documents can be deactivated but not deleted.
+BR-16
+QR scan must match the expected ProductVariant before receiving, picking, counting or returns confirmation.
+BR-17
+QR label value must be unique and traceable to ProductVariant and optional lot/context.
+BR-18
+Only stable, non-zero IoT weight posts can be attached as verification evidence.
+BR-19
+Expected weight = unit weight × quantity. The actual IoT weight is accepted
+when |actual − expected| ÷ expected ≤ the configured tolerance band (MVP default ±5%). The tolerance value is stored in SystemConfig and may be overridden per ProductCategory.
+BR-20
+Weight mismatch flags discrepancy and requires manager review before final confirmation if configured.
+BR-21
+Remote TARE/RESET/CALIBRATE commands are stored as device commands and processed once by the device.
+BR-22
+Stocktake adjustment requires manager approval and reason code.
+BR-23
+The counted quantity must be zero or positive.
+BR-24
+Inbound bottleneck warning compares scheduled inbound workload with storage and labour capacity.
+BR-25
+Bottleneck warning is advisory and must not block or cancel inbound documents automatically.
+BR-26
+Bottleneck level is derived from utilization = scheduled inbound load ÷ configured capacity: Normal when utilization < 70%, Warning when 70% ≤ utilization ≤ 90%, Critical when utilization > 90%. Threshold percentages are stored in SystemConfig and configurable per warehouse.
+BR-27
+Put-away suggestion first applies hard filters (active, non-quarantine,
+category allowed, remaining capacity ≥ group quantity), then ranks qualifying
+locations by Score = 0.40×CapacityFit + 0.30×OccupancyFit + 0.20×CategoryMatch + 0.10×PriorityNorm (each term normalized 0–1). Ties break by lower Priority number, then lower CurrentOccupancy, then lowest LocationId. The weight set is stored in SystemConfig.
+BR-28
+The system may return no suggestion when no location has enough capacity.
+BR-29
+Manual override of put-away suggestion must store selected location, reason and actor.
+BR-30
+Customer/inbound returns require approval and inspection before stock is changed.
+BR-31
+Returned goods that fail QC must be routed to a quarantine/non-available location with a reason. Sellable returned goods must be assigned to a valid storage location before final approval. 
+BR-32
+Return-to-supplier decreases inventory only after final dispatch confirmation.
+BR-33
+Financial return handling, refunds, credits/accounts payable and carrier pickup automation are out of MVP scope.
+BR-34
+Inactive ProductVariants and inactive Locations must not be selectable for new warehouse documents or new put-away operations, but they remain visible in historical and audit references. 
+BR-35
+Finalized inbound, outbound, stocktake, and return documents are read-only. Corrections must be processed through a new authorized adjustment or return process rather than editing the original finalized document. 
+BR-36
+
+InventoryTransaction records are append-only and immutable. Each transaction must contain a source reference, ProductVariant, Location, before quantity, after quantity, actor, and timestamp. Corrections are recorded as new transactions. 
+BR-37
+
+Stocktake variance equals ActualQuantity minus SystemQuantity. 
+BR-38
+
+For each return item, accepted quantity plus damaged quantity must not exceed the inspected or returned quantity. 
+BR-39
+
+A Location with on-hand inventory must not be deactivated unless all remaining stock is moved to another active location or an authorized manager records an override reason. 
+BR-40 
+Users referenced by historical documents, inventory transactions, or audit records must be deactivated or soft-deleted instead of physically deleted. Soft-deleted users cannot log in or receive a valid token, but their historical references remain available for audit. 
+BR-41 
+StockLite reports are operational and inventory reports only. The system must not present payments, cash flow, financial ledger, refund, credit, or accounts payable data as part of MVP reporting. 
+BR-42 
+Report exports must use the same active warehouse, date range, status, search, and other filter criteria currently applied on the reporting screen. 
+BR-43 
+Repeated scans of the same QR code within a defined debounce window must not create duplicate receiving, picking, counting, return inspection, or inventory-changing actions. 
+BR-44 
+Warehouse Staff may view only activity history generated by their own account. Users with authorized audit or management permissions may view broader activity history according to assigned permissions. 
+BR-45 
+A date range filter must contain valid dates, and its start date must not be later than its end date. 
+BR-46 
+Signing out must invalidate the active user session and remove locally stored authentication credentials. Subsequent access to protected functions requires authentication again. 
+BR-47 
+IoT device availability must be determined from its latest valid heartbeat. When no valid heartbeat is received within the configured timeout, the device must be marked Offline. Offline devices must not receive remote commands until a new valid heartbeat is received. 
+BR-48 
+Remote IoT commands in Pending status must be marked Expired when their configured expiry time is reached without a valid completion result. Terminal command statuses must not be changed by expiry processing. 
+BR-49 
+Notification retry processing must resend only retryable notification logs. Successfully delivered or terminal notification logs must not be sent again, and duplicate notification delivery records must not be created. 
+BR-50 
+Audit retention or archival processing must not modify or delete immutable InventoryTransaction or audit records. It may only mark eligible records using a separate retention or archival status. 
+BR-51 
+Only expired or revoked UserSession records may be invalidated or removed by session cleanup. Active valid sessions must remain usable. 
+BR-52 
+Only expired or already used verification tokens may be invalidated or removed by token cleanup. Valid unused tokens must remain usable until their expiry time. 
+BR-53
+When an approved outbound order is cancelled or its approval is revoked, the
+system releases the full remaining QuantityReserved for every line; on-hand is
+unchanged.
+BR-54
+On partial pick or partial shipment confirmation, the system decreases on-hand
+and releases reservations only for the confirmed quantity. The unpicked remainder stays reserved until the order is completed or cancelled.
+BR-55
+Inventory balance updates use optimistic concurrency via a RowVersion token.
+When two operations update the same ProductVariant/Location balance concurrently, the stale write is rejected and retried so the system cannot oversell or lose an update; available quantity must never become negative.
+Table 72: Business Rules Summary
+Part 6 — Non-Functional Requirements
+NFR ID
+Category
+Requirement
+NFR-P01
+Performance
+Dashboard summary loads within 3 seconds for 10,000 inventory records under normal network conditions.
+NFR-P02
+Performance
+QR scan validation response returns within 2 seconds for 95% of requests.
+NFR-P03
+Realtime
+Inventory and alert broadcast reaches connected Angular clients within 5 seconds after confirmed transaction.
+NFR-P04 
+Performance 
+Mobile product lookup information must load within 3 seconds under normal network conditions. 
+NFR-S01
+Security
+All authenticated APIs require JWT; role authorization is enforced server-side.
+NFR-S02
+Security
+Passwords are stored using BCrypt or equivalent salted hash; plain passwords are never stored or logged.
+NFR-S03 
+Security 
+Mobile access and refresh tokens must be stored only in platform-secure storage and must not be displayed in the user interface or written to application logs. 
+NFR-A01
+Auditability
+All stock-changing actions record actor, timestamp, source document and reason where applicable.
+NFR-R01
+Reliability
+IoT weight posts are idempotent by request identifier or timestamp window to avoid duplicate evidence records.
+NFR-U01
+Usability
+Mobile operational screens require no more than 3 primary taps after scanning a valid QR for common receiving/picking actions.
+NFR-U02 
+Usability 
+Interactive mobile controls must provide a minimum touch target of 44 × 44 px 
+NFR-C01
+Compatibility
+Angular web admin supports current Chrome, Edge and Safari; Flutter mobile supports common Android devices used by staff.
+NFR-M01
+Maintainability
+Backend follows Clean Architecture and separates Domain, Application, Infrastructure and API concerns.
+NFR-B01
+Backup
+Database backup/export procedure is documented for project deployment and demonstration environment.
+NFR-L01
+Localization
+Primary UI copy supports Vietnamese business terminology; internal IDs and API fields remain English.
+NFR-R02 
+Reliability 
+Recurring background jobs must be idempotent. Re-running a job with unchanged input data must not create duplicate business outcomes, including active alerts, notifications, commands, session invalidations, or retention markers. 
+NFR-D01
+Data Integrity
+Concurrent inventory updates are serialized through
+optimistic locking (RowVersion/ETag). Conflicting writes fail safely and are retried;
+the system never produces a lost update or a negative available quantity. Scope note: a
+single small warehouse with low write concurrency — optimistic locking is sufficient for
+MVP; pessimistic/distributed locking is out of scope.
+Table 73: Non-Functional Requirements
+Appendices
+Appendix A — RTW.xlsx Reference
+Sheet
+Purpose
+1. Overview
+Workbook summary and navigation instructions.
+2. Use Case List
+UC IDs, actors, preconditions, postconditions, linked FT/SC.
+3. Feature Traceability
+FE -> FT -> UC -> Scenario -> Data -> NFR -> BR -> Test mapping.
+4. Permission Matrix
+Role x feature/action access control.
+5. Data Dictionary
+Entity and attribute-level data requirements.
+6. Business Rules
+Full BR definitions and linked features.
+7. NFR Tracker
+NFR targets, test methods and status.
+8. Open Issues
+Unresolved decisions/questions.
+9. Change Log
+Requirement changes.
+Table 74: Appendix A - RTW.xlsx Reference
+
+Appendix B — Diagram Index
+Diagram ID
+Scenario
+File Name
+SC-01
+Configure product variants and QR labels
+SC-01.png
+SC-02
+Create and approve inbound document
+SC-02.png
+SC-03
+Receive inbound goods with QR and IoT verification
+SC-03.png
+SC-04
+Store received goods using put-away suggestion
+SC-04.png
+SC-05
+Pick, pack, and ship outbound goods
+SC-05.png
+SC-06
+Perform cycle count and stock adjustment
+SC-06.png
+SC-07
+Monitor real-time inventory, reports, and low-stock alerts
+SC-07.png
+SC-08
+Review inbound bottleneck warning
+SC-08.png
+SC-09
+Maintain warehouse locations and supplier master data
+SC-09.png
+SC-10
+Manage users and permissions
+SC-10.png
+SC-11
+Process customer / inbound returns
+SC-11.png
+SC-12
+Process return-to-supplier
+SC-12.png
+ Table 75: Appendix B - Diagram Index
+— End of Document —
+

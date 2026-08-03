@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/theme_controller.dart';
+import '../../../auth/data/auth_session_store.dart';
+import '../../../auth/data/api_auth_service.dart';
+import '../../data/api_account_repository.dart';
 import '../../data/account_repository.dart';
 import '../../models/account_profile.dart';
 import '../widgets/account_bottom_bar.dart';
@@ -10,6 +13,8 @@ import '../widgets/account_menu_section.dart';
 import '../widgets/account_stats_card.dart';
 import '../widgets/assigned_warehouse_card.dart';
 
+/// Màn hình Quản lý tài khoản (Account Screen / Profile Screen).
+/// Hiển thị thông tin người dùng, số liệu thống kê làm việc, thông tin kho hàng phụ trách và các thiết lập cài đặt ứng dụng.
 class AccountScreen extends StatefulWidget {
   const AccountScreen({super.key});
 
@@ -18,7 +23,7 @@ class AccountScreen extends StatefulWidget {
 }
 
 class _AccountScreenState extends State<AccountScreen> {
-  final AccountRepository _repository = MockAccountRepository();
+  final AccountRepository _repository = ApiAccountRepository();
 
   late final Future<AccountProfile> _profileFuture;
   AccountProfile? _profile;
@@ -27,18 +32,20 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   void initState() {
     super.initState();
-    // API_SWAP: This is where the screen requests account profile data.
+    // Khởi tạo Future lấy dữ liệu profile của người dùng
     _profileFuture = _repository.getProfile();
   }
 
+  /// Khởi tạo dữ liệu cục bộ khi tải xong dữ liệu từ Repository (chỉ chạy một lần đầu tiên)
   void _initializeProfile(AccountProfile profile) {
     if (_initialized) return;
     _profile = profile;
     _initialized = true;
   }
 
+  /// Bật/tắt nhận thông báo từ hệ thống
   void _toggleNotifications(bool value) {
-    // API_SWAP: Call PATCH /account/settings notificationsEnabled=value.
+    // API_SWAP: Sau này gọi PATCH /account/settings với notificationsEnabled=value.
     final profile = _profile;
     if (profile == null) return;
     setState(() {
@@ -46,9 +53,11 @@ class _AccountScreenState extends State<AccountScreen> {
     });
   }
 
+  /// Bật/tắt Dark Mode (Giao diện tối) của hệ thống
   void _toggleDarkMode(bool value) {
-    // API_SWAP: Call PATCH /account/settings darkModeEnabled=value or save locally.
-    ThemeController.setDarkMode(value);
+    // API_SWAP: Sau này gọi PATCH /account/settings với darkModeEnabled=value hoặc lưu local/SQLite/SharedPref.
+    ThemeController.setDarkMode(
+        value); // Thay đổi theme trực tiếp thông qua ThemeController
     final profile = _profile;
     if (profile == null) return;
     setState(() {
@@ -56,8 +65,20 @@ class _AccountScreenState extends State<AccountScreen> {
     });
   }
 
-  void _logout() {
-    // API_SWAP: Call POST /auth/logout and clear token storage.
+  /// Đăng xuất khỏi hệ thống
+  Future<void> _logout() async {
+    final session = AuthSessionStore.current;
+    if (session != null) {
+      try {
+        await ApiAuthService()
+            .logout(session)
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {
+        // Local logout must still complete when the server is unavailable.
+      }
+    }
+    AuthSessionStore.current = null;
+    if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.login,
       (route) => false,
@@ -72,10 +93,12 @@ class _AccountScreenState extends State<AccountScreen> {
         child: FutureBuilder<AccountProfile>(
           future: _profileFuture,
           builder: (context, snapshot) {
+            // Hiển thị loading trong lúc đợi dữ liệu được tải về
             if (snapshot.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator());
             }
 
+            // Xử lý khi xảy ra lỗi tải thông tin tài khoản
             if (snapshot.hasError || !snapshot.hasData) {
               return const Center(child: Text('Không tải được tài khoản'));
             }
@@ -86,15 +109,22 @@ class _AccountScreenState extends State<AccountScreen> {
             return SingleChildScrollView(
               child: Column(
                 children: [
+                  // Phần header thông tin tài khoản
                   AccountHeader(profile: profile),
+
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: Column(
                       children: [
+                        // Thẻ hiển thị số lượng phiếu Nhập/Xuất/Kiểm đã thực hiện
                         AccountStatsCard(profile: profile),
                         const SizedBox(height: 10),
+
+                        // Thẻ hiển thị thông tin Kho hàng được chỉ định
                         AssignedWarehouseCard(profile: profile),
                         const SizedBox(height: 10),
+
+                        // Phần menu CÀI ĐẶT
                         AccountMenuSection(
                           title: 'CÀI ĐẶT',
                           items: [
@@ -124,6 +154,8 @@ class _AccountScreenState extends State<AccountScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
+
+                        // Phần menu TÀI KHOẢN & TRỢ GIÚP
                         AccountMenuSection(
                           title: 'TÀI KHOẢN',
                           items: [
@@ -131,7 +163,9 @@ class _AccountScreenState extends State<AccountScreen> {
                               icon: Icons.lock_outline,
                               iconColor: const Color(0xFF8B5CF6),
                               title: 'Đổi mật khẩu',
-                              onTap: () {},
+                              onTap: () => Navigator.of(context).pushNamed(
+                                AppRoutes.changePassword,
+                              ),
                             ),
                             AccountMenuItem.navigation(
                               icon: Icons.support_agent,
@@ -142,6 +176,8 @@ class _AccountScreenState extends State<AccountScreen> {
                           ],
                         ),
                         const SizedBox(height: 10),
+
+                        // Phần menu ĐĂNG XUẤT
                         AccountMenuSection(
                           items: [
                             AccountMenuItem.navigation(
@@ -161,7 +197,8 @@ class _AccountScreenState extends State<AccountScreen> {
           },
         ),
       ),
-      bottomNavigationBar: const AccountBottomBar(),
+      bottomNavigationBar:
+          const AccountBottomBar(), // Thanh Bottom Nav của trang Profile
     );
   }
 }

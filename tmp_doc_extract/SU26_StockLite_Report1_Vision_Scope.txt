@@ -1,0 +1,611 @@
+﻿
+ Vision & Scope Document
+Warehouse Management Application for SME E-Commerce Businesses
+ STOCKLITE - REPORT 1
+Project Name
+Warehouse Management Application for SME E-Commerce Businesses
+Version
+v1.1.1
+Date Created
+18/05/2026
+Last Updated
+21/06/2026
+Author(s)
+SEP490-G60
+Reviewer(s)
+Tô Thanh Hải
+Status
+Approved
+
+Table Of Content
+ TOC \h \u \z \t "Heading 1,1,Heading 2,2,Heading 3,3,Heading 4,4,Heading 5,5,Heading 6,6,"Table Of Content2
+Document Change History3
+List of Figures4
+List of Table5
+Definition and Acronyms6
+1. Product Background7
+Quantified evidence of the problem.8
+Target customer profile.8
+Basis of the problem statement.9
+2. Existing Solutions9
+2.1 KiotViet9
+1. Support Package11
+2. Professional & Premium Packages12
+2.2 Sapo13
+1. Sales Channels & Connection Limits (System Quotas)18
+2. Smart Retail Features (AI Applications)18
+3. Core Operational Variations Among Packages18
+2.3 Odoo ERP19
+1. Operational Philosophy & Core Application Ecosystem22
+2. Inclusive Service Policies22
+3. Subscription Tier Breakdown22
+3. Proposed Solution23
+4. Project Scope & Limitations23
+4.1 Major Features23
+Gap Reference Table29
+Feature-to-gap traceability and net improvement.30
+4.2 Limitations & Exclusions32
+5. Expected Contributions & Next Steps34
+5.1 Business & Operational Impact34
+5.2 User Experience Impact34
+5.3 Planned Next Steps After Project Completion34
+References:35
+
+Document Change History
+Version
+Date
+Changes
+Author
+v1.0.0
+18/05/2026
+Initial creation
+LongTD
+v1.0.1
+31/05/2026
+Edit information about project
+LongTD
+v1.0.2
+01/06/2026
+Add Definition and acronyms and information about product background
+LongTD
+v1.0.3
+13/06/2026
+Edit information about project and proposed solution
+LongTD
+v1.0.4
+14/06/2026
+Add information about price service of Existing system
+LongTD
+v1.1.0
+20/06/2026
+Edit information of major feature, limitation and add information to feature to gap table
+NhanDND
+v1.1.1
+21/06/2026
+Addressed mentor review on Report 1: added Target Customer Profile and primary-research basis; reframed Odoo positioning (simpler, not stronger); clarified outbound document creation; sharpened GAP-03; clarified IoT tolerance/exceptions and rule-based nature of FE-12/FE-13
+NhanDND
+
+List of Figures
+Figure No.
+Title
+Page
+Figure 1
+Existing System: KiotViet
+9
+Figure 2
+Price of KiotViet
+10
+Figure 3
+Details of KiotViet Support service package
+11
+Figure 4
+Details of the Professional, Premium service package
+11
+Figure 5
+Existing System: Sapo
+13
+Figure 6
+Price of Sapo
+14
+Figure 7
+Sapo Pricing Plans and Channel Connection Limits
+15
+Figure 8
+Sapo Smart Retail AI Feature Quotas
+15
+Figure 9
+Sapo Product & Inventory Management Feature Comparison
+16
+Figure 10
+Sapo Operations Management, HR & CRM Settings
+16
+Figure 11
+Sapo Payment, Shipping Carrier Integration & Reporting Features
+17
+Figure 12
+Sapo Website Analytics & Workflow Automation Features
+17
+Figure 13
+Sapo Post-Sale Customer Loyalty & Retention Setup
+18
+Figure 14
+Existing System: Odoo ERP
+19
+Figure 15
+Price of Odoo per year
+20
+Figure 16
+Price of Odoo per month
+21
+Figure 17
+Odoo Enterprise Interface and Main Business Applications
+21
+
+List of Table
+Table No.
+Title
+Page
+Table 1
+Quantified evidence of the SME inventory-management problem
+8
+Table 2
+Advantages & Disadvantages of KiotViet
+10
+Table 3
+Advantages & Disadvantages of Sapo
+13
+Table 4
+Advantages & Disadvantages of Odoo ERP
+19
+Table 5
+Major feature of StockLite
+23 - 28
+Table 6
+Gap reference of StockLite
+29
+Table 7
+Feature-to-gap traceability and net improvement 
+30 - 31
+Table 8
+Limitations & Exclusions of StockLite 
+33
+
+Definition and Acronyms 
+Acronym
+Definition
+SME
+Small and Medium-sized Enterprises 
+SKU
+Stock Keeping Unit
+POS
+Point-Of-Sale
+GMV
+Gross Merchandise Volume
+WMS
+Warehouse Management System
+ERP
+Enterprise Resource Planning 
+USD
+United States Dollar
+LI
+Limitation
+FE
+Feature
+MVP
+Minimum Viable Product
+APK
+Android Package Kit
+iOS
+iPhone Operating System
+API
+Application Programming Interface
+IoT
+Internet of Things
+QR
+Quick Response Code 
+OCR
+Optical Character Recognition 
+FIFO
+First In, First Out 
+FEFO
+First Expired, First Out 
+
+1. Product Background
+Vietnam's e-commerce market has emerged as one of the fastest-growing in Southeast Asia. According to the Ministry of Industry and Trade, Vietnam's retail e-commerce market surpassed USD 25 billion in 2024, marking a 20% increase compared to the previous year — exceeding the earlier forecast of USD 22 billion made by Google, Temasek, and Bain & Company [1]. E-commerce now accounts for over 60% of Vietnam's digital economy, ranking third in the region behind Indonesia and Thailand [1]. According to YouNet ECI's full-year 2024 report, Shopee and TikTok Shop led the market with GMV of USD 9.3 billion and USD 3.8 billion respectively, together capturing approximately 93.6% of platform market share [2].
+This explosive growth has drawn hundreds of thousands of small and medium-sized enterprises onto e-commerce platforms. In Quarter 2 2024 alone, Shopee recorded 261,000 active sellers, TikTok Shop had 113,000, Lazada had 104,000, and Tiki had 8,800 [3]. However, the rapid expansion has also intensified competition.
+As order volumes surge, most Vietnamese SME sellers still rely on manual methods to manage their warehouse operations — a reality reflected in the fact that inventory inaccuracy remains one of the most critical warehouse challenges in Vietnam, primarily caused by human error during stock counts and order picking, leading to significant discrepancies between recorded and actual inventory levels [4]. Globally, 72% of SMEs experience unpredictable delivery times from suppliers, and SMEs carry the highest labour costs at an average of 27.7% of revenue — inefficiencies that compound when inventory is poorly managed [5]. 
+These gaps highlight the urgent need for an affordable, accessible, and localised warehouse management solution tailored to the scale of Vietnamese SME e-commerce businesses. StockLite is developed to address this opportunity — providing a lightweight system with an Angular web admin dashboard and a Flutter mobile application.
+
+Quantified evidence of the problem.
+Problem area
+Typical manual practice (Excel / Zalo / paper)
+Quantified impact — industry benchmark
+Capability StockLite provides
+Inventory record accuracy
+Stock counted by hand; balances kept in spreadsheets and chat
+Under-digitised retail operations average only ~63% inventory accuracy; the 2024 cross-industry average is ~83% versus ~95% for world-class — up to ~1 in 6 records wrong [9][10]
+Real-time stock by ProductVariant and location, updated only via confirmed transactions (FE-01)
+Stockouts and lost sales
+Reorder from memory; no automatic low-stock signal
+Out-of-stock items are linked to roughly US$1 trillion in missed sales globally, and ~69% of shoppers switch to a competitor after a stockout [10].
+Configurable low-stock alerts (FE-03) and movement reports (FE-04)
+Receiving / picking errors
+Goods checked by eye; no scan or weight check
+Barcode/scan verification has been shown to cut handling errors by ~43%, and real-time tracking improves stock accuracy by ~35% [9][10].
+QR scan plus IoT weight verification before any confirmation (FE-07, FE-09)
+SME digitisation gap
+Tools are Excel + Zalo + paper, with no warehouse system
+About 43% of small businesses do not track inventory or still rely on manual systems [10].
+An affordable, purpose-built warehouse MVP (whole system)
+Table 1 — Quantified evidence of the SME inventory-management problem
+Target customer profile.
+StockLite targets Vietnamese SME e-commerce sellers that: (a) operate a single physical warehouse or stockroom; (b) sell primarily non-perishable, individually countable goods — fashion & accessories, consumer electronics & accessories, home & living, toys, stationery, and similar non-expiry FMCG; (c) process roughly 50–200 outbound orders per day; and (d) employ 2–10 warehouse staff.
+
+This target range is a v1 segmentation assumption supported by recent Vietnamese operating evidence. For example, Enoda Home, a Vietnamese home-and-living e-commerce seller, reported that warehouse productivity increased to approximately 190 outbound orders per warehouse employee per day after standardising warehouse operations, and could reach approximately 210 orders per employee per day during peak periods. The case demonstrates that sellers of individually countable home-and-living products can face meaningful warehouse-execution pressure even with a small operational team. However, the published case does not disclose the seller’s total daily order volume, total warehouse headcount, or number of physical warehouses. Therefore, StockLite treats the 50–200 orders-per-day [11] and 2–10 warehouse-staff [11] range as a validated target hypothesis to be confirmed through pilot interviews and on-site observation.
+
+For this segment, lot/expiry traceability, which is generally required for cosmetics, food, and pharmaceuticals, and inter-warehouse transfer are not part of daily operations. Excluding them (LI-02, LI-06) therefore removes complexity without removing capability the target user actually needs. Sellers that require batch/lot/expiry control, multi-site logistics, or substantially larger warehouse operations fall outside the v1 target segment and are addressed in the post-launch roadmap (Section 5.3).
+Basis of the problem statement.
+The need described in this section is currently evidenced by secondary and industry data (the quantified-evidence table above and the cited e-commerce/inventory statistics). Primary field validation — structured interviews and on-site observation with pilot SME sellers — has not yet been conducted and is defined as the first activity after the v1 feature freeze (Section 5.3). The team treats the current scope as a validated hypothesis to be confirmed with pilot users, not as a market-proven requirement set.
+2. Existing Solutions
+The following solutions currently address parts of the warehouse and inventory management problem for Vietnamese SME e-commerce sellers. Each is evaluated for its strengths, weaknesses, and the gap it leaves that StockLite aims to close.
+2.1 KiotViet
+KiotViet is a mobile-based retail management application developed specifically for the Vietnamese market, trusted by over 150,000 stores. The system helps SME retailers manage inventory, revenue, and orders on a single platform. Figure 1 - Existing System: KiotViet
+Attribute
+Description
+Website / Link
+https://www.kiotviet.vn
+Target Users
+Admin, Store Owner / Manager, Staff
+Core Features
+Detailed revenue & inventory reporting, low stock alerts, real-time order status updates, multi-branch monitoring, product and supplier management
+Strengths
+User-friendly interface with full Vietnamese language support; affordable pricing well-suited for SMEs; accessible anytime via mobile app
+Weaknesses
+Primarily oriented toward retail/POS operations; dedicated warehouse-floor execution workflows such as QR-guided receiving, IoT scale verification, and detailed stock discrepancy handling are not its core focus.
+GAP for this project
+Although KiotViet supports retail inventory management and e-commerce marketplace connectivity, its core positioning is broader retail/POS and sales management rather than a dedicated warehouse-floor execution system. StockLite focuses on lightweight internal warehouse workflows for SMEs, including QR-based receiving/dispatching, stocktake discrepancy tracking, IoT scale verification, and inventory transaction traceability.
+Table 2 - Advantages & Disadvantages of KiotViet
+
+Figure 2 - Price of KiotViet
+Pricing and market position (re-verify at kiotviet.vn): KiotViet’s published service tiers are about 270,000đ/month (Support), 330,000đ/month (Professional) and 490,000đ/month (Premium), effective 06/2026 [6]. The packages are affordable but built around retail/POS, so warehouse-floor execution — QR-guided receiving, IoT weight verification, location-level stock — is not their focus.
+
+Figure 3 - Details of KiotViet Support service package
+
+Figure 4 - Details of the Professional, Premium service package 
+1. Support Package
+This package provides the most fundamental and essential platform for retail management and store operations:
+Sales and Payment: Provides features for ordering, selling, returning goods, and integrating payments via Napas VietQR, Visa, and Master. It also supports e-invoice integration and automated order notifications.
+Basic E-commerce Operations: Allows selling on Shopee and TikTok while synchronizing product, order, and customer information back to the KiotViet system.
+Operational Management: Includes order creation via shipping carriers, customer management (points accumulation, promotions, SMS/Zalo care messages), and supplier management.
+Basic Inventory Management: Supports inventory tracking, viewing stock cards by product/branch, and executing goods receipt, checking, transferring, or cancellation.
+Reports and Devices: Enables creating receipt/payment vouchers, viewing multi-dimensional reports, and allows usage across various devices such as Laptops, Mobiles, PCs, Tablets, and POS machines.
+2. Professional & Premium Packages
+In addition to inheriting all features of the Support package, these two tiers introduce advanced functionalities tailored for multi-channel businesses and those with a larger workforce:
+Multi-channel Expansion: Supports posting products on more e-commerce platforms (including Lazada, Tiki...) and centralizes order status updates.
+Social Media & Website: Automatically closes livestream orders based on customer comments on Facebook/Instagram, creates orders during chats, and allows users to easily build an online sales website.
+Advanced Warehouse Management: Differentiates between sales inventory and reserve inventory, facilitates goods transfer between warehouses, and manages separate stock for each warehouse to prevent loss.
+Human Resources Management: Provides timekeeping features (fingerprint, QR code), automatically calculates overtime and late/early arrivals, and includes an automated system for calculating various salaries and commissions.
+Business Analytics: Delivers in-depth analysis, tracking, forecasting, and smart business recommendations to retain customers and optimize operations.
+Public API Privilege (Premium Package Only): Safely and securely supports integration with third-party management software such as Websites and CRMs via APIs for customer information, pricing, and products.
+
+2.2 Sapo
+Sapo is Vietnam's leading omnichannel sales and management platform, serving over 190,000 businesses and shop owners. It enables selling across multiple channels — from physical stores, websites, and Facebook to major e-commerce marketplaces — with centralized management of products, inventory, and orders in a single system.
+
+Figure 5 - Existing System: Sapo
+Attribute
+Description
+Website / Link
+https://www.sapo.vn
+Target Users
+Admin, Store Owner, Warehouse Manager, Staff
+Core Features
+Omnichannel sales management (physical, web, Facebook, Shopee, Lazada, TikTok Shop); real-time inventory and order synchronisation; multi-warehouse and multi-branch management; revenue and staff performance reporting; domestic shipping carrier integration
+Strengths
+Made-in-Vietnam platform with multiple national technology awards; full Vietnamese language support and local payment gateway integration; well-suited for retail chains and multi-channel businesses
+Weaknesses
+More focused on point-of-sale (POS) and sales management than deep warehouse operations; omnichannel pricing packages can be relatively costly for early-stage SMEs; advanced warehouse features (complex Inbound/Outbound flows, automated cycle counting) are limited compared to dedicated WMS solutions
+GAP for this project
+While Sapo possesses solid warehouse capabilities, these features primarily serve to support its core POS and sales ecosystem. Since the platform is inherently optimized for retail and sales management, it does not heavily focus on the in-depth Inbound/Outbound workflows or stringent stock discrepancy tracking that dedicated, warehouse-focused operations require. Additionally, for early-stage SMEs operating on tight budgets, Sapo's omnichannel pricing structure may also be a financial consideration when they only need a focused warehouse execution workflow. 
+Table 3 - Advantages & Disadvantages of Sapo
+
+Figure 6 - Price of Sapo
+Pricing and market position (re-verify at sapo.vn/bang-gia.html): Sapo’s entry POS package starts around 170,000–249,000đ/month, while the full Omnichannel package is around 600,000–999,000đ/month [7]. SMEs therefore pay mainly for multi-channel sales features rather than deep inbound/outbound warehouse control.
+
+Figure 7 - Sapo Pricing Plans and Channel Connection Limits
+
+Figure 8 - Sapo Smart Retail AI Feature Quotas 
+
+Figure 9 - Sapo Product & Inventory Management Feature Comparison 
+
+Figure 10 - Sapo Operations Management, HR & CRM Settings 
+
+Figure 11- Sapo Payment, Shipping Carrier Integration & Reporting Features 
+
+Figure 12 - Sapo Website Analytics & Workflow Automation Features 
+
+Figure 13 - Sapo Post-Sale Customer Loyalty & Retention Setup 
+1. Sales Channels & Connection Limits (System Quotas)
+Start Up Package ($170,000 VND/month$): Best suited for beginners or small-scale sellers. It strictly limits users to 1 branch, 1 social media page (up to 3 users), and 1 e-commerce storefront; online website generation is not supported.
+Pro Package ($249,000 VND/month$): An upgraded tier for brick-and-mortar retailers expanding online. It supports 1 branch, expands connection capacity up to 3 social media pages (5 users), and 5 e-commerce storefronts; online website generation is excluded.
+Omni Package ($600,000 VND/month$): Tailored for professional omnichannel merchants. It expands limits to 2 branches, 5 social media pages (30 users), 15 e-commerce storefronts, and comes with an integrated brand website. Notably, this package opens the "Unlimited livestream sales scripts" functionality.
+Growth Package ($999,000 VND/month$): The ultimate package designed for retail chains or high-growth businesses. It natively supports 5 branches, 5 social media pages (50 users), 15 e-commerce storefronts, includes an integrated brand website, and offers unlimited livestream sales capabilities.
+2. Smart Retail Features (AI Applications)
+All 4 packages share identical AI resource quotas: 100 credits/month (provided as a free trial for the first 3 months, with options to purchase more credits).
+The integrated AI features include automated product description writing, multi-channel bulk product listing, situational smart AI Chatbots, and automated review translation/replies on Shopee.
+3. Core Operational Variations Among Packages
+Core Sales & Inventory Management: Core capabilities—such as detailed product/inventory configurations, automated real-time stock sync upon new orders, centralized multi-channel order orchestration, cashless payment integrations, automated shipping carrier assignment/reconciliation, and basic customer/cash book management—are systematically supported across all 4 tiers.
+Advanced Website Analytics (Omni and Growth Packages Only): Analytical capabilities—such as step-by-step conversion rate tracking, website traffic trend analysis, product view session auditing, and landing page single-page bounce rate analytics—are exclusively active on the website-enabled tiers (Omni and Growth).
+Workflow Automation (Growth Package Only): This is the premium, standalone highlight reserved solely for the Growth tier, enabling growing enterprises to automate sophisticated multi-step business logic and background operational routines.
+Post-Sale Customer Retention: All 4 packages fully support multi-channel customer loyalty point setups (POS, Web, Facebook), point expiration window configuration, tier-based member structures, and reward points redemption mechanisms.
+2.3 Odoo ERP
+Odoo is an open-source ERP platform that delivers core WMS functionalities — including multi-location tracking, automation, and integrations — at a fraction of the cost of traditional warehouse management systems. Built around a modular app structure, Odoo lets businesses choose the tools they need and add more as they grow.
+
+ Figure 14 - Existing System: Odoo ERP
+
+Attribute
+Description
+Website / Link
+https://www.odoo.com
+Target Users
+Admin, Warehouse Manager, Purchaser, Sales Staff, Accountant
+Core Features
+Real-time inventory tracking (double-entry system); multi-warehouse, multi-company, and multi-currency support with automated forecasting; full module integration (accounting, purchasing, sales, customer relationship management); barcode scanning, batch/serial number tracking; third-party business tool integrations
+Strengths
+Inventory management at a lower price point than many cloud ERPs; highly flexible and deeply customisable; large global community with implementation partners available in Vietnam
+Weaknesses
+Technical expertise or a dedicated support team required to deploy, integrate, and customize; complex interface with a steep learning curve — not ideal for SMEs just beginning to digitise.
+GAP for this project
+Although Odoo offers exceptionally powerful and comprehensive inventory and warehouse capabilities, its broader ERP scope, configuration complexity, and implementation effort can be excessive for Vietnamese SME e-commerce sellers who need a lightweight, immediately usable warehouse workflow. StockLite is intentionally narrower and simpler than Odoo: it does not aim to match Odoo's batch/lot, multi-warehouse, cycle-counting, or full-ERP depth. Instead it delivers the subset of warehouse-execution functions a single-warehouse, non-perishable SME uses every day, with near-zero setup cost and learning curve. The advantage is fit and time-to-adopt, not feature superiority. StockLite focuses on this smaller MVP scope: QR-based warehouse operations, IoT scale verification, stock movement traceability, and a mobile workflow for warehouse staff.
+Table 4 - Advantages & Disadvantages of Odoo ERP
+
+Figure 15 - Price of Odoo per year
+
+Figure 16 - Price of Odoo per month
+Pricing and market position (re-verify at odoo.com/pricing): Odoo Enterprise is priced per user (roughly US$0–10.9/user/month on the Standard plan, higher for Custom), and small-business implementation is commonly cited at about US$2,000–5,000 (mid-size US$8,000–20,000+) [8]. The per-user fee plus implementation effort and full-ERP complexity exceed what a small Vietnamese seller needs for a warehouse-only workflow.
+
+Figure 17 - Odoo Enterprise Interface and Main Business Applications 
+
+1. Operational Philosophy & Core Application Ecosystem
+Instead of artificial feature gating, Odoo’s paid tiers (Standard and Custom) unlock full access to the entire global suite of applications. Key core modules highlighted on the dashboard include:
+Commerce & Sales: Sales management (Sales), Digital Storefronts (eCommerce), and Point of Sale (POS).
+Operations & Logistics: In-depth warehouse execution (Inventory) and Task Orchestration (Project).
+Finance & Relations: Corporate double-entry bookkeeping (Accounting), Customer Relationship Management (CRM), and Document Validation (Sign).
+Workforce & Web Presence: Human Resources (HR) and Content Management/Website Builder (Website).
+2. Inclusive Service Policies
+Odoo enforces high cost transparency by embedding fundamental operational infrastructure natively:
+Unlimited Support: Continuous technical support and ticketing assistance are fully covered.
+Hosting & Maintenance: Standard cloud infrastructure hosting and routine maintenance updates are bundled inside the core subscription fee (excluding custom Odoo.sh cloud hosting rates, which require a separate line-item charge).
+No Hidden Costs: There are absolute limits waived on business features or live data retention.
+
+3. Subscription Tier Breakdown 
+While the application catalog remains wide open, Odoo maps its monetization strategy to deployment capabilities and user headcount rather than specific business features:
+One App Free: Completely free of charge for an unlimited headcount, provided the enterprise relies strictly on one single application.
+Standard Plan: Grants comprehensive app access hosted entirely within Odoo’s multi-tenant software-as-a-service cloud (Odoo Online). Billing scales linearly based on the exact user seats registered monthly.
+Custom Plan: Specially structured for businesses requiring deeper architecture interventions. It enables advanced low-code customization (Odoo Studio), multi-corporate environments (Multi-Company), external developer connections (External API), and versatile deployment choices (Odoo Online, Odoo.sh, or locally managed On-premise infrastructure).
+
+3. Proposed Solution
+StockLite is an internal warehouse management system designed for small and medium-sized e-commerce businesses in Vietnam. It addresses the operational gaps identified in Section 2 by replacing fragmented stock tracking methods such as spreadsheets, chat messages, and manual records with a single, structured environment for managing warehouse activities. The product focuses on improving stock accuracy, inbound and outbound traceability, and overall warehouse control.
+For store owners and warehouse managers, StockLite provides clearer visibility over inventory movement, stock status, and warehouse performance, helping them reduce stock discrepancies and make better operational decisions. For warehouse staff, guided workflows help reduce manual mistakes during receiving, picking, packing, and stock checking. As a result, warehouse operations become more consistent, traceable, and easier to manage as the business grows.
+The timing is appropriate because Vietnam’s e-commerce market continues to expand rapidly, while many SME sellers still lack affordable and localized warehouse management tools. StockLite offers a lightweight and easy-to-adopt solution that fits the practical needs of Vietnamese SME warehouses, making warehouse digitalisation more accessible without requiring complex enterprise-level systems.
+4. Project Scope & Limitations
+4.1 Major Features
+ID
+Feature Name
+Description
+Addresses Gap
+FE-01
+Real-Time Inventory Tracking
+Enables warehouse staff and managers to monitor real-time stock levels by ProductVariant/SKU, warehouse, and internal storage location. Inventory is updated only through confirmed inventory transactions such as inbound confirmation, outbound shipment confirmation, return confirmation, stocktake adjustment, or manual adjustment with permission.
+GAP-01
+FE-02
+Inbound / Outbound Management with Approval
+Supports staff-created inbound and outbound warehouse documents with manager/system admin approval before execution.
+ 
+Inbound: staff create an inbound document (selecting an existing or quick-created supplier), submit it for approval, scan QR/SKU after approval, split received goods into receiving groups if needed, attach IoT weight evidence, accept or override the suggested storage location, and confirm receiving. The received quantity per line may differ from the ordered quantity; a document may be fully received, partially received, or rejected. Goods identified as short, over, damaged, or failing quality checks are recorded with a discrepancy reason and routed to a quarantine (non-available) location instead of available stock. Inventory at the confirmed location is increased only after final receiving confirmation.
+ 
+Outbound: staff create an outbound document (selecting a customer), submit it for approval. On approval the system reserves the required quantity so that available stock = on-hand − reserved, preventing two orders from committing the same stock. After approval, staff perform QR-based picking from the system-indicated source location, then packing, attach optional IoT weight evidence, and confirm shipment. Reserved stock is released if the document is cancelled. Inventory is decreased only after final shipment confirmation. Outbound documents are created manually by warehouse staff based on orders the seller has already confirmed on marketplace platforms (Shopee / TikTok Shop) or other sales channels. Staff key in customer name, phone, address, and order lines directly on the outbound document (StockLite keeps no customer master table — see FE-15). Marketplace order data is entered manually in v1; automated order pull via marketplace APIs is out of scope (LI-01) and deferred to the roadmap (Section 5.3).
+GAP-01
+FE-03
+Low Stock Alerts
+Automatically notifies the store owner when product quantities fall below a configurable minimum threshold, enabling proactive restocking.
+GAP-01
+FE-04
+Inventory Reporting & Analytics
+Provides daily, weekly, and monthly reports on inventory movement, stock turnover, low-stock products, inventory discrepancies, and inventory adjustment summaries to support data-driven inventory management decisions 
+GAP-03
+FE-05
+Role-Based Access Control
+Allows the store owner to assign distinct roles (System Admin, Warehouse Manager, Warehouse Staff) with granular permissions, protecting sensitive data and ensuring accountability.
+GAP-01
+FE-06
+Product & Category Management
+Supports creation and organisation of product master data, categories, units of measure, and ProductVariant/SKU records. ProductVariant is the stock-keeping unit used in inbound documents, outbound documents, stocktake, inventory, QR scanning, IoT weight verification, and reporting. StockLite does not store SKU directly on the parent Product entity.
+GAP-01
+FE-07 
+QR Warehouse Operations 
+Generates or stores QR code values for each ProductVariant/SKU and enables warehouse staff to scan QR codes during inbound receiving, outbound picking/packing, and stocktake workflows. QR scanning verifies that the correct SKU is being processed before any inventory-changing confirmation is allowed.
+GAP-02
+FE-08 
+Flutter Mobile Warehouse App 
+Provides a mobile-first Flutter application for warehouse staff to execute warehouse-floor tasks, including QR scanning, inbound receiving, put-away location confirmation, outbound picking/packing, stocktake counting, IoT weight log retrieval, and final operation confirmation.
+GAP-02 
+FE-09 
+IoT Scale Verification 
+Integrates an IoT scale hardware component (ESP32 microcontroller + HX711 amplifier module) to transmit physical weight data to the backend during receiving (Inbound) or dispatching (Outbound) processes. Inventory is strictly managed by item quantity (units), not by weight. The IoT scale serves purely as an automated verification checkpoint: the system calculates the expected total weight (Standard Weight of Variant × Quantity) and compares it with the actual physical weight from the scale to instantly detect discrepancies such as under-receiving, wrong item picking, or incorrect packaging before final confirmation. The IoT scale is a verification checkpoint only. It does not replace quantity counting and does not update inventory automatically. Weight verification operates within a configurable tolerance band (±5%) to absorb sensor noise and lightweight items, and its result is advisory: a staff member may override a flagged mismatch with a reason. Connection loss, multi-SKU weighing, and items with non-uniform unit weight are handled as defined exception cases in Report 3 (scenarios) and never block inventory confirmation by themselves. Inventory is always driven by confirmed item quantity, never by weight.
+GAP-01 
+FE-10 
+Stocktake & Inventory Adjustment 
+Allows managers to create stocktake sessions and assign counting tasks to warehouse staff. Staff perform physical counting by QR/SKU and location, while the system compares counted quantities with system quantities. Any discrepancy must be reviewed and approved by a manager before the system creates adjustment transactions and updates inventory. Counting is performed by QR/SKU and by storage location, so each count line records the location it was counted at. While a stocktake session is active for a location, inbound/outbound transactions on that location are controlled (locked or recorded separately) to keep the counted quantity comparable with the system quantity. Each stocktake adjustment is recorded as a document with the counting staff, the approving manager, timestamp, and before/after quantities, and staff may attach supporting evidence (e.g. a count-sheet photo) into the same shared document store.
+GAP-01 
+FE-11 
+Inventory Transaction History 
+Records every confirmed inventory-changing event, including inbound receiving, outbound shipment, inbound returns, return-to-supplier, stocktake adjustment, and authorized manual adjustment. Each transaction stores reference document, reference item, ProductVariant/SKU, location, before quantity, after quantity, timestamp, and user information for auditability.
+GAP-03
+FE-12
+Rule-Based Inbound Bottleneck Warning 
+The system evaluates inbound workload during document submission and manager/system admin approval. It checks planned inbound quantity, expected receiving date, warehouse/location capacity, and available staff workload to warn managers about possible receiving congestion before the warehouse floor starts processing goods. The warning is advisory and does not automatically cancel inbound documents.
+GAP-01 / GAP-03 
+FE-13
+Put-away Location Suggestion
+The system suggests suitable internal storage locations during inbound receiving after QR/SKU validation and before final receiving confirmation. Suggestions are calculated based on ProductVariant, product category, available location capacity, current occupancy, and location priority. Staff may accept the suggested location or override it with a reason. Inventory is increased at the confirmed location only after final receiving confirmation.
+
+GAP-01/
+GAP-02
+FE-14
+Warehouse & Location Management
+Supports configuration of the single active warehouse and its internal storage structure: zones, racks/shelves, and slots/bins, each with a maximum capacity (MaxCapacity), current occupancy, allowed product category, and put-away priority. This master data is the foundation for inventory-by-location tracking (FE-01), put-away suggestion (FE-13), and the inbound bottleneck warning (FE-12).
+GAP-01 / GAP-02
+FE-15
+Supplier Management
+Maintains supplier master records used by inbound documents. A supplier can be deactivated but not deleted while still referenced by existing inbound documents. A new supplier may be quick-created directly inside the inbound document screen when goods arrive from a supplier not yet in the system. Customer information is not maintained as master data; instead, customer name, phone, and address are entered directly on each outbound document. Financial/accounting scope is excluded.
+GAP-01
+FE-16
+Returns Management (Reverse Logistics)
+Handles the reverse-logistics flows that were previously folded into FE-02, now managed as a dedicated feature with two distinct sub-functions. (1) Customer / Inbound Returns: staff create an inbound-return document for goods returned by a customer (optionally referencing the original outbound document) and submit it for manager/system admin approval; returned goods are then inspected, with items that pass inspection restocked to an available location and damaged or failed-QC items routed to a quarantine (non-available) location with a recorded return reason. Inventory increases only after final return confirmation, and the event is logged as an inbound-return transaction. (2) Return-to-Supplier: staff create a return-to-supplier document referencing the supplier (and optionally the original inbound document) and submit it for approval; after approval they perform QR-based picking of the goods to be sent back and confirm dispatch. Inventory decreases only after final confirmation, and the event is logged as a return-to-supplier transaction. The financial and analytical layers of reverse logistics (refunds, credit/accounts-payable, automated carrier pickup, and return-reason analytics) remain out of MVP scope per LI-07.
+GAP-01 / GAP-03
+ Table 5 - Major feature of StockLite 
+Gap Reference Table
+Gap ID
+Description 
+Derived From 
+GAP-01 
+Vietnamese SME e-commerce sellers lack an affordable, purpose-built tool for accurate real-time inventory tracking, Inbound/Outbound workflow management, and stock discrepancy control — currently relying on manual spreadsheets or chat-based records. 
+KiotViet and Sapo are strong in retail/POS and omnichannel sales management, while Odoo is powerful but complex 
+GAP-02
+Existing solutions may provide mobile access, but their mobile experience is mainly oriented toward retail/POS or general business management. StockLite focuses on dedicated warehouse-floor execution, including QR scanning, receiving, put-away confirmation, picking/packing, stocktake, and IoT weight verification.
+KiotViet and Sapo provide mobile access mainly for retail/POS and sales operations; Odoo supports barcode workflows but requires heavier configuration and implementation effort 
+GAP-03 
+SME store owners lack accessible, consolidated reporting on stock movement, discrepancies, and inventory performance — making data-driven purchasing and restocking decisions difficult without manual cross-referencing across multiple platforms. 
+KiotViet/Sapo report mainly on retail/POS sales performance, while Odoo's reporting is powerful but requires ERP configuration — none of them provides SME-friendly, consolidated reporting focused purely on warehouse execution (stock movement, discrepancy history, QR/IoT evidence, transaction traceability).
+ Table 6 - Gap reference of StockLite
+
+Feature-to-gap traceability and net improvement.
+Each major feature is mapped to the existing-system strength it preserves, the documented gap (GAP-01 to GAP-03) it closes, and the net improvement over KiotViet, Sapo, Odoo, and manual tools — so that every feature is traceable to a real need rather than added arbitrarily.
+Feature
+Existing strength preserved
+Gap addressed
+Net improvement vs existing tools
+FE-01 Real-Time Inventory Tracking
+The familiar stock-list view from KiotViet/Excel is kept
+GAP-01: spreadsheets/chat give no real-time, by-location truth
+Stock tracked by ProductVariant and location, updated only on confirmed transactions — no manual re-keying
+FE-02 Inbound / Outbound with Approval
+Receiving/dispatch concepts from WMS tools
+GAP-01: no controlled, auditable goods movement in Excel/chat
+Approval gate + stock reservation block unauthorised or oversold movement; partial receipts and quarantine handled
+FE-03 Low Stock Alerts
+KiotViet also signals low stock
+GAP-01: Excel cannot alert automatically
+Threshold alerts pushed automatically against live by-location stock
+FE-04 Inventory Reporting & Analytics
+Reporting appetite proven by KiotViet/Sapo dashboards
+GAP-03: existing tools provide sales- and inventory-level reports, but not warehouse-execution reporting. StockLite's GAP-03 targets reports that require floor-level execution data the rivals do not capture: stock-by-internal-location utilisation, IoT weight-discrepancy log, put-away override log, stocktake variance by location, and inbound-bottleneck history.
+Movement, turnover and discrepancy reports from one database, with no cross-file reconciliation
+FE-05 Role-Based Access Control
+Multi-role access exists in KiotViet/Sapo/Odoo
+GAP-01: Excel/chat has no permission separation or accountability
+System Admin / Warehouse Manager / Warehouse Staff permissions with accountable, traceable actions
+FE-06
+Product & Category Management
+Master-data concepts from KiotViet/Sapo/Odoo
+GAP-01: spreadsheet SKUs are inconsistent
+ProductVariant/SKU as the single stock-keeping entity; SKU never stored on parent Product
+FE-07 QR Warehouse Operations
+Barcode workflows exist in Odoo
+GAP-02: rivals’ mobile is POS/sales-oriented
+QR verifies the correct SKU before any inventory change, on the warehouse floor
+FE-08 Flutter Mobile Warehouse App
+Mobile access familiar from KiotViet/Sapo
+GAP-02: their mobile targets retail/POS, not warehouse tasks
+A purpose-built warehouse-floor app: receiving, put-away, pick/pack, count
+FE-09 IoT Scale Verification
+Novel — no rival offers it natively
+GAP-01: manual eyeball checks miss short, wrong or damaged goods
+Expected-vs-actual weight check flags discrepancies before confirmation — a capability absent from KiotViet, Sapo and Odoo
+FE-10 Stocktake & Inventory Adjustment
+Cycle count exists in Odoo (ERP-grade)
+GAP-01: an Excel count has no controlled adjustment or audit
+Count by location, manager-approved adjustments, full before/after audit trail
+FE-11 Inventory Transaction History
+Audit logs exist in ERP-grade tools
+GAP-03: Excel/chat keeps no reliable audit trail
+Every confirmed movement logged (who, when, before/after) for traceability
+FE-12 Inbound Bottleneck Warning
+Novel for SME-grade tools
+GAP-01/03: no early warning of receiving congestion
+Rule-based advisory warning before the floor is overloaded — not present in rival SME tools
+FE-13 Put-away Suggestion
+Novel for SME-grade tools
+GAP-01/02: manual put-away wastes space and slows picking
+Suggests a location by category, capacity and priority by rule-based; staff may override with a reason
+FE-14 
+Warehouse & Location Management
+Zone/rack/bin structure from WMS tools
+GAP-01/02: Excel has no by-location structure
+Single active warehouse with zones/racks/slots, capacity & priority — foundation for by-location stock and put-away
+FE-15 
+Supplier Management
+
+Supplier master from KiotViet/Sapo
+GAP-01: suppliers tracked ad-hoc in chat
+Supplier master reused by inbound; quick-create on the inbound screen; deactivate-not-delete while referenced
+FE-16 Returns Management (Reverse Logistics)
+Reverse-logistics flows previously bundled into FE-02
+GAP-01/03: customer and supplier returns must update stock and stay auditable
+Customer/inbound returns are inspected and restocked or quarantined; return-to-supplier goods are dispatched back; every movement is logged as an inbound-return or return-to-supplier transaction
+Table 7 — Feature-to-gap traceability and net improvement 
+4.2 Limitations & Exclusions 
+ID
+Excluded Item
+Reason for Exclusion
+LI-01
+Direct E-Commerce Marketplace API Integration
+The system does not support direct API integration with e-commerce marketplaces (Shopee, TikTok Shop, Lazada, Tiki).
+LI-02
+Multi-Warehouse Management
+v1 supports one active warehouse for the account, but it supports multiple internal storage locations/racks inside that warehouse. Multi-warehouse management and inter-warehouse transfer are deferred to v2 after validating the core single-warehouse workflow not required for the target non-perishable, single-warehouse SME segment (see Target Customer Profile, Section 1).
+LI-03
+App Store / Play Store Release
+The MVP focuses on Android APK deployment for demonstration and testing. iOS build and App Store release are out of scope.
+LI-04
+AI-Powered Demand Forecasting
+Predictive restocking recommendations require accumulated historical data that does not yet exist at launch. This feature is deferred until post-launch when sufficient data is available.
+LI-05
+Third-Party Logistics API Integration
+Automated shipping label creation and carrier API calls are out of scope for version 1. Staff will manually record shipment references within the system.
+LI-06
+Batch /Lot/ Expiry-Level Inventory Tracking
+The MVP manages inventory by ProductVariant, warehouse, location, and quantity. Receiving lines may be split into receiving groups for checking, weighing, quality handling, and put-away assignment, but inventory balances are not tracked by LotNo, manufacturing date, or expiry date. Full batch/lot/expiry tracking is deferred to a future version not required for the target non-perishable, single-warehouse SME segment (see Target Customer Profile, Section 1).
+LI-07
+Advanced Reverse Logistics
+StockLite supports the core return flows in the MVP through the dedicated FE-16 Returns Management feature: inbound returns (returned goods) and return-to-supplier. Excluded from the MVP are the financial and analytical layers of reverse logistics — refund/credit/accounts-payable processing, automated carrier pickup for returns, and return-reason analytics/dashboards — which are deferred to a future version because they add accounting and integration complexity not required to validate the core warehouse flow
+ Table 8 - Limitations & Exclusions of StockLite 
+
+5. Expected Contributions & Next Steps
+5.1 Business & Operational Impact
+By digitising staff-created inbound and outbound workflows with manager/system admin approval, QR-based warehouse-floor operations, IoT scale verification, and inventory transaction records, StockLite is expected to reduce manual spreadsheet reconciliation and improve inventory accuracy for SME warehouse teams. The approval workflow prevents unauthorized inventory movement, while QR scanning and IoT weight evidence reduce receiving, picking, and packing mistakes. Put-away suggestions help staff place received goods in suitable internal locations, improving later picking efficiency. Rule-based inbound bottleneck warnings help managers detect overloaded receiving days before warehouse congestion occurs. StockLite also covers the core return flows through the dedicated FE-16 Returns Management feature — inbound returns and return-to-supplier — so that returned goods are inspected and either restocked or quarantined, keeping system stock aligned with physical stock.
+5.2 User Experience Impact
+Warehouse staff benefit from a guided mobile workflow for creating warehouse documents, scanning QR codes, receiving goods, confirming put-away locations, picking goods, counting stock, and attaching IoT weight evidence directly on the warehouse floor. Managers and system admins benefit from an approval-focused web dashboard where they can review inbound/outbound documents, approve or reject requests, monitor warnings, review discrepancies, and track inventory movement history. Store owners gain a real-time view of inventory without manually cross-referencing spreadsheets, chat messages, and paper documents. The Flutter app is execution-only and single-task-guided — staff perform one warehouse operation at a time, with all management, approval, and reporting kept on the Angular web admin. This split keeps the mobile UX simple and testable within the project timeline.
+5.3 Planned Next Steps After Project Completion
+Following successful v1 deployment and validation with pilot businesses, the planned next steps include:
+- Offline mode for Flutter warehouse app.
+- Google Play / App Store release after pilot validation.
+- E-commerce platform API integration with Shopee, TikTok Shop, Lazada, and Tiki.
+- Improved OCR for delivery documents.
+- AI-driven demand forecasting after enough historical data is collected.
+- Full batch/lot/expiry tracking with FIFO/FEFO support for businesses that require lot-level traceability.
+
+References:
+Việt Nam's e-commerce market exceeds $25 billion. Available at: https://vietnamnews.vn/economy/1689608/viet-nam-s-e-commerce-market-exceeds-25-billion.html
+Shopee, TikTok shop bỏ xa đối thủ trên thị trường thương mại điện tử Việt Nam. Available at: https://baodautu.vn/shopee-tiktok-shop-bo-xa-doi-thu-tren-thi-truong-thuong-mai-dien-tu-viet-nam-d244354.html
+Shopee và TikTok Shop nắm hơn 93% thị phần thương mại điện tử Việt Nam. Available at: https://nguoiquansat.vn/shopee-va-tiktok-shop-nam-hon-93-thi-phan-thuong-mai-dien-tu-viet-nam-151007.html
+Top 5 Warehouse Management Problems and Solutions in Vietnam. Available at: https://innotech-vn.com/top-5-warehouse-management-problems-and-solutions-in-vietnam/
+19 Inventory Management Statistics & Industry Benchmarks for 2024. Available at: https://www.unleashedsoftware.com/blog/inventory-management-statistics/
+KiotViet — Service price adjustment announcement (Support / Professional / Premium tiers). Available at:
+ https://www.kiotviet.vn/phi-dich-vu/
+Sapo — Official pricing. Available at: https://www.sapo.vn/bang-gia.html
+Odoo — Pricing and plans. Available at: https://www.odoo.com/pricing
+NetSuite (citing CAPS Research 2024) — Inventory discrepancies and accuracy benchmarks. Available at: https://www.netsuite.com/portal/resource/articles/inventory-management/inventory-discrepancies.shtml
+Inventory accuracy and stockout statistics (63% / 83% / 95% accuracy, real-time +35%, barcode -43%, stockout ~US$1 trillion, 43% of small businesses untracked). Available at: https://www.opensend.com/post/inventory-accuracy-statistics 
+Enoda Home tăng trưởng 70% doanh thu nhờ bài toán tối ưu kho vận tốc độ cao. Available at: https://dantri.com.vn/doi-song/enoda-home-tang-truong-70-doanh-thu-nho-bai-toan-toi-uu-kho-van-toc-do-cao-20260528105027625.html
+— End of Document —

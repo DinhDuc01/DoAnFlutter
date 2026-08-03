@@ -1,51 +1,81 @@
 import 'package:flutter/material.dart';
 
 import '../../features/account/presentation/screens/account_screen.dart';
+import '../../features/account/presentation/screens/change_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/character/presentation/screens/character_customization_screen.dart';
+import '../../features/character/presentation/screens/character_lab_screen.dart';
 import '../../features/history/presentation/screens/operation_history_screen.dart';
-import '../../features/inbound/presentation/screens/inbound_success_screen.dart';
+import '../../features/thu_mua/presentation/screens/thu_mua_success_screen.dart';
+import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
-import '../../features/inbound/presentation/screens/inbound_screen.dart';
-import '../../features/inventory/presentation/screens/inventory_screen.dart';
+import '../../features/thu_mua/presentation/screens/thu_mua_screen.dart';
+import '../../features/kho/presentation/screens/kho_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
-import '../../features/outbound/presentation/screens/outbound_success_screen.dart';
-import '../../features/outbound/presentation/screens/outbound_screen.dart';
+import '../../features/giao_hang/presentation/screens/giao_hang_success_screen.dart';
+import '../../features/giao_hang/presentation/screens/giao_hang_screen.dart';
 import '../../features/products/presentation/screens/product_detail_screen.dart';
+import '../../features/quality_inspection/presentation/screens/quality_inspection_screen.dart';
 import '../../features/reports/presentation/screens/reports_screen.dart';
 import '../../features/scan/presentation/screens/scan_qr_screen.dart';
+import '../../features/milling/presentation/screens/milling_preparation_screen.dart';
+import '../../features/scale/presentation/screens/inventory_weighing_screen.dart';
 
+/// Lớp định nghĩa tất cả các tuyến đường (routes) và điều hướng trong ứng dụng.
 class AppRoutes {
-  const AppRoutes._();
+  const AppRoutes._(); // Hạn chế khởi tạo đối tượng từ bên ngoài
 
-  static const login = '/login';
-  static const home = '/home';
-  static const inbound = '/inbound';
-  static const inboundSuccess = '/inbound/success';
-  static const outbound = '/outbound';
-  static const outboundSuccess = '/outbound/success';
-  static const inventory = '/inventory';
-  static const productDetail = '/products/detail';
-  static const scanQr = '/scan-qr';
-  static const reports = '/reports';
-  static const history = '/history';
-  static const notifications = '/notifications';
-  static const account = '/account';
+  // Khai báo tên định danh cho từng màn hình
+  static const login = '/login'; // Màn hình Đăng nhập
+  static const home = '/home'; // Màn hình Trang chủ
+  static const inbound = '/thu-mua'; // Màn hình Nhập kho
+  static const purchaseScheduleDetail =
+      '/thu-mua/detail'; // Chi tiết lịch thu mua
+  static const thuMuaSuccess =
+      '/thu-mua/success'; // Màn hình Nhập kho thành công
+  static const outbound = '/giao-hang'; // Màn hình Xuất kho
+  static const giaoHangSuccess =
+      '/giao-hang/success'; // Màn hình Xuất kho thành công
+  static const stocktake = '/stocktake';
+  static const qualityInspection = '/quality-inspections';
+  @Deprecated('Use stocktake')
+  static const inventory = stocktake;
+  static const productDetail = '/products/detail'; // Màn hình Chi tiết sản phẩm
+  static const scanQr = '/scan-qr'; // Màn hình Quét mã QR/Barcode
+  static const reports = '/reports'; // Màn hình Báo cáo & Biểu đồ
+  static const history = '/history'; // Màn hình Lịch sử hoạt động
+  static const notifications = '/notifications'; // Màn hình Thông báo
+  static const account = '/account'; // Màn hình Tài khoản & Hồ sơ cá nhân
+  static const changePassword = '/change-password'; // Màn hình Đổi mật khẩu
+  static const milling = '/xay-xat'; // Luồng hoàn tất xay và cân đóng bao
+  static const scale = '/scale'; // Cân sản phẩm trong kho
+  static const characterCustomization = '/character/customize';
+  static const characterLab = '/character/lab';
 
+  /// Map liên kết các tên định danh của route với Widget Builder tương ứng.
+  /// Được sử dụng trong MaterialApp ở file app.dart để cấu hình điều hướng.
   static Map<String, WidgetBuilder> get routes {
     return {
       login: (_) => const LoginScreen(),
       home: (_) => const HomeScreen(),
-      inbound: (_) => const InboundScreen(),
-      inboundSuccess: (_) => const InboundSuccessScreen(),
-      outbound: (_) => const OutboundScreen(),
-      outboundSuccess: (_) => const OutboundSuccessScreen(),
-      inventory: (_) => const InventoryScreen(),
+      inbound: (_) => const ThuMuaScreen(),
+      purchaseScheduleDetail: (_) => const PurchaseScheduleDetailScreen(),
+      thuMuaSuccess: (_) => const ThuMuaSuccessScreen(),
+      outbound: (_) => const GiaoHangScreen(),
+      giaoHangSuccess: (_) => const GiaoHangSuccessScreen(),
+      stocktake: (_) => const KhoScreen(),
+      qualityInspection: (_) => const QualityInspectionScreen(),
       productDetail: (_) => const ProductDetailScreen(),
       scanQr: (_) => const ScanQrScreen(),
       reports: (_) => const ReportsScreen(),
       history: (_) => const OperationHistoryScreen(),
       notifications: (_) => const NotificationsScreen(),
       account: (_) => const AccountScreen(),
+      changePassword: (_) => const ChangePasswordScreen(),
+      milling: (_) => const MillingPreparationScreen(),
+      scale: (_) => const InventoryWeighingScreen(),
+      characterCustomization: (_) => const CharacterCustomizationScreen(),
+      characterLab: (_) => const CharacterLabScreen(),
     };
   }
 }

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 
+/// Thanh điều hướng phía dưới cùng dành cho màn hình Báo cáo tổng quan (Report Bottom Bar).
 class ReportBottomBar extends StatelessWidget {
+  /// Khởi tạo [ReportBottomBar].
   const ReportBottomBar({super.key});
 
   @override
