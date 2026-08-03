@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/api_milling_repository.dart';
 import '../../data/milling_repository.dart';
@@ -20,19 +21,17 @@ class MillingPreparationScreen extends StatefulWidget {
 
 class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
   late final MillingRepository _repository;
-  late Future<MillingOrder> _orderFuture;
+
+  static const Set<String> _entities = {
+    'MillingOrder',
+    'Inventory',
+    'InventoryTransaction',
+  };
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiMillingRepository();
-    _orderFuture = _repository.getActiveOrder();
-  }
-
-  void _retry() {
-    setState(() {
-      _orderFuture = _repository.getActiveOrder();
-    });
   }
 
   @override
@@ -40,27 +39,16 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
     return Scaffold(
       backgroundColor: millingBackground,
       appBar: const MillingAppBar(title: 'Hoàn tất xay & đóng bao'),
-      body: FutureBuilder<MillingOrder>(
-        future: _orderFuture,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return HErrorState(
-              message: 'Không thể tải lệnh xay: ${snapshot.error}',
-              onRetry: _retry,
-            );
-          }
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const FormSkeleton();
-          }
-
-          final order = snapshot.data;
-          if (order == null) {
-            return HErrorState(
-              message: 'Server không trả về lệnh xay.',
-              onRetry: _retry,
-            );
-          }
-
+      body: RealtimeDataView<MillingOrder>(
+        loader: _repository.getActiveOrder,
+        entities: _entities,
+        enablePullToRefresh: false,
+        loadingBuilder: (_) => const FormSkeleton(),
+        errorBuilder: (context, error, retry) => HErrorState(
+          message: 'Không thể tải lệnh xay: $error',
+          onRetry: retry,
+        ),
+        builder: (context, order) {
           return Column(
             children: [
               Expanded(

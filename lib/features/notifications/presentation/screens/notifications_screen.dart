@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../data/api_notifications_repository.dart';
+import '../../data/notification_center.dart';
+import '../../data/notification_navigator.dart';
 import '../../data/notifications_repository.dart';
 import '../../models/app_notification.dart';
 import '../widgets/notifications_bottom_bar.dart';
 import '../widgets/notifications_card.dart';
 import '../widgets/notifications_filter_chips.dart';
 import '../widgets/notifications_header.dart';
+import '../widgets/notifications_pager.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({this.repository, super.key});
@@ -20,6 +23,8 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  static const int _pageSize = 10;
+
   late final NotificationsRepository _repository;
   List<AppNotification> _notifications = const [];
   NotificationFilter _filter = NotificationFilter.all;
@@ -27,11 +32,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   String? _error;
   int _loadGeneration = 0;
 
+  int _page = 1;
+  int _total = 0;
+
+  StreamSubscription<void>? _refreshSub;
+
+  /// Chỉ có API thật mới hỗ trợ phân trang + đổi trạng thái. Test tiêm repo giả
+  /// (chỉ có getNotifications) nên các thao tác này sẽ chạy cục bộ (optimistic).
+  ApiNotificationsRepository? get _api =>
+      _repository is ApiNotificationsRepository
+          ? _repository as ApiNotificationsRepository
+          : null;
+
+  bool? get _serverIsReadFilter =>
+      _filter == NotificationFilter.unread ? false : null;
+
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiNotificationsRepository();
+    // Tự tải lại khi có thông báo đẩy realtime (chỉ hiệu lực ở app thật).
+    _refreshSub = NotificationCenter.instance.onRefresh.listen((_) {
+      if (mounted) _loadNotifications(showLoading: false);
+    });
     unawaited(_loadNotifications(showLoading: true));
+  }
+
+  @override
+  void dispose() {
+    _refreshSub?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadNotifications({required bool showLoading}) async {
@@ -44,10 +74,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
 
     try {
-      final notifications = await _repository.getNotifications();
+      final api = _api;
+      List<AppNotification> items;
+      int total;
+      if (api != null) {
+        final page = await api.fetch(
+          pageIndex: _page,
+          pageSize: _pageSize,
+          isRead: _serverIsReadFilter,
+        );
+        items = page.items;
+        total = page.total;
+      } else {
+        items = await _repository.getNotifications();
+        total = items.length;
+      }
       if (!mounted || generation != _loadGeneration) return;
       setState(() {
-        _notifications = notifications;
+        _notifications = items;
+        _total = total;
         _isLoading = false;
         _error = null;
       });
@@ -60,41 +105,105 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     }
   }
 
-  void _removeNotification(String id) {
+  void _replaceItem(AppNotification updated) {
     setState(() {
       _notifications = [
-        for (final notification in _notifications)
-          if (notification.id != id) notification,
+        for (final n in _notifications)
+          if (n.id == updated.id) updated else n,
       ];
     });
   }
 
-  void _markAllAsRead() {
+  void _removeItemLocal(String id) {
     setState(() {
       _notifications = [
-        for (final notification in _notifications)
-          AppNotification(
-            id: notification.id,
-            type: notification.type,
-            title: notification.title,
-            message: notification.message,
-            timeAgo: notification.timeAgo,
-            isRead: true,
-          ),
+        for (final n in _notifications)
+          if (n.id != id) n,
       ];
+      if (_total > 0) _total -= 1;
     });
   }
+
+  /// Bấm vào thông báo: đánh dấu đã đọc rồi điều hướng tới màn liên quan.
+  /// Nếu không có màn liên quan thì chỉ đổi trạng thái, không chuyển trang.
+  Future<void> _onTapNotification(AppNotification notification) async {
+    if (!notification.isRead) {
+      _replaceItem(notification.copyWith(isRead: true));
+      final api = _api;
+      if (api != null) {
+        try {
+          await api.markRead(notification.numericId);
+          await NotificationCenter.instance.refreshUnread();
+        } catch (_) {
+          // Bỏ qua: UI đã cập nhật optimistic.
+        }
+      }
+    }
+
+    final route = NotificationNavigator.routeFor(notification.directionId);
+    if (route != null && mounted) {
+      await Navigator.of(context).pushNamed(route);
+    }
+  }
+
+  Future<void> _dismissNotification(AppNotification notification) async {
+    _removeItemLocal(notification.id);
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.delete(notification.numericId);
+        await NotificationCenter.instance.refreshUnread();
+      } catch (_) {
+        // Bỏ qua lỗi xoá phía server.
+      }
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    setState(() {
+      _notifications = [
+        for (final n in _notifications) n.copyWith(isRead: true),
+      ];
+    });
+    final api = _api;
+    if (api != null) {
+      try {
+        await api.markAllRead();
+        await NotificationCenter.instance.refreshUnread();
+      } catch (_) {
+        // Bỏ qua lỗi.
+      }
+    }
+  }
+
+  void _onFilterChanged(NotificationFilter filter) {
+    if (filter == _filter) return;
+    setState(() {
+      _filter = filter;
+      _page = 1;
+    });
+    _loadNotifications(showLoading: false);
+  }
+
+  void _goToPage(int page) {
+    if (page < 1 || page > _totalPages || page == _page) return;
+    setState(() => _page = page);
+    _loadNotifications(showLoading: true);
+  }
+
+  int get _totalPages =>
+      _total <= 0 ? 1 : ((_total + _pageSize - 1) ~/ _pageSize);
 
   List<AppNotification> get _filteredNotifications {
     return switch (_filter) {
       NotificationFilter.all => _notifications,
       NotificationFilter.unread => [
-          for (final notification in _notifications)
-            if (!notification.isRead) notification,
+          for (final n in _notifications)
+            if (!n.isRead) n,
         ],
       NotificationFilter.alerts => [
-          for (final notification in _notifications)
-            if (notification.isAlert) notification,
+          for (final n in _notifications)
+            if (n.isAlert) n,
         ],
     };
   }
@@ -117,7 +226,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             NotificationsFilterChips(
               selectedFilter: _filter,
               unreadCount: _unreadCount,
-              onChanged: (filter) => setState(() => _filter = filter),
+              onChanged: _onFilterChanged,
             ),
             if (!_isLoading)
               Align(
@@ -132,6 +241,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ),
             Expanded(child: _buildContent()),
+            if (!_isLoading && _error == null && _totalPages > 1)
+              NotificationsPager(
+                page: _page,
+                totalPages: _totalPages,
+                onChanged: _goToPage,
+              ),
           ],
         ),
       ),
@@ -182,7 +297,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           final notification = filtered[index];
           return NotificationsCard(
             notification: notification,
-            onDismissed: () => _removeNotification(notification.id),
+            onTap: () => _onTapNotification(notification),
+            onDismissed: () => _dismissNotification(notification),
           );
         },
       ),

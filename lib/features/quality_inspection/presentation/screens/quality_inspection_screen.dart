@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/quality_inspection_repository.dart';
@@ -17,20 +18,19 @@ class QualityInspectionScreen extends StatefulWidget {
 
 class _QualityInspectionScreenState extends State<QualityInspectionScreen> {
   late final QualityInspectionRepository _repository;
-  late Future<List<QualityInspection>> _future;
+  final RealtimeDataController _controller = RealtimeDataController();
   bool _isCreating = false;
+
+  static const Set<String> _entities = {
+    'QualityInspection',
+    'PaddyLot',
+    'InboundOrder',
+  };
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiQualityInspectionRepository();
-    _future = _repository.getInspections();
-  }
-
-  void _reload() {
-    setState(() {
-      _future = _repository.getInspections();
-    });
   }
 
   Future<void> _createInspection() async {
@@ -55,7 +55,7 @@ class _QualityInspectionScreenState extends State<QualityInspectionScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đã tạo phiếu kiểm chất.')),
       );
-      _reload();
+      _controller.reload();
     } on QualityInspectionException catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -74,7 +74,7 @@ class _QualityInspectionScreenState extends State<QualityInspectionScreen> {
         title: const Text('Kiểm chất lô lúa/gạo'),
         actions: [
           IconButton(
-            onPressed: _reload,
+            onPressed: _controller.reload,
             icon: const Icon(Icons.refresh),
             tooltip: 'Tải lại',
           ),
@@ -90,19 +90,16 @@ class _QualityInspectionScreenState extends State<QualityInspectionScreen> {
             : const Icon(Icons.add),
         label: Text(_isCreating ? 'Đang xử lý...' : 'Tạo phiếu kiểm chất'),
       ),
-      body: FutureBuilder<List<QualityInspection>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const ListSkeleton();
-          }
-          if (snapshot.hasError) {
-            return HErrorState(
-              message: 'Không tải được phiếu kiểm chất: ${snapshot.error}',
-              onRetry: _reload,
-            );
-          }
-          final inspections = snapshot.data ?? const [];
+      body: RealtimeDataView<List<QualityInspection>>(
+        loader: _repository.getInspections,
+        controller: _controller,
+        entities: _entities,
+        loadingBuilder: (_) => const ListSkeleton(),
+        errorBuilder: (context, error, retry) => HErrorState(
+          message: 'Không tải được phiếu kiểm chất: $error',
+          onRetry: retry,
+        ),
+        builder: (context, inspections) {
           if (inspections.isEmpty) {
             return const HEmptyState(
               title: 'Chưa có phiếu kiểm chất',
@@ -111,18 +108,12 @@ class _QualityInspectionScreenState extends State<QualityInspectionScreen> {
               icon: Icons.science_outlined,
             );
           }
-          return RefreshIndicator(
-            onRefresh: () async {
-              _reload();
-              await _future;
-            },
-            child: ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: inspections.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, index) =>
-                  _InspectionCard(inspection: inspections[index]),
-            ),
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: inspections.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (_, index) =>
+                _InspectionCard(inspection: inspections[index]),
           );
         },
       ),

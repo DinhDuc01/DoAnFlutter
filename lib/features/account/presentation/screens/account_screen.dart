@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/notifications/fcm_service.dart';
+import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/theme_controller.dart';
 import '../../../auth/data/auth_session_store.dart';
@@ -69,6 +71,10 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _logout() async {
     final session = AuthSessionStore.current;
     if (session != null) {
+      // Huỷ token FCM trước khi xoá phiên (cần token để gọi API).
+      await FcmService.instance.stopForUser();
+      // Đóng kết nối realtime dữ liệu.
+      await RealtimeService.instance.stop();
       try {
         await ApiAuthService()
             .logout(session)

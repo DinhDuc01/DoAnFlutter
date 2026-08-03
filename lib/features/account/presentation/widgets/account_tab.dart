@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/notifications/fcm_service.dart';
+import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/state_widgets.dart';
@@ -14,6 +16,10 @@ class AccountTab extends StatelessWidget {
   final Future<void> Function(AuthSession session)? logout;
 
   Future<void> _logout(BuildContext context, AuthSession session) async {
+    // Huỷ token FCM trước khi xoá phiên (cần token để gọi API).
+    await FcmService.instance.stopForUser();
+    // Đóng kết nối realtime dữ liệu.
+    await RealtimeService.instance.stop();
     try {
       await (logout ?? ApiAuthService().logout)(session)
           .timeout(const Duration(seconds: 5));

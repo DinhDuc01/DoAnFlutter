@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/state_widgets.dart';
@@ -17,19 +18,16 @@ class KhoTab extends StatefulWidget {
 
 class _KhoTabState extends State<KhoTab> {
   final KhoCheckRepository _repository = ApiKhoCheckRepository();
-  late Future<KhoCheck> _checkFuture;
+  final RealtimeDataController _controller = RealtimeDataController();
 
-  @override
-  void initState() {
-    super.initState();
-    _checkFuture = _repository.getDraftCheck();
-  }
-
-  void _reload() {
-    setState(() {
-      _checkFuture = _repository.getDraftCheck();
-    });
-  }
+  static const Set<String> _entities = {
+    'Inventory',
+    'InventoryTransaction',
+    'InboundOrder',
+    'PaddyLot',
+    'Warehouse',
+    'Location',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +51,7 @@ class _KhoTabState extends State<KhoTab> {
                   ),
                 ),
                 IconButton(
-                  onPressed: _reload,
+                  onPressed: _controller.reload,
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Tải lại',
                 ),
@@ -61,20 +59,17 @@ class _KhoTabState extends State<KhoTab> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<KhoCheck>(
-              future: _checkFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const ListSkeleton();
-                }
-                if (snapshot.hasError) {
-                  return HErrorState(
-                    message: 'Không tải được tồn kho: ${snapshot.error}',
-                    onRetry: _reload,
-                  );
-                }
-                final check = snapshot.data;
-                if (check == null || check.items.isEmpty) {
+            child: RealtimeDataView<KhoCheck>(
+              loader: _repository.getDraftCheck,
+              controller: _controller,
+              entities: _entities,
+              loadingBuilder: (_) => const ListSkeleton(),
+              errorBuilder: (context, error, retry) => HErrorState(
+                message: 'Không tải được tồn kho: $error',
+                onRetry: retry,
+              ),
+              builder: (context, check) {
+                if (check.items.isEmpty) {
                   return const HEmptyState(
                     title: 'Kho chưa có hàng',
                     description:

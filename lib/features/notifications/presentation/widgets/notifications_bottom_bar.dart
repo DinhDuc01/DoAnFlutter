@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'notification_bell_icon.dart';
 
 /// Thanh điều hướng phía dưới cùng dành cho màn hình Thông báo (Notifications Bottom Bar).
 class NotificationsBottomBar extends StatelessWidget {
@@ -34,7 +35,7 @@ class NotificationsBottomBar extends StatelessWidget {
           label: 'Trang chủ',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.notifications_outlined),
+          icon: NotificationBellIcon(icon: Icons.notifications_outlined),
           label: 'Thông báo',
         ),
         BottomNavigationBarItem(

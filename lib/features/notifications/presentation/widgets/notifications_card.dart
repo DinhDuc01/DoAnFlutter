@@ -9,6 +9,7 @@ class NotificationsCard extends StatelessWidget {
   const NotificationsCard({
     required this.notification,
     required this.onDismissed,
+    this.onTap,
     super.key,
   });
 
@@ -18,11 +19,14 @@ class NotificationsCard extends StatelessWidget {
   /// Callback kích hoạt khi nhấn nút đóng "X" thông báo.
   final VoidCallback onDismissed;
 
+  /// Callback khi bấm vào thẻ: đánh dấu đã đọc & điều hướng (nếu có màn liên quan).
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Container(
+    final card = Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: colorScheme.surface,
@@ -122,6 +126,13 @@ class NotificationsCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (onTap == null) return card;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: card,
     );
   }
 }

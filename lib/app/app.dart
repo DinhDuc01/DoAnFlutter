@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_keys.dart';
 import '../core/routes/app_routes.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
@@ -14,11 +15,13 @@ class StockLiteApp extends StatelessWidget {
       valueListenable: ThemeController.mode,
       builder: (context, themeMode, _) {
         return MaterialApp(
-          title: 'Tuấn Mây Mobile',
+          title: 'Lúa gạo Tuấn Mây',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: themeMode,
+          navigatorKey: appNavigatorKey,
+          scaffoldMessengerKey: appMessengerKey,
           initialRoute: AppRoutes.login,
           routes: AppRoutes.routes,
           home: const LoginScreen(),

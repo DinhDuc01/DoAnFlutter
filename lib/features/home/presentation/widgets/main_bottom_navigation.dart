@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
+import '../../../notifications/presentation/widgets/notification_bell_icon.dart';
 
 /// Shared navigation for the six main areas of the mobile application.
 class MainBottomNavigation extends StatelessWidget {
@@ -65,8 +66,11 @@ class MainBottomNavigation extends StatelessWidget {
             label: 'Bán',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications_outlined),
-            activeIcon: Icon(Icons.notifications, color: AppColors.primary),
+            icon: NotificationBellIcon(icon: Icons.notifications_outlined),
+            activeIcon: NotificationBellIcon(
+              icon: Icons.notifications,
+              color: AppColors.primary,
+            ),
             label: 'Thông báo',
           ),
           BottomNavigationBarItem(

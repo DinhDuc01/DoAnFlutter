@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/warehouse_report_repository.dart';
 import '../../models/warehouse_report.dart';
@@ -24,14 +25,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
   // Repository quản lý việc lấy dữ liệu báo cáo thống kê kho (hiện dùng dữ liệu mock)
   late final WarehouseReportRepository _repository;
 
-  late final Future<WarehouseReport> _reportFuture;
+  static const Set<String> _entities = {
+    'Inventory',
+    'InventoryTransaction',
+    'InboundOrder',
+    'OutboundOrder',
+    'Product',
+    'ProductVariant',
+    'Warehouse',
+    'Location',
+    'Alert',
+    'PaddyLot',
+  };
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? MockWarehouseReportRepository();
-    // API_SWAP: Sau này gọi API thực tế qua GET /reports/warehouse.
-    _reportFuture = _repository.getWarehouseReport();
   }
 
   @override
@@ -39,21 +49,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(context),
       body: SafeArea(
-        child: FutureBuilder<WarehouseReport>(
-          future: _reportFuture,
-          builder: (context, snapshot) {
-            // Hiển thị vòng xoay đang tải dữ liệu báo cáo
-            if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            // Thông báo lỗi nếu không tải được báo cáo
-            if (snapshot.hasError || !snapshot.hasData) {
-              return const Center(child: Text('Không tải được thống kê kho'));
-            }
-
-            final report = snapshot.data!;
-
+        child: RealtimeDataView<WarehouseReport>(
+          loader: _repository.getWarehouseReport,
+          entities: _entities,
+          errorBuilder: (context, error, retry) =>
+              const Center(child: Text('Không tải được thống kê kho')),
+          builder: (context, report) {
             return SingleChildScrollView(
               child: Column(
                 children: [

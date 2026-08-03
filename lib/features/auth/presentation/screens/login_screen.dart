@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../../core/notifications/fcm_service.dart';
+import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/api_auth_service.dart';
@@ -57,6 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text,
       );
       AuthSessionStore.current = session;
+
+      // Bắt đầu nhận thông báo đẩy realtime + đăng ký token FCM cho phiên này.
+      unawaited(FcmService.instance.startForUser());
+      // Mở kết nối realtime dữ liệu (SignalR) để tự làm mới các màn khi có thay đổi.
+      unawaited(RealtimeService.instance.start());
 
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.home);

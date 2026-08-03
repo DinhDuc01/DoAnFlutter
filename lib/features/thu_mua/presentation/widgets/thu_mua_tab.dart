@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/state_widgets.dart';
@@ -15,19 +16,14 @@ class ThuMuaTab extends StatefulWidget {
 
 class _ThuMuaTabState extends State<ThuMuaTab> {
   final PurchaseScheduleRepository _repository = PurchaseScheduleRepository();
-  late Future<List<PurchaseSchedule>> _schedulesFuture;
+  final RealtimeDataController _controller = RealtimeDataController();
 
-  @override
-  void initState() {
-    super.initState();
-    _schedulesFuture = _repository.getSchedules();
-  }
-
-  void _reload() {
-    setState(() {
-      _schedulesFuture = _repository.getSchedules();
-    });
-  }
+  static const Set<String> _entities = {
+    'PaddyPurchaseSchedule',
+    'PaddyPurchaseReceipt',
+    'InboundOrder',
+    'PaddyLot',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +48,7 @@ class _ThuMuaTabState extends State<ThuMuaTab> {
                 ),
                 IconButton(
                   tooltip: 'Tải lại',
-                  onPressed: _reload,
+                  onPressed: _controller.reload,
                   icon: const Icon(Icons.refresh),
                 ),
                 IconButton.filled(
@@ -65,19 +61,16 @@ class _ThuMuaTabState extends State<ThuMuaTab> {
             ),
           ),
           Expanded(
-            child: FutureBuilder<List<PurchaseSchedule>>(
-              future: _schedulesFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState != ConnectionState.done) {
-                  return const ListSkeleton();
-                }
-                if (snapshot.hasError) {
-                  return HErrorState(
-                    message: 'Không tải được lịch thu mua: ${snapshot.error}',
-                    onRetry: _reload,
-                  );
-                }
-                final schedules = snapshot.data ?? const [];
+            child: RealtimeDataView<List<PurchaseSchedule>>(
+              loader: _repository.getSchedules,
+              controller: _controller,
+              entities: _entities,
+              loadingBuilder: (_) => const ListSkeleton(),
+              errorBuilder: (context, error, retry) => HErrorState(
+                message: 'Không tải được lịch thu mua: $error',
+                onRetry: retry,
+              ),
+              builder: (context, schedules) {
                 if (schedules.isEmpty) {
                   return const HEmptyState(
                     title: 'Chưa có lịch thu mua',

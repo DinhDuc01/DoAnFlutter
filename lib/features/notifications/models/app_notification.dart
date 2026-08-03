@@ -37,10 +37,18 @@ class AppNotification {
     required this.message,
     required this.timeAgo,
     required this.isRead,
+    this.directionId,
   });
 
-  /// Mã định danh của thông báo.
+  /// Mã định danh của thông báo (userNotificationId, dùng cho mark-read/unread/xoá).
   final String id;
+
+  /// Đường dẫn nội bộ (kiểu web) do backend gửi kèm để điều hướng khi bấm vào thông báo.
+  /// Có thể null nếu thông báo không gắn với màn hình cụ thể.
+  final String? directionId;
+
+  /// Id dạng số của thông báo để gọi API (mark-read/unread/xoá).
+  int get numericId => int.tryParse(id) ?? 0;
 
   /// Phân loại loại thông báo.
   final AppNotificationType type;
@@ -61,6 +69,19 @@ class AppNotification {
   bool get isAlert {
     return type == AppNotificationType.alert ||
         type == AppNotificationType.warning;
+  }
+
+  /// Tạo bản sao với một vài trường được thay đổi (VD: đánh dấu đã đọc).
+  AppNotification copyWith({bool? isRead}) {
+    return AppNotification(
+      id: id,
+      type: type,
+      title: title,
+      message: message,
+      timeAgo: timeAgo,
+      isRead: isRead ?? this.isRead,
+      directionId: directionId,
+    );
   }
 
   /// Trả về biểu tượng Icon tương ứng cho từng loại thông báo.

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/product_variant_api.dart';
 
@@ -17,13 +18,13 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final ProductVariantApi _productApi = ProductVariantApi();
-  late Future<ProductVariantStock> _productFuture;
 
-  @override
-  void initState() {
-    super.initState();
-    _productFuture = _loadProduct();
-  }
+  static const Set<String> _entities = {
+    'Product',
+    'ProductVariant',
+    'Inventory',
+    'InventoryTransaction',
+  };
 
   Future<ProductVariantStock> _loadProduct() {
     final id = widget.productVariantId;
@@ -32,47 +33,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         : _productApi.firstActiveVariantWithStock();
   }
 
-  Future<void> _reload() async {
-    final future = _loadProduct();
-    setState(() {
-      _productFuture = future;
-    });
-    await future;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(context),
       appBar: AppBar(title: const Text('Chi tiết sản phẩm')),
-      body: FutureBuilder<ProductVariantStock>(
-        future: _productFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return _ErrorState(
-                message: '${snapshot.error ?? 'Không có dữ liệu'}');
-          }
-
-          final product = snapshot.data!;
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _ProductSummaryCard(product: product),
+      body: RealtimeDataView<ProductVariantStock>(
+        loader: _loadProduct,
+        entities: _entities,
+        loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+        errorBuilder: (context, error, retry) => _ErrorState(message: '$error'),
+        builder: (context, product) {
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _ProductSummaryCard(product: product),
+              const SizedBox(height: 12),
+              _ProductInfoCard(product: product),
+              const SizedBox(height: 12),
+              _WarehouseStockCard(product: product),
+              if (product.description?.trim().isNotEmpty ?? false) ...[
                 const SizedBox(height: 12),
-                _ProductInfoCard(product: product),
-                const SizedBox(height: 12),
-                _WarehouseStockCard(product: product),
-                if (product.description?.trim().isNotEmpty ?? false) ...[
-                  const SizedBox(height: 12),
-                  _DescriptionCard(description: product.description!.trim()),
-                ],
+                _DescriptionCard(description: product.description!.trim()),
               ],
-            ),
+            ],
           );
         },
       ),

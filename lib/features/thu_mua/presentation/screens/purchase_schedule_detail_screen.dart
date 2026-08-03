@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/state_widgets.dart';
@@ -24,79 +27,128 @@ class PurchaseScheduleDetailScreen extends StatefulWidget {
 class _PurchaseScheduleDetailScreenState
     extends State<PurchaseScheduleDetailScreen> {
   late final PurchaseScheduleRepository _repository;
-  Future<PurchaseSchedule>? _detailFuture;
   PurchaseSchedule? _schedule;
+  PurchaseSchedule? _detail;
+  Object? _error;
+  bool _loading = false;
+  int _generation = 0;
+  StreamSubscription<Set<String>>? _realtimeSub;
+
+  static const Set<String> _entities = {
+    'PaddyPurchaseSchedule',
+    'PaddyPurchaseReceipt',
+    'InboundOrder',
+  };
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? PurchaseScheduleRepository();
+    _realtimeSub =
+        RealtimeService.instance.onEntitiesChanged.listen(_onEntitiesChanged);
     if (widget.initialSchedule != null) {
-      _load(widget.initialSchedule!);
+      // Đặt cờ trực tiếp (không setState trong initState) rồi tải bất đồng bộ.
+      _loading = true;
+      _load(widget.initialSchedule!, showLoading: false);
     }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_detailFuture != null) return;
+    if (_schedule != null) return;
 
     final arguments = ModalRoute.of(context)?.settings.arguments;
     if (arguments is PurchaseSchedule) {
-      _load(arguments);
+      _loading = true;
+      _load(arguments, showLoading: false);
     }
   }
 
-  void _load(PurchaseSchedule schedule) {
+  @override
+  void dispose() {
+    _realtimeSub?.cancel();
+    super.dispose();
+  }
+
+  void _onEntitiesChanged(Set<String> changed) {
+    if (!mounted || _schedule == null) return;
+    if (changed.any(_entities.contains)) {
+      _load(_schedule!, showLoading: false);
+    }
+  }
+
+  Future<void> _load(
+    PurchaseSchedule schedule, {
+    required bool showLoading,
+  }) async {
     _schedule = schedule;
-    _detailFuture = _repository.getScheduleDetails(schedule);
+    final generation = ++_generation;
+    if (showLoading && mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final detail = await _repository.getScheduleDetails(schedule);
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _detail = detail;
+        _loading = false;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      // Giữ dữ liệu cũ khi reload im lặng thất bại.
+      if (_detail == null) {
+        setState(() {
+          _error = error;
+          _loading = false;
+        });
+      }
+    }
   }
 
   void _retry() {
     final schedule = _schedule;
     if (schedule == null) return;
-    setState(() {
-      _detailFuture = _repository.getScheduleDetails(schedule);
-    });
+    _load(schedule, showLoading: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final future = _detailFuture;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF0FBF4),
       body: SafeArea(
         child: Column(
           children: [
             const _DetailHeader(),
-            Expanded(
-              child: future == null
-                  ? HErrorState(
-                      message: 'Không tìm thấy lịch thu mua cần hiển thị.',
-                      onRetry: () => Navigator.of(context).maybePop(),
-                    )
-                  : FutureBuilder<PurchaseSchedule>(
-                      future: future,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState != ConnectionState.done) {
-                          return const _DetailSkeleton();
-                        }
-                        if (snapshot.hasError || !snapshot.hasData) {
-                          return HErrorState(
-                            message:
-                                'Không tải được chi tiết lịch: ${snapshot.error}',
-                            onRetry: _retry,
-                          );
-                        }
-                        return _DetailContent(schedule: snapshot.data!);
-                      },
-                    ),
-            ),
+            Expanded(child: _buildContent()),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildContent() {
+    if (_schedule == null) {
+      return HErrorState(
+        message: 'Không tìm thấy lịch thu mua cần hiển thị.',
+        onRetry: () => Navigator.of(context).maybePop(),
+      );
+    }
+    // Chỉ hiện skeleton ở lần tải đầu tiên.
+    if (_loading && _detail == null) {
+      return const _DetailSkeleton();
+    }
+    if (_error != null && _detail == null) {
+      return HErrorState(
+        message: 'Không tải được chi tiết lịch: $_error',
+        onRetry: _retry,
+      );
+    }
+    return _DetailContent(schedule: _detail!);
   }
 }
 
