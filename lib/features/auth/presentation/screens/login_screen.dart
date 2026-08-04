@@ -60,7 +60,8 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text,
         password: _passwordController.text,
       );
-      AuthSessionStore.current = session;
+      // Lưu phiên xuống bộ nhớ cục bộ để lần mở app sau không phải đăng nhập lại.
+      await AuthSessionStore.save(session);
 
       // Bắt đầu nhận thông báo đẩy realtime + đăng ký token FCM cho phiên này.
       unawaited(FcmService.instance.startForUser());
@@ -158,7 +159,7 @@ class _HeaderSection extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Tuấn Mây Mobile',
+            'Lúa gạo Tuấn Mây',
             style: TextStyle(
               color: Colors.white,
               fontSize: 24,

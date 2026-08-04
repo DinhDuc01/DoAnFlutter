@@ -3,11 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/app/app.dart';
 
 void main() {
-  testWidgets('shows Tuan May Mobile login screen',
+  testWidgets('shows Lua gao Tuan May login screen',
       (WidgetTester tester) async {
     await tester.pumpWidget(const StockLiteApp());
 
-    expect(find.text('Tuấn Mây Mobile'), findsOneWidget);
+    expect(find.text('Lúa gạo Tuấn Mây'), findsOneWidget);
     expect(
         find.text(
             'Công cụ hiện trường cho thu mua, kho, giao hàng và kiểm kê lúa gạo.'),

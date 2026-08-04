@@ -17,6 +17,14 @@ class ApiClient {
   final String baseUrl;
   final Duration requestTimeout;
 
+  /// Hook làm mới token khi API trả về 401.
+  ///
+  /// Nhận access token đã hết hạn (token vừa dùng cho request bị 401) và trả về
+  /// access token mới nếu làm mới thành công, hoặc null nếu không thể (khi đó
+  /// request sẽ giữ nguyên lỗi 401). Được gắn 1 lần trong `main()` để tránh
+  /// phụ thuộc vòng giữa ApiClient và tầng auth.
+  static Future<String?> Function(String? expiredToken)? onUnauthorized;
+
   /// Thực hiện phương thức GET request.
   /// [path] là đường dẫn API (ví dụ: '/products').
   /// [query] là các tham số dạng query string.
@@ -99,12 +107,16 @@ class ApiClient {
   }
 
   /// Phương thức chung nội bộ để xử lý gửi request (cả GET và POST).
+  ///
+  /// [allowRefresh] cho phép tự làm mới token khi gặp 401 (chỉ thử 1 lần để
+  /// tránh lặp vô hạn).
   Future<Map<String, dynamic>> _send(
     String method,
     String path, {
     Map<String, String>? query,
     Map<String, dynamic>? body,
     String? token,
+    bool allowRefresh = true,
   }) async {
     // Tạo đối tượng HttpClient hỗ trợ cấu hình tùy chỉnh
     final client = _createHttpClient();
@@ -137,6 +149,25 @@ class ApiClient {
 
       // Giải mã chuỗi phản hồi sang Map JSON
       final json = _decodeJson(responseBody);
+
+      // Access token hết hạn → thử làm mới token rồi gửi lại đúng 1 lần.
+      if (response.statusCode == 401 &&
+          allowRefresh &&
+          token != null &&
+          token.isNotEmpty &&
+          onUnauthorized != null) {
+        final newToken = await onUnauthorized!(token);
+        if (newToken != null && newToken.isNotEmpty && newToken != token) {
+          return _send(
+            method,
+            path,
+            query: query,
+            body: body,
+            token: newToken,
+            allowRefresh: false,
+          );
+        }
+      }
 
       // Nếu mã trạng thái HTTP không nằm trong khoảng thành công (200 - 299)
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -174,6 +205,97 @@ class ApiClient {
       // Đảm bảo client luôn đóng để giải phóng tài nguyên hệ thống
       client.close(force: true);
     }
+  }
+
+  /// Gửi request multipart/form-data (dùng để upload ảnh lên server → Cloudinary).
+  ///
+  /// [fields] là các trường text kèm theo; [fileBytes]/[fileName] là tệp cần
+  /// tải lên dưới field tên [fileField]. Trả về JSON đã giải mã.
+  Future<Map<String, dynamic>> postMultipart(
+    String path, {
+    required List<int> fileBytes,
+    required String fileName,
+    String fileField = 'Files',
+    Map<String, String> fields = const {},
+    String? token,
+  }) async {
+    final client = _createHttpClient();
+    try {
+      final uri = Uri.parse('$baseUrl$path');
+      final request = await client.postUrl(uri);
+      final boundary =
+          '----flutterBoundary${DateTime.now().microsecondsSinceEpoch}';
+
+      request.headers.set(HttpHeaders.acceptHeader, ContentType.json.mimeType);
+      if (token != null && token.isNotEmpty) {
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      }
+      request.headers.contentType = ContentType(
+        'multipart',
+        'form-data',
+        parameters: {'boundary': boundary},
+      );
+
+      final body = <int>[];
+      void writeLine(String line) => body.addAll(utf8.encode('$line\r\n'));
+
+      fields.forEach((key, value) {
+        writeLine('--$boundary');
+        writeLine('Content-Disposition: form-data; name="$key"');
+        writeLine('');
+        writeLine(value);
+      });
+
+      writeLine('--$boundary');
+      writeLine(
+        'Content-Disposition: form-data; name="$fileField"; filename="$fileName"',
+      );
+      writeLine('Content-Type: ${_mimeFromFileName(fileName)}');
+      writeLine('');
+      body.addAll(fileBytes);
+      body.addAll(utf8.encode('\r\n'));
+      writeLine('--$boundary--');
+
+      request.contentLength = body.length;
+      request.add(body);
+
+      final response = await request.close().timeout(requestTimeout);
+      final responseBody =
+          await response.transform(utf8.decoder).join().timeout(requestTimeout);
+      final json = _decodeJson(responseBody);
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(
+          message: JsonReader.string(json, 'message') ??
+              'API lỗi ${response.statusCode}',
+          statusCode: response.statusCode,
+        );
+      }
+      return json;
+    } on ApiException {
+      rethrow;
+    } on TimeoutException {
+      throw const ApiException(
+        message: 'API phản hồi quá lâu. Vui lòng thử lại.',
+        isTransient: true,
+      );
+    } on SocketException {
+      throw ApiException(
+        message: 'Không kết nối được API tại $baseUrl',
+        isTransient: true,
+      );
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  String _mimeFromFileName(String fileName) {
+    final lower = fileName.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    if (lower.endsWith('.heic')) return 'image/heic';
+    return 'image/jpeg';
   }
 
   /// Giải mã chuỗi JSON sang đối tượng Map.

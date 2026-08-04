@@ -25,6 +25,54 @@ class ApiAuthService implements AuthService {
   }
 
   @override
+  Future<AuthSession> refresh(AuthSession session) async {
+    if (session.refreshToken.isEmpty) {
+      throw const AuthException('Phiên đăng nhập đã hết hạn');
+    }
+
+    try {
+      // Backend nhận accessToken (cũ) + refreshToken, trả về cặp token mới.
+      final json = await _apiClient.post(
+        '/api/v1/auth/refresh-token',
+        body: {
+          'accessToken': session.accessToken,
+          'refreshToken': session.refreshToken,
+        },
+      );
+
+      final isSucceeded = JsonReader.boolean(json, 'isSucceeded') ?? false;
+      if (!isSucceeded) {
+        throw AuthException(
+          JsonReader.string(json, 'message') ?? 'Làm mới phiên thất bại',
+        );
+      }
+
+      final resources = JsonReader.map(json, 'resources');
+      if (resources == null) {
+        throw const AuthException('API làm mới token không trả dữ liệu');
+      }
+
+      final accessToken = JsonReader.string(resources, 'accessToken') ?? '';
+      final refreshToken = JsonReader.string(resources, 'refreshToken') ?? '';
+      if (accessToken.isEmpty) {
+        throw const AuthException('API làm mới token không hợp lệ');
+      }
+
+      return session.copyWith(
+        accessToken: accessToken,
+        // Giữ refresh token cũ nếu backend không cấp lại token mới.
+        refreshToken: refreshToken.isEmpty ? session.refreshToken : refreshToken,
+      );
+    } on AuthException {
+      rethrow;
+    } on ApiException catch (error) {
+      throw AuthException(error.message);
+    } catch (error) {
+      throw AuthException('Không làm mới được phiên: $error');
+    }
+  }
+
+  @override
   Future<AuthSession> login({
     required String email,
     required String password,

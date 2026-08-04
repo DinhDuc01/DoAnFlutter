@@ -8,7 +8,6 @@ import '../../../../core/widgets/state_widgets.dart';
 import '../../../auth/data/auth_session_store.dart';
 import '../../../auth/data/api_auth_service.dart';
 import '../../../auth/models/auth_session.dart';
-import '../../../character/runtime/character_renderer.dart';
 
 class AccountTab extends StatelessWidget {
   const AccountTab({this.logout, super.key});
@@ -34,7 +33,7 @@ class AccountTab extends StatelessWidget {
         );
       }
     } finally {
-      AuthSessionStore.current = null;
+      await AuthSessionStore.clear();
       if (context.mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil(
           AppRoutes.login,
@@ -72,10 +71,10 @@ class AccountTab extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _MenuRow(
-                    icon: Icons.badge_outlined,
-                    title: 'Ngoại hình nhân viên',
+                    icon: Icons.person_outline,
+                    title: 'Thông tin cá nhân',
                     onTap: () => Navigator.of(context).pushNamed(
-                      AppRoutes.characterCustomization,
+                      AppRoutes.personalInfo,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -98,14 +97,6 @@ class AccountTab extends StatelessWidget {
                         ),
                       );
                     },
-                  ),
-                  const SizedBox(height: 8),
-                  _MenuRow(
-                    icon: Icons.access_time,
-                    title: 'Lịch sử thao tác của tôi',
-                    onTap: () => Navigator.of(context).pushNamed(
-                      AppRoutes.history,
-                    ),
                   ),
                   const SizedBox(height: 80),
                   InkWell(
@@ -156,28 +147,7 @@ class _ProfileHeader extends StatelessWidget {
       color: const Color(0xFF159447),
       child: Column(
         children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              const CharacterAvatar(size: 82),
-              Positioned(
-                right: -2,
-                bottom: -2,
-                child: CircleAvatar(
-                  radius: 12,
-                  backgroundColor: Colors.white,
-                  child: Text(
-                    fullName.characters.first.toUpperCase(),
-                    style: const TextStyle(
-                      color: Color(0xFF159447),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          _UserAvatar(user: user, fullName: fullName),
           const SizedBox(height: 12),
           Text(
             fullName,
@@ -200,6 +170,36 @@ class _ProfileHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _UserAvatar extends StatelessWidget {
+  const _UserAvatar({required this.user, required this.fullName});
+
+  final AuthUser user;
+  final String fullName;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = user.avatarUrl;
+    final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
+    final initial = fullName.characters.first.toUpperCase();
+
+    return CircleAvatar(
+      radius: 41,
+      backgroundColor: Colors.white,
+      backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
+      child: hasAvatar
+          ? null
+          : Text(
+              initial,
+              style: const TextStyle(
+                color: Color(0xFF159447),
+                fontSize: 30,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
     );
   }
 }

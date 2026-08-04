@@ -2,10 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../features/account/presentation/screens/account_screen.dart';
 import '../../features/account/presentation/screens/change_password_screen.dart';
+import '../../features/account/presentation/screens/personal_info_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/character/presentation/screens/character_customization_screen.dart';
-import '../../features/character/presentation/screens/character_lab_screen.dart';
-import '../../features/history/presentation/screens/operation_history_screen.dart';
 import '../../features/thu_mua/presentation/screens/thu_mua_success_screen.dart';
 import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -43,14 +41,12 @@ class AppRoutes {
   static const productDetail = '/products/detail'; // Màn hình Chi tiết sản phẩm
   static const scanQr = '/scan-qr'; // Màn hình Quét mã QR/Barcode
   static const reports = '/reports'; // Màn hình Báo cáo & Biểu đồ
-  static const history = '/history'; // Màn hình Lịch sử hoạt động
   static const notifications = '/notifications'; // Màn hình Thông báo
   static const account = '/account'; // Màn hình Tài khoản & Hồ sơ cá nhân
+  static const personalInfo = '/personal-info'; // Màn hình Thông tin cá nhân
   static const changePassword = '/change-password'; // Màn hình Đổi mật khẩu
   static const milling = '/xay-xat'; // Luồng hoàn tất xay và cân đóng bao
   static const scale = '/scale'; // Cân sản phẩm trong kho
-  static const characterCustomization = '/character/customize';
-  static const characterLab = '/character/lab';
 
   /// Map liên kết các tên định danh của route với Widget Builder tương ứng.
   /// Được sử dụng trong MaterialApp ở file app.dart để cấu hình điều hướng.
@@ -68,14 +64,12 @@ class AppRoutes {
       productDetail: (_) => const ProductDetailScreen(),
       scanQr: (_) => const ScanQrScreen(),
       reports: (_) => const ReportsScreen(),
-      history: (_) => const OperationHistoryScreen(),
       notifications: (_) => const NotificationsScreen(),
       account: (_) => const AccountScreen(),
+      personalInfo: (_) => const PersonalInfoScreen(),
       changePassword: (_) => const ChangePasswordScreen(),
       milling: (_) => const MillingPreparationScreen(),
       scale: (_) => const InventoryWeighingScreen(),
-      characterCustomization: (_) => const CharacterCustomizationScreen(),
-      characterLab: (_) => const CharacterLabScreen(),
     };
   }
 }

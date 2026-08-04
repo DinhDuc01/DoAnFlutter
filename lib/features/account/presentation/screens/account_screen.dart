@@ -83,7 +83,7 @@ class _AccountScreenState extends State<AccountScreen> {
         // Local logout must still complete when the server is unavailable.
       }
     }
-    AuthSessionStore.current = null;
+    await AuthSessionStore.clear();
     if (!mounted) return;
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.login,
