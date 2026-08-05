@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/notifications/fcm_service.dart';
@@ -30,12 +32,47 @@ class _AccountScreenState extends State<AccountScreen> {
   late final Future<AccountProfile> _profileFuture;
   AccountProfile? _profile;
   bool _initialized = false;
+  StreamSubscription<Set<String>>? _realtimeSub;
 
   @override
   void initState() {
     super.initState();
     // Khởi tạo Future lấy dữ liệu profile của người dùng
     _profileFuture = _repository.getProfile();
+    // Tự cập nhật khi hồ sơ người dùng bị sửa ở nơi khác (vd trên web) — server
+    // phát realtime "User", nạp lại profile để header/tên/avatar đổi ngay.
+    _realtimeSub =
+        RealtimeService.instance.onEntitiesChanged.listen(_onEntitiesChanged);
+  }
+
+  @override
+  void dispose() {
+    _realtimeSub?.cancel();
+    super.dispose();
+  }
+
+  void _onEntitiesChanged(Set<String> changed) {
+    if (!mounted || !changed.contains('User')) return;
+    _reloadProfile();
+  }
+
+  /// Nạp lại profile im lặng (không hiện loading), giữ nguyên các thiết lập cục bộ.
+  Future<void> _reloadProfile() async {
+    try {
+      final fresh = await _repository.getProfile();
+      if (!mounted) return;
+      final prev = _profile;
+      setState(() {
+        _profile = prev == null
+            ? fresh
+            : fresh.copyWith(
+                notificationsEnabled: prev.notificationsEnabled,
+                darkModeEnabled: prev.darkModeEnabled,
+              );
+      });
+    } catch (_) {
+      // Bỏ qua lỗi reload im lặng — giữ nguyên dữ liệu đang hiển thị.
+    }
   }
 
   /// Khởi tạo dữ liệu cục bộ khi tải xong dữ liệu từ Repository (chỉ chạy một lần đầu tiên)
