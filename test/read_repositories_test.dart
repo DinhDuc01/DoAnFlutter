@@ -144,16 +144,29 @@ void main() {
           .getNotifications();
 
       expect(notifications, hasLength(5));
-      expect(notifications[0].type, AppNotificationType.alert);
-      expect(notifications[0].timeAgo, '10 phút trước');
-      expect(notifications[1].type, AppNotificationType.success);
-      expect(notifications[1].timeAgo, '2 giờ trước');
-      expect(notifications[1].isRead, isTrue);
-      expect(notifications[2].type, AppNotificationType.warning);
-      expect(notifications[2].timeAgo, '2 ngày trước');
-      expect(notifications[3].type, AppNotificationType.info);
-      expect(notifications[3].timeAgo, 'Vừa xong');
-      expect(notifications[4].timeAgo, 'Không rõ thời gian');
+      expect(notifications.first.id, '1');
+      expect(notifications.first.type, AppNotificationType.alert);
+      expect(notifications.first.timeAgo, '10 phút trước');
+      final success = notifications.singleWhere((item) => item.id == '2');
+      expect(success.type, AppNotificationType.success);
+      expect(success.timeAgo, '2 giờ trước');
+      expect(success.isRead, isTrue);
+      expect(
+        notifications.singleWhere((item) => item.id == '3').type,
+        AppNotificationType.warning,
+      );
+      expect(
+        notifications.singleWhere((item) => item.id == '3').timeAgo,
+        '2 ngày trước',
+      );
+      expect(
+        notifications.singleWhere((item) => item.id == '4').timeAgo,
+        'Vừa xong',
+      );
+      expect(
+        notifications.singleWhere((item) => item.id == '5').timeAgo,
+        'Không rõ thời gian',
+      );
       expect(client.calls.single.body, const {'pageIndex': 1, 'pageSize': 50});
     });
 
@@ -683,5 +696,7 @@ MillingOrder _millingOrder() {
     scaleCode: 'SCALE-01',
     riceBags: [],
     branBags: [],
+    riceProductVariantId: 101,
+    branProductVariantId: 102,
   );
 }

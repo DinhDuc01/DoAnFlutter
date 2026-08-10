@@ -1,6 +1,7 @@
 /// Phieu nhap kho nhap, gom san pham va thong tin kho de cap nhat ton.
 class ThuMuaReceipt {
   const ThuMuaReceipt({
+    this.id,
     required this.productVariantId,
     required this.warehouseId,
     required this.warehouseName,
@@ -15,7 +16,14 @@ class ThuMuaReceipt {
     required this.unitCostPrice,
     this.supplier,
     this.expectedDate,
+    this.scheduleId,
+    this.riceVarietyId,
+    this.actualWeightKg = 0,
+    this.moisturePercent,
+    this.paidAmount = 0,
   });
+
+  final int? id;
 
   /// ID bien the san pham tren backend.
   final int productVariantId;
@@ -52,15 +60,29 @@ class ThuMuaReceipt {
   final double unitCostPrice;
   final ThuMuaSupplier? supplier;
   final DateTime? expectedDate;
+  final int? scheduleId;
+  final int? riceVarietyId;
+  final double actualWeightKg;
+  final double? moisturePercent;
+  final double paidAmount;
 
   ThuMuaReceipt copyWith({
     ThuMuaSupplier? supplier,
     DateTime? expectedDate,
+    int? scheduleId,
+    int? riceVarietyId,
+    double? actualWeightKg,
+    double? moisturePercent,
+    double? paidAmount,
+    double? unitCostPrice,
+    int? warehouseId,
+    String? warehouseName,
   }) {
     return ThuMuaReceipt(
+      id: id,
       productVariantId: productVariantId,
-      warehouseId: warehouseId,
-      warehouseName: warehouseName,
+      warehouseId: warehouseId ?? this.warehouseId,
+      warehouseName: warehouseName ?? this.warehouseName,
       status: status,
       productName: productName,
       sku: sku,
@@ -69,9 +91,14 @@ class ThuMuaReceipt {
       weightKg: weightKg,
       quantity: quantity,
       noteHint: noteHint,
-      unitCostPrice: unitCostPrice,
+      unitCostPrice: unitCostPrice ?? this.unitCostPrice,
       supplier: supplier ?? this.supplier,
       expectedDate: expectedDate ?? this.expectedDate,
+      scheduleId: scheduleId ?? this.scheduleId,
+      riceVarietyId: riceVarietyId ?? this.riceVarietyId,
+      actualWeightKg: actualWeightKg ?? this.actualWeightKg,
+      moisturePercent: moisturePercent ?? this.moisturePercent,
+      paidAmount: paidAmount ?? this.paidAmount,
     );
   }
 }
@@ -100,6 +127,61 @@ class ThuMuaOrderSubmission {
   final String status;
 }
 
+class ThuMuaDraftSummary {
+  const ThuMuaDraftSummary({
+    required this.id,
+    required this.code,
+    required this.farmerName,
+    required this.riceVarietyName,
+    required this.actualWeightKg,
+    required this.bagCount,
+    required this.createdAt,
+    this.debtAmount = 0,
+  });
+
+  final int id;
+  final String code;
+  final String farmerName;
+  final String riceVarietyName;
+  final double actualWeightKg;
+  final int bagCount;
+  final DateTime createdAt;
+  final double debtAmount;
+}
+
+/// Tóm tắt phiếu mua/nhập kho dùng cho lịch sử và phân loại trạng thái.
+class ThuMuaReceiptSummary {
+  const ThuMuaReceiptSummary({
+    required this.id,
+    required this.code,
+    required this.farmerName,
+    required this.riceVarietyName,
+    required this.actualWeightKg,
+    required this.storedWeightKg,
+    required this.remainingWeightKg,
+    required this.status,
+    required this.isDraft,
+    required this.isConfirmed,
+    required this.isFullyStored,
+    required this.createdAt,
+    this.scheduleId,
+  });
+
+  final int id;
+  final String code;
+  final String farmerName;
+  final String riceVarietyName;
+  final double actualWeightKg;
+  final double storedWeightKg;
+  final double remainingWeightKg;
+  final String status;
+  final bool isDraft;
+  final bool isConfirmed;
+  final bool isFullyStored;
+  final DateTime createdAt;
+  final int? scheduleId;
+}
+
 /// Ket qua nhap kho thanh cong de gui sang man hinh success.
 class ThuMuaSuccessResult {
   const ThuMuaSuccessResult({
@@ -114,6 +196,9 @@ class ThuMuaSuccessResult {
     required this.status,
     required this.unitCostPrice,
     this.expectedDate,
+    this.actualWeightKg = 0,
+    this.moisturePercent,
+    this.debtAmount = 0,
   });
 
   final String receiptCode;
@@ -127,6 +212,9 @@ class ThuMuaSuccessResult {
   final String status;
   final double unitCostPrice;
   final DateTime? expectedDate;
+  final double actualWeightKg;
+  final double? moisturePercent;
+  final double debtAmount;
 
   ThuMuaSuccessResult copyWithStatus(String value) {
     return ThuMuaSuccessResult(
@@ -141,6 +229,9 @@ class ThuMuaSuccessResult {
       status: value,
       unitCostPrice: unitCostPrice,
       expectedDate: expectedDate,
+      actualWeightKg: actualWeightKg,
+      moisturePercent: moisturePercent,
+      debtAmount: debtAmount,
     );
   }
 }

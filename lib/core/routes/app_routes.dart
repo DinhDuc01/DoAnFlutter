@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../features/account/presentation/screens/account_screen.dart';
-import '../../features/account/presentation/screens/change_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/character/presentation/screens/character_customization_screen.dart';
 import '../../features/character/presentation/screens/character_lab_screen.dart';
@@ -10,12 +9,12 @@ import '../../features/thu_mua/presentation/screens/thu_mua_success_screen.dart'
 import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/thu_mua/presentation/screens/thu_mua_screen.dart';
+import '../../features/thu_mua/models/purchase_schedule.dart';
 import '../../features/kho/presentation/screens/kho_screen.dart';
 import '../../features/notifications/presentation/screens/notifications_screen.dart';
 import '../../features/giao_hang/presentation/screens/giao_hang_success_screen.dart';
 import '../../features/giao_hang/presentation/screens/giao_hang_screen.dart';
 import '../../features/products/presentation/screens/product_detail_screen.dart';
-import '../../features/quality_inspection/presentation/screens/quality_inspection_screen.dart';
 import '../../features/reports/presentation/screens/reports_screen.dart';
 import '../../features/scan/presentation/screens/scan_qr_screen.dart';
 import '../../features/milling/presentation/screens/milling_preparation_screen.dart';
@@ -37,7 +36,6 @@ class AppRoutes {
   static const giaoHangSuccess =
       '/giao-hang/success'; // Màn hình Xuất kho thành công
   static const stocktake = '/stocktake';
-  static const qualityInspection = '/quality-inspections';
   @Deprecated('Use stocktake')
   static const inventory = stocktake;
   static const productDetail = '/products/detail'; // Màn hình Chi tiết sản phẩm
@@ -46,7 +44,6 @@ class AppRoutes {
   static const history = '/history'; // Màn hình Lịch sử hoạt động
   static const notifications = '/notifications'; // Màn hình Thông báo
   static const account = '/account'; // Màn hình Tài khoản & Hồ sơ cá nhân
-  static const changePassword = '/change-password'; // Màn hình Đổi mật khẩu
   static const milling = '/xay-xat'; // Luồng hoàn tất xay và cân đóng bao
   static const scale = '/scale'; // Cân sản phẩm trong kho
   static const characterCustomization = '/character/customize';
@@ -57,21 +54,29 @@ class AppRoutes {
   static Map<String, WidgetBuilder> get routes {
     return {
       login: (_) => const LoginScreen(),
-      home: (_) => const HomeScreen(),
-      inbound: (_) => const ThuMuaScreen(),
+      home: (context) {
+        final initialIndex = ModalRoute.of(context)?.settings.arguments;
+        return HomeScreen(
+          initialIndex: initialIndex is int ? initialIndex.clamp(0, 5) : 0,
+        );
+      },
+      inbound: (context) {
+        final arguments = ModalRoute.of(context)?.settings.arguments;
+        return ThuMuaScreen(
+          schedule: arguments is PurchaseSchedule ? arguments : null,
+        );
+      },
       purchaseScheduleDetail: (_) => const PurchaseScheduleDetailScreen(),
       thuMuaSuccess: (_) => const ThuMuaSuccessScreen(),
       outbound: (_) => const GiaoHangScreen(),
       giaoHangSuccess: (_) => const GiaoHangSuccessScreen(),
       stocktake: (_) => const KhoScreen(),
-      qualityInspection: (_) => const QualityInspectionScreen(),
       productDetail: (_) => const ProductDetailScreen(),
       scanQr: (_) => const ScanQrScreen(),
       reports: (_) => const ReportsScreen(),
       history: (_) => const OperationHistoryScreen(),
       notifications: (_) => const NotificationsScreen(),
       account: (_) => const AccountScreen(),
-      changePassword: (_) => const ChangePasswordScreen(),
       milling: (_) => const MillingPreparationScreen(),
       scale: (_) => const InventoryWeighingScreen(),
       characterCustomization: (_) => const CharacterCustomizationScreen(),

@@ -1,0 +1,426 @@
+--------- beginning of main
+08-09 15:41:51.160   573  1778 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.appop.HistoricalRegistry.clearHistory(int, java.lang.String)(HistoricalRegistry.java:642) waiters=0 in com.android.server.appop.AppOpsService$PackageVerificationResult com.android.server.appop.AppOpsService.verifyAndGetBypass(int, java.lang.String, java.lang.String, java.lang.String, boolean) for 559ms
+08-09 15:41:51.161   573  2775 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.appop.HistoricalRegistry.clearHistory(int, java.lang.String)(HistoricalRegistry.java:642) waiters=6 in com.android.server.appop.AppOpsService$PackageVerificationResult com.android.server.appop.AppOpsService.verifyAndGetBypass(int, java.lang.String, java.lang.String, java.lang.String, boolean) for 372ms
+08-09 15:41:51.164   573   573 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.appop.HistoricalRegistry.clearHistory(int, java.lang.String)(HistoricalRegistry.java:642) waiters=2 in com.android.server.appop.AppOpsService$PackageVerificationResult com.android.server.appop.AppOpsService.verifyAndGetBypass(int, java.lang.String, java.lang.String, java.lang.String, boolean) for 491ms
+--------- beginning of system
+08-09 15:41:51.166   573   573 I ConditionProviders: Disallowing condition provider com.stocklite.app (userSet: true)
+08-09 15:41:51.175  1244  1258 W System  : A resource failed to call release. 
+08-09 15:41:51.175  1244  1258 W System  : A resource failed to call release. 
+08-09 15:41:51.175  1244  1258 W System  : A resource failed to call release. 
+08-09 15:41:51.175  1244  1258 W s.nexuslauncher: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~Jm_lYVv-BvkA6K87TWJtUA==/com.stocklite.app-6yut6UyiV1NrP87wB353uA==/base.apk' with 1 weak references
+08-09 15:41:51.177  1244  1258 W System  : A resource failed to call release. 
+08-09 15:41:51.177  1244  1258 W System  : A resource failed to call release. 
+08-09 15:41:51.177  1244  1258 W System  : A resource failed to call release. 
+08-09 15:41:51.178   573   646 W system_server: Long monitor contention with owner NetworkStats (733) at void com.android.server.power.PowerManagerService.acquireWakeLockInternal(android.os.IBinder, int, int, java.lang.String, java.lang.String, android.os.WorkSource, java.lang.String, int, int, android.os.IWakeLockCallback)(PowerManagerService.java:1681) waiters=0 in void com.android.server.power.PowerManagerService.handleSandman(int) for 441ms
+08-09 15:41:51.205   573   789 D ShortcutService: Saving package item com.android.systemui to /data/system_ce/0/shortcut_service/launchers/com.android.systemui0.xml
+08-09 15:41:51.228   573  2775 W Role    : Default holder doesn't have required signing certificate: com.google.android.retaildemo:6547c73dee150c103980bfdffe55cc9a011d785dd694a5f99afd8205bcaf1f80
+08-09 15:41:51.252   573  2775 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION
+08-09 15:41:51.283   573   573 W Looper  : Slow dispatch took 610ms main h=com.android.server.notification.NotificationManagerService$WorkerHandler c=null m=8
+08-09 15:41:51.286  6318  6712 W oid.documentsui: Long monitor contention with owner pool-7-thread-6 (6714) at void com.android.documentsui.roots.ProvidersCache$MultiProviderUpdateTask.handleDocumentsProvider(android.content.pm.ProviderInfo, com.android.documentsui.base.UserId)(ProvidersCache.java:648) waiters=2 in void com.android.documentsui.roots.ProvidersCache$MultiProviderUpdateTask.handleDocumentsProvider(android.content.pm.ProviderInfo, com.android.documentsui.base.UserId) for 860ms
+08-09 15:41:51.287   362   431 I netd    : tetherGetStats() -> {[]} <67.86ms>
+08-09 15:41:51.287  6318  6710 W oid.documentsui: Long monitor contention with owner pool-7-thread-6 (6714) at void com.android.documentsui.roots.ProvidersCache$MultiProviderUpdateTask.handleDocumentsProvider(android.content.pm.ProviderInfo, com.android.documentsui.base.UserId)(ProvidersCache.java:648) waiters=3 in void com.android.documentsui.roots.ProvidersCache$MultiProviderUpdateTask.handleDocumentsProvider(android.content.pm.ProviderInfo, com.android.documentsui.base.UserId) for 868ms
+08-09 15:41:51.290  1343  1850 I MediaProvider: Begin Intent { act=android.intent.action.PACKAGE_FULLY_REMOVED dat=package: flg=0x5000010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaService (has extras) }
+08-09 15:41:51.291  1343  1850 D MediaProvider: Deleted 0 Android/media items belonging to com.stocklite.app on /data/user/0/com.google.android.providers.media.module/databases/external.db
+08-09 15:41:51.295   573   573 W Looper  : Drained
+08-09 15:41:51.295  6318  6711 W oid.documentsui: Long monitor contention with owner pool-7-thread-6 (6714) at void com.android.documentsui.roots.ProvidersCache$MultiProviderUpdateTask.handleDocumentsProvider(android.content.pm.ProviderInfo, com.android.documentsui.base.UserId)(ProvidersCache.java:648) waiters=4 in void com.android.documentsui.roots.ProvidersCache$MultiProviderUpdateTask.handleDocumentsProvider(android.content.pm.ProviderInfo, com.android.documentsui.base.UserId) for 876ms
+08-09 15:41:51.325   573   627 D ActivityManager: sync unfroze 1779 com.google.android.permissioncontroller for 3
+08-09 15:41:51.326   573   626 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+08-09 15:41:51.398   573   573 W IPCThreadState: Sending oneway calls to frozen process.
+08-09 15:41:51.398   573   573 W IPCThreadState: Sending oneway calls to frozen process.
+08-09 15:41:51.402  3749  3749 E CellBroadcastUtils: getDefaultCellBroadcastReceiverPackageName: no package found
+08-09 15:41:51.402   573  1094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = READ_SMS, mode = allow, callingUid = 1001, oldMode = allow
+08-09 15:41:51.403   573  1094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = RECEIVE_SMS, mode = allow, callingUid = 1001, oldMode = allow
+08-09 15:41:51.403   573  1094 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = RECEIVE_WAP_PUSH, mode = allow, callingUid = 1001, oldMode = allow
+08-09 15:41:51.408   573  1092 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = SEND_SMS, mode = allow, callingUid = 1001, oldMode = allow
+08-09 15:41:51.415  1343  1850 D MediaGrants: Removed 0 media_grants for 0 user for [com.stocklite.app]. Reason: Package orphaned
+08-09 15:41:51.430  1343  1850 I MediaProvider: End Intent { act=android.intent.action.PACKAGE_FULLY_REMOVED dat=package: flg=0x5000010 cmp=com.google.android.providers.media.module/com.android.providers.media.MediaService (has extras) }
+08-09 15:41:51.432   573  2775 W Role    : Default holder doesn't have required signing certificate: com.google.android.apps.work.clouddpc:23962F4B43B9857638EA66F4D419518EAE282491ACDA4B94707BD59003C45E58
+08-09 15:41:51.454   573   608 W AppOpService: Ignored setUidMode call for runtime permission app op: uid = 1001, code = READ_CELL_BROADCASTS, mode = allow, callingUid = 1001, oldMode = allow
+08-09 15:41:51.465  4561  4561 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.482  4561  4561 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.486  4561  4561 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.516  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.518  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.519  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.534  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.535  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.535  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.536  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.536  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.536  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.536  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.536  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.536  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.536  4561  4694 I AF::TrackHandle: opChanged OP_PLAY_AUDIO callback received for 
+08-09 15:41:51.563   573  2517 D ActivityManager: sync unfroze 4904 com.google.android.gms for 6
+08-09 15:41:51.566   573  2517 D ActivityManager: sync unfroze 3532 com.google.android.adservices.api for 6
+08-09 15:41:51.641   573  6361 D IntervalStats: Unable to parse usage stats packages: [228]
+08-09 15:41:51.832  1244  1244 D LauncherAppsCallbackImpl: package removed received com.stocklite.app
+08-09 15:41:51.832  1244  1377 D PackageUpdatedTask: Package updated: mOp=REMOVE packages=[com.stocklite.app]
+08-09 15:41:51.896   573   627 D ActivityManager: sync unfroze 6388 android.process.media for 3
+08-09 15:41:51.926  1877  1877 I AiAiEcho: AppFetcherImplV2 onPackageRemoved com.stocklite.app.
+08-09 15:41:51.929   573  1093 W system_server: Long monitor contention with owner NetworkStats (733) at void android.net.connectivity.com.android.server.net.NetworkStatsService$4.onReceive(android.content.Context, android.content.Intent)(NetworkStatsService.java:2274) waiters=1 in java.lang.String[] android.net.connectivity.com.android.server.net.NetworkStatsService.getAllIfacesSinceBoot(int) for 349ms
+08-09 15:41:51.946   573  2450 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.am.BroadcastQueueModernImpl.updateRunningList()(BroadcastQueueModernImpl.java:450) waiters=4 in android.content.ComponentName com.android.server.am.ActivityManagerService.startService(android.app.IApplicationThread, android.content.Intent, java.lang.String, boolean, java.lang.String, java.lang.String, int, boolean, int, java.lang.String, java.lang.String) for 282ms
+08-09 15:41:51.948  1877  1978 I AiAiEcho: [pnb-agg] Reload pnb aggregation on events deleted
+08-09 15:41:51.948  1877  1978 I AiAiEcho: [pnb-agg] pnb aggregation disabled.
+08-09 15:41:51.978   362   431 I netd    : tetherGetStats() -> {[]} <0.59ms>
+08-09 15:41:51.984   573   736 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.am.CachedAppOptimizer.unfreezeTemporarily(com.android.server.am.ProcessRecord, int, long)(CachedAppOptimizer.java:1411) waiters=0 in void com.android.server.am.ActivityManagerService$LocalService.notifyNetworkPolicyRulesUpdated(int, long) for 207ms
+08-09 15:41:52.014  1244  1377 D PackageUpdatedTask: REMOVE: removing package=com.stocklite.app
+08-09 15:41:52.015  1244  1244 D StatsLog: LAUNCHER_ALLAPPS_COUNT
+08-09 15:41:52.016  1244  1377 D PackageUpdatedTask: OP_REMOVE: removing packages=[com.stocklite.app]
+08-09 15:41:52.016  1244  1377 D ModelWriter: removing items from db . Reason: [removed because the corresponding package or component is removed. mOp=3 removedPackages=[com.stocklite.app] removedComponents=[]]
+08-09 15:41:52.053   573   637 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.am.BroadcastQueueModernImpl.updateRunningList()(BroadcastQueueModernImpl.java:450) waiters=5 in boolean com.android.server.am.ActivityManagerService$LocalService.isProfileOwner(int) for 699ms
+08-09 15:41:52.063   573   682 W system_server: Long monitor contention with owner binder:573_11 (1710) at android.app.job.JobWorkItem com.android.server.job.JobServiceContext.doDequeueWork(com.android.server.job.JobServiceContext$JobCallback, int)(JobServiceContext.java:811) waiters=0 in void com.android.server.job.JobSchedulerService$JobHandler.handleMessage(android.os.Message) for 495ms
+08-09 15:41:52.063   573  2517 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.am.BroadcastQueueModernImpl.updateRunningList()(BroadcastQueueModernImpl.java:450) waiters=5 in void com.android.server.am.ActivityManagerService.serviceDoneExecuting(android.os.IBinder, int, int, int, android.content.Intent) for 331ms
+08-09 15:41:52.065   573   626 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.am.BroadcastQueueModernImpl.updateRunningList()(BroadcastQueueModernImpl.java:450) waiters=8 in int com.android.server.am.ActivityManagerService.bindServiceInstance(android.app.IApplicationThread, android.os.IBinder, android.content.Intent, java.lang.String, android.app.IServiceConnection, long, java.lang.String, boolean, int, java.lang.String, android.app.IApplicationThread, java.lang.String, int) for 184ms
+08-09 15:41:52.071   573   689 W system_server: Long monitor contention with owner ActivityManager (627) at void com.android.server.am.BroadcastQueueModernImpl.updateRunningList()(BroadcastQueueModernImpl.java:450) waiters=3 in void com.android.server.am.ProcessServiceRecord.onProcessUnfrozen() for 408ms
+08-09 15:41:52.118  1244  1244 D Launcher.Workspace: addInScreenFromBind: hotseat inflation with x = 2 and y = 0
+08-09 15:41:52.127  1244  1465 D EGL_emulation: app_time_stats: avg=3107.98ms min=3107.98ms max=3107.98ms count=1
+--------- beginning of kernel
+08-09 15:41:52.083     0     0 I servicemanager: Caller(pid=573,uid=1000,sid=u:r:system_server:s0) Since 'android.system.virtualizationmaintenance' could not be found trying to start it as a lazy AIDL service. (if it's not configured to be a lazy service, it may be stuck starting or still starting).
+08-09 15:41:52.151   573  6361 D IntervalStats: Unable to parse usage stats packages: [243, 244, 245]
+08-09 15:41:52.151   573  6361 D IntervalStats: Unable to parse usage stats packages: [245]
+08-09 15:41:52.175     0     0 I init    : starting service 'virtualizationservice'...
+08-09 15:41:52.180     0     0 I init    : ... started service 'virtualizationservice' has pid 6727
+08-09 15:41:52.181     0     0 I init    : Control message: Processed ctl.interface_start for 'aidl/android.system.virtualizationmaintenance' from pid: 155 (/system/bin/servicemanager)
+08-09 15:41:52.263   573  2775 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.WALLET
+08-09 15:41:52.263   573  1710 D SafetySourceDataValidat: No cert check requested for package com.google.android.permissioncontroller
+08-09 15:41:52.469   573   627 W system_server: Long monitor contention with owner binder:573_16 (2119) at void com.android.server.am.ActivityManagerService.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(ActivityManagerService.java:16433) waiters=0 in void com.android.server.am.BroadcastQueueModernImpl.updateRunningList() for 186ms
+08-09 15:41:52.471   573  1094 W system_server: Long monitor contention with owner binder:573_16 (2119) at void com.android.server.am.ActivityManagerService.finishReceiver(android.os.IBinder, int, java.lang.String, android.os.Bundle, boolean, int)(ActivityManagerService.java:16433) waiters=1 in android.content.ComponentName com.android.server.am.ActivityManagerService.startService(android.app.IApplicationThread, android.content.Intent, java.lang.String, boolean, java.lang.String, java.lang.String, int, boolean, int, java.lang.String, java.lang.String) for 186ms
+08-09 15:41:52.509     0     0 I servicemanager: Caller(pid=6727,uid=1000,sid=u:r:virtualizationservice:s0) Could not find android.hardware.security.secretkeeper.ISecretkeeper/default in the VINTF manifest. No alternative instances declared in VINTF.
+08-09 15:41:52.535  6727  6727 I VirtualizationService: virtualizationservice::maintenance: Failed to find a Secretkeeper instance; skipping secret management
+08-09 15:41:52.535  6727  6727 I AidlLazyServiceRegistrar: Registering service android.system.virtualizationservice
+08-09 15:41:52.538  2462  2462 I GsaVoiceInteractionSrv: (REDACTED) O received %s
+08-09 15:41:52.576     0     0 I servicemanager: Caller(pid=6727,uid=1000,sid=u:r:virtualizationservice:s0) Could not find android.hardware.security.keymint.IRemotelyProvisionedComponent/avf in the VINTF manifest. VINTF declared instances: default.
+08-09 15:41:52.593  6727  6727 I VirtualizationService: virtualizationservice: Registered Binder service android.system.virtualizationservice.
+08-09 15:41:52.632     0     0 I servicemanager: Notifying android.system.virtualizationmaintenance they do (previously: don't) have clients when service is guaranteed to be in use
+08-09 15:41:52.647     0     0 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+08-09 15:41:52.652   573   627 W system_server: Long monitor contention with owner binder:573_7 (1094) at android.content.ComponentName com.android.server.am.ActivityManagerService.startService(android.app.IApplicationThread, android.content.Intent, java.lang.String, boolean, java.lang.String, java.lang.String, int, boolean, int, java.lang.String, java.lang.String)(ActivityManagerService.java:14006) waiters=3 in void com.android.server.am.BroadcastQueueModernImpl.updateRunningList() for 177ms
+08-09 15:41:52.654  6727  6727 I AidlLazyServiceRegistrar: Registering service android.system.virtualizationmaintenance
+08-09 15:41:52.656  6727  6727 I VirtualizationService: virtualizationservice: Registered Binder service android.system.virtualizationmaintenance.
+08-09 15:41:52.658  6727  6733 I AidlLazyServiceRegistrar: Process has 1 (of 2 available) client(s) in use after notification android.system.virtualizationmaintenance has clients: 1
+08-09 15:41:52.707   573  1105 I AppWidgetServiceImpl: getInstalledProvidersForProfiles() 0
+08-09 15:41:52.720  4904  4904 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
+08-09 15:41:52.728  4904  6728 W gle.android.gms: Long monitor contention with owner lowpool[58] (5941) at void amia.run()(:com.google.android.gms@242335041@24.23.35 (190800-646585959):32) waiters=0 in android.os.Bundle amhz.b(android.content.Context, java.lang.String, android.os.Bundle) for 255ms
+08-09 15:41:52.884  6727  6733 I VirtualizationService: virtualizationservice::aidl: ignoring packageRemoved(user_id=0, app_id=10214)
+08-09 15:41:52.971  4904  4904 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
+08-09 15:41:52.977  4904  4904 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.common.BIND_SHARED_PREFS pkg=com.google.android.gms }
+08-09 15:41:53.028  1779  1779 D PersistedStoragePackageUninstalledReceiver: Received android.intent.action.PACKAGE_FULLY_REMOVED for com.stocklite.app for u0
+08-09 15:41:53.068   573  1092 W ParceledListSlice: Element #25 is 19828 bytes.
+08-09 15:41:53.068   573  1092 W ParceledListSlice: Element #26 is 19864 bytes.
+08-09 15:41:53.081   573  1105 W ParceledListSlice: Element #27 is 19708 bytes.
+08-09 15:41:53.081   573  1105 W ParceledListSlice: Element #28 is 19616 bytes.
+08-09 15:41:53.081   573  1105 W ParceledListSlice: Element #29 is 19728 bytes.
+08-09 15:41:53.126  1877  2057 W PackageManager: Failure retrieving text 0x7f130786 in package com.android.systemui
+08-09 15:41:53.126  1877  2057 W PackageManager: android.content.res.Resources$NotFoundException: String resource ID #0x7f130786
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at android.content.res.Resources.getText(Resources.java:466)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at android.app.ApplicationPackageManager.getText(ApplicationPackageManager.java:2405)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at android.appwidget.AppWidgetProviderInfo.loadDescription(AppWidgetProviderInfo.java:484)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at kml.a(PG:341)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at kmg.b(PG:82)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at aaer.g(PG:13)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at kotlinx.coroutines.DispatchedTask.run(PG:114)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:487)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at wqm.a(PG:3)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at wpo.run(PG:21)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at wqn.run(PG:5)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:487)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at java.util.concurrent.FutureTask.run(FutureTask.java:264)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:307)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1145)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:644)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at hqv.run(PG:221)
+08-09 15:41:53.126  1877  2057 W PackageManager: 	at java.lang.Thread.run(Thread.java:1012)
+08-09 15:41:53.136  1877  2057 I AiAiEcho: EchoSearch: WidgetFetcherImpl is initialized with [33] widgets [reason=package removed for userId: 0]
+08-09 15:41:53.188   362   431 I netd    : tetherGetStats() -> {[]} <2.29ms>
+08-09 15:41:53.193   573   573 W system_server: Long monitor contention with owner binder:573_17 (2450) at void com.android.server.alarm.AlarmManagerService.setImpl(int, long, long, long, android.app.PendingIntent, android.app.IAlarmListener, java.lang.String, int, android.os.WorkSource, android.app.AlarmManager$AlarmClockInfo, int, java.lang.String, android.os.Bundle, int)(AlarmManagerService.java:2279) waiters=0 in void com.android.server.alarm.AlarmManagerService$AlarmHandler.handleMessage(android.os.Message) for 114ms
+08-09 15:41:53.199   573   573 W Looper  : Slow dispatch took 119ms main h=com.android.server.alarm.AlarmManagerService$AlarmHandler c=null m=7
+08-09 15:41:53.295  4904  6729 I Blockstore: [DataStoreImpl] Clearing all the restore credential for 1 packages [CONTEXT service_id=258 ]
+08-09 15:41:53.295  4904  6729 W Blockstore: [DataStoreImpl] Does not contain gms package key space. [CONTEXT service_id=258 ]
+08-09 15:41:53.298  4904  6729 I Blockstore: [PackageIntentOperation] Deleted restore credential for package com.stocklite.app is successful: true [CONTEXT service_id=258 ]
+08-09 15:41:53.307  1877  1936 I ogle.android.as: Waiting for a blocking GC ProfileSaver
+08-09 15:41:53.305   573   604 W system_server: Suspending all threads took: 8.466ms
+08-09 15:41:53.352   573  2775 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.devicelockcontroller, role: android.app.role.SYSTEM_FINANCED_DEVICE_CONTROLLER
+08-09 15:41:53.364  4904  6729 I Blockstore: [DataStoreImpl] Clearing all the Blockstore Data for package com.stocklite.app [CONTEXT service_id=258 ]
+08-09 15:41:53.364  4904  6729 I Blockstore: [DataStoreImpl] Clearing all the Blockstore Data for 1 packages [CONTEXT service_id=258 ]
+08-09 15:41:53.364  4904  6729 I Blockstore: [DataStoreImpl] Removing Blockstore data for packages [com.stocklite.app] [CONTEXT service_id=258 ]
+08-09 15:41:53.437  4904  6739 W SQLiteLog: (28) double-quoted string literal: "com.stocklite.app"
+08-09 15:41:53.514  4904  5134 I Icing   : doRemovePackageData com.stocklite.app
+08-09 15:41:53.553  4509  6737 I ProximityAuth: [RecentAppsMediator] Package removed: (user=UserHandle{0}) com.stocklite.app
+08-09 15:41:53.610   362  6749 I resolv  : GetAddrInfoHandler::run: {104 786536 104 983144 10143 0}
+08-09 15:41:53.615   362  6750 I resolv  : res_nmkquery: (QUERY, IN, AAAA)
+08-09 15:41:53.618   362  6751 I resolv  : res_nmkquery: (QUERY, IN, A)
+08-09 15:41:53.770  3749  3759 I m.android.phone: Background concurrent mark compact GC freed 3784KB AllocSpace bytes, 0(0B) LOS objects, 49% free, 3370KB/6740KB, paused 106.690ms,1.014ms total 2.253s
+08-09 15:41:53.791  4904  4904 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.feedback.internal.IFeedbackService dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsBoundBrokerService }
+08-09 15:41:53.791  4904  4904 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.feedback.internal.IFeedbackService dat=chimera-action:/... cmp=com.google.android.gms/.chimera.GmsBoundBrokerService }
+08-09 15:41:53.843  1877  1891 I ogle.android.as: Background concurrent mark compact GC freed 6437KB AllocSpace bytes, 6(312KB) LOS objects, 49% free, 7563KB/14MB, paused 579us,121.969ms total 763.426ms
+08-09 15:41:53.894  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/PrebuiltBugle/PrebuiltBugle.apk' with 1 weak references
+08-09 15:41:53.895  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/GoogleDialer/GoogleDialer.apk' with 1 weak references
+08-09 15:41:53.895  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Camera2/Camera2.apk' with 1 weak references
+08-09 15:41:53.895  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/SettingsGoogle/SettingsGoogle.apk' with 1 weak references
+08-09 15:41:53.895  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '/product/overlay/SettingsGoogle__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:53.896  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/SafetyHubPrebuilt/SafetyHubPrebuilt.apk' with 1 weak references
+08-09 15:41:53.896  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/DocumentsUIGoogle/DocumentsUIGoogle.apk' with 1 weak references
+08-09 15:41:53.896  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/Velvet/Velvet.apk' with 1 weak references
+08-09 15:41:53.898  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/SystemUIGoogle/SystemUIGoogle.apk' with 1 weak references
+08-09 15:41:53.898  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '/vendor/overlay/SystemUIGoogle__sdk_gphone64_x86_64__auto_generated_rro_vendor.apk' with 1 weak references
+08-09 15:41:53.899  4509  6736 I Fitness : FitCleanupIntentOperation received Intent android.intent.action.PACKAGE_REMOVED [CONTEXT service_id=17 ]
+08-09 15:41:53.908  1877  1936 I ogle.android.as: WaitForGcToComplete blocked ProfileSaver on Background for 601.755ms
+08-09 15:41:53.934  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '/product/overlay/SystemUIGoogle__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:53.935  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Drive/Drive.apk' with 1 weak references
+08-09 15:41:53.937  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Maps/Maps.apk' with 1 weak references
+08-09 15:41:53.968  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Photos/Photos.apk' with 1 weak references
+08-09 15:41:53.978  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/WellbeingPrebuilt/WellbeingPrebuilt.apk' with 1 weak references
+08-09 15:41:53.978  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/YouTubeMusicPrebuilt/YouTubeMusicPrebuilt.apk' with 1 weak references
+08-09 15:41:53.978  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/CalendarGooglePrebuilt/CalendarGooglePrebuilt.apk' with 1 weak references
+08-09 15:41:53.979  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/GoogleContacts/GoogleContacts.apk' with 1 weak references
+08-09 15:41:53.979  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/PrebuiltDeskClockGoogle/PrebuiltDeskClockGoogle.apk' with 1 weak references
+08-09 15:41:53.979  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/SettingsIntelligenceGooglePrebuilt/SettingsIntelligenceGooglePrebuilt.apk' with 1 weak references
+08-09 15:41:53.979  1877  1893 W ogle.android.as: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/YouTube/YouTube.apk' with 1 weak references
+08-09 15:41:54.096  1877  2283 I AiAiTextClassifier: [VisualCortexAdapter]: provideRegistration: Registered Prominent Screen Entities for updates.
+08-09 15:41:54.105  1877  2283 I AiAiTextClassifier: [VisualCortexAdapter]: provideRegistration: Registered Prominent Screen Entities for updates.
+08-09 15:41:54.110  1877  2283 I AiAiTextClassifier: [VisualCortexAdapter]: provideRegistration: Registered Prominent Screen Entities for updates.
+08-09 15:41:54.130   573   604 I system_server: Background concurrent mark compact GC freed 27MB AllocSpace bytes, 66(2004KB) LOS objects, 45% free, 28MB/52MB, paused 54.430ms,19.345ms total 4.236s
+08-09 15:41:54.142   362  6751 I resolv  : res_nsend: used send_dg 81 terrno: 0
+08-09 15:41:54.142   362  6751 I resolv  : doQuery: rcode=0, ancount=2, return value=81
+08-09 15:41:54.142   362  6750 I resolv  : res_nsend: used send_dg 93 terrno: 0
+08-09 15:41:54.142   362  6750 I resolv  : doQuery: rcode=0, ancount=2, return value=93
+08-09 15:41:54.190   934   939 I ndroid.systemui: Background concurrent mark compact GC freed 5453KB AllocSpace bytes, 30(984KB) LOS objects, 49% free, 20MB/41MB, paused 44.865ms,20.901ms total 3.846s
+08-09 15:41:54.191  4509  5271 D TrafficStats: tagSocket(95) with statsTag=0x407, statsUid=-1
+08-09 15:41:54.204   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/PrebuiltGmail/PrebuiltGmail.apk' with 1 weak references
+08-09 15:41:54.206   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~Jm_lYVv-BvkA6K87TWJtUA==/com.stocklite.app-6yut6UyiV1NrP87wB353uA==/base.apk' with 1 weak references
+08-09 15:41:54.207   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/LatinIMEGooglePrebuilt/LatinIMEGooglePrebuilt.apk' with 1 weak references
+08-09 15:41:54.209   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/GoogleTTS/GoogleTTS.apk' with 1 weak references
+08-09 15:41:54.209   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Drive/Drive.apk' with 1 weak references
+08-09 15:41:54.211   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/CalendarGooglePrebuilt/CalendarGooglePrebuilt.apk' with 1 weak references
+08-09 15:41:54.211   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/PrebuiltGmsCore/PrebuiltGmsCore.apk' with 1 weak references
+08-09 15:41:54.212   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/app/AccessibilityMenu/AccessibilityMenu.apk' with 1 weak references
+08-09 15:41:54.213   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '/product/overlay/AccessibilityMenu__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:54.215   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/talkback/talkback.apk' with 1 weak references
+08-09 15:41:54.216   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '/vendor/overlay/EmulatorTalkBackOverlay/EmulatorTalkBackOverlay.apk' with 1 weak references
+08-09 15:41:54.217   573   606 W system_server: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/InputDevices/InputDevices.apk' with 1 weak references
+08-09 15:41:54.221   934   941 W ndroid.systemui: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~Jm_lYVv-BvkA6K87TWJtUA==/com.stocklite.app-6yut6UyiV1NrP87wB353uA==/base.apk' with 1 weak references
+08-09 15:41:54.810   934   934 D TileServices: Couldn't find tile for ComponentInfo{com.google.android.apps.wellbeing/com.google.android.apps.wellbeing.focusmode.quicksettings.FocusModeTileService}(0)
+08-09 15:41:54.944   362   431 I netd    : tetherGetStats() -> {[]} <1.22ms>
+08-09 15:41:54.970  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/YouTube/YouTube.apk' with 1 weak references
+08-09 15:41:54.971  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/DisplayCutoutEmulationCorner/DisplayCutoutEmulationCornerOverlay.apk' with 1 weak references
+08-09 15:41:54.972  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.extservices/priv-app/GoogleExtServices@350820300/GoogleExtServices.apk' with 1 weak references
+08-09 15:41:54.972  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/DisplayCutoutEmulationDouble/DisplayCutoutEmulationDoubleOverlay.apk' with 1 weak references
+08-09 15:41:54.972  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/TelephonyProvider/TelephonyProvider.apk' with 1 weak references
+08-09 15:41:54.972  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/TelephonyProvider__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:54.972  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/DynamicSystemInstallationService/DynamicSystemInstallationService.apk' with 1 weak references
+08-09 15:41:54.972  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/Velvet/Velvet.apk' with 1 weak references
+08-09 15:41:54.974  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/CalendarProvider/CalendarProvider.apk' with 1 weak references
+08-09 15:41:54.975  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/GoogleOneTimeInitializer/GoogleOneTimeInitializer.apk' with 1 weak references
+08-09 15:41:54.976  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/GoogleExtShared/GoogleExtShared.apk' with 1 weak references
+08-09 15:41:54.976  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/ExternalStorageProvider/ExternalStorageProvider.apk' with 1 weak references
+08-09 15:41:54.977  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/HTMLViewer/HTMLViewer.apk' with 1 weak references
+08-09 15:41:54.977  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/CompanionDeviceManager/CompanionDeviceManager.apk' with 1 weak references
+08-09 15:41:54.978  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/DownloadProvider/DownloadProvider.apk' with 1 weak references
+08-09 15:41:55.449   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:41:55.452   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:41:55.452   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={10145} in 4ms
+08-09 15:41:55.453   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:41:55.455   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:41:55.458   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={20145} in 5ms
+08-09 15:41:55.494   819   819 I wpa_supplicant: wlan0: CTRL-EVENT-BEACON-LOSS 
+08-09 15:41:56.696  5178  5182 W .apps.wellbeing: Suspending all threads took: 8.103ms
+08-09 15:41:56.716  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/SoundPickerPrebuilt/SoundPickerPrebuilt.apk' with 1 weak references
+08-09 15:41:56.716  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.mediaprovider/priv-app/MediaProviderGoogle@350820300/MediaProviderGoogle.apk' with 1 weak references
+08-09 15:41:56.717  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/SafetyHubPrebuilt/SafetyHubPrebuilt.apk' with 1 weak references
+08-09 15:41:56.717  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/DownloadProviderUi/DownloadProviderUi.apk' with 1 weak references
+08-09 15:41:56.717  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.wifi/app/OsuLoginGoogle@350820300/OsuLoginGoogle.apk' with 1 weak references
+08-09 15:41:56.717  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/PacProcessor/PacProcessor.apk' with 1 weak references
+08-09 15:41:56.717  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/SimAppDialog/SimAppDialog.apk' with 1 weak references
+08-09 15:41:56.718  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/SimAppDialog__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.718  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.adservices/priv-app/AdServicesApkGoogle@350820260/AdServicesApkGoogle.apk' with 1 weak references
+08-09 15:41:56.719  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/DisplayCutoutEmulationHole/DisplayCutoutEmulationHoleOverlay.apk' with 1 weak references
+08-09 15:41:56.719  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/DisplayCutoutEmulationTall/DisplayCutoutEmulationTallOverlay.apk' with 1 weak references
+08-09 15:41:56.719  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/CertInstaller/CertInstaller.apk' with 1 weak references
+08-09 15:41:56.719  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/talkback/talkback.apk' with 1 weak references
+08-09 15:41:56.720  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/vendor/overlay/EmulatorTalkBackOverlay/EmulatorTalkBackOverlay.apk' with 1 weak references
+08-09 15:41:56.720  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/NavigationBarMode3Button/NavigationBarMode3ButtonOverlay.apk' with 1 weak references
+08-09 15:41:56.720  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Camera2/Camera2.apk' with 1 weak references
+08-09 15:41:56.720  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/EasterEgg/EasterEgg.apk' with 1 weak references
+08-09 15:41:56.721  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/MtpService/MtpService.apk' with 1 weak references
+08-09 15:41:56.721  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.nfcservices/priv-app/NfcNciApexGoogle@AE3A.240806.043/NfcNciApexGoogle.apk' with 1 weak references
+08-09 15:41:56.721  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/Stk/Stk.apk' with 1 weak references
+08-09 15:41:56.721  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/PrebuiltDeskClockGoogle/PrebuiltDeskClockGoogle.apk' with 1 weak references
+08-09 15:41:56.722  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/NavigationBarMode2Button/NavigationBarMode2ButtonOverlay.apk' with 1 weak references
+08-09 15:41:56.722  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/DevicePersonalizationPrebuiltPixel2021-aiai_20240329.00_RC16/DevicePersonalizationPrebuiltPixel2021-aiai_20240329.00_RC16.apk' with 1 weak references
+08-09 15:41:56.724  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/PrebuiltGmail/PrebuiltGmail.apk' with 1 weak references
+08-09 15:41:56.733  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.permission/priv-app/GooglePermissionController@350820360/GooglePermissionController.apk' with 1 weak references
+08-09 15:41:56.735  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/GooglePermissionControllerOverlay.apk' with 1 weak references
+08-09 15:41:56.735  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.btservices/app/BluetoothGoogle@342010060/BluetoothGoogle.apk' with 1 weak references
+08-09 15:41:56.736  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/SettingsProvider/SettingsProvider.apk' with 1 weak references
+08-09 15:41:56.736  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/LargeScreenSettingsProviderOverlay.apk' with 1 weak references
+08-09 15:41:56.736  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/SettingsProvider__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.736  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/PrintSpooler/PrintSpooler.apk' with 1 weak references
+08-09 15:41:56.737  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/BasicDreams/BasicDreams.apk' with 1 weak references
+08-09 15:41:56.738  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/DeviceIntelligenceNetworkPrebuilt-astrea_20240329.00_RC02/DeviceIntelligenceNetworkPrebuilt-astrea_20240329.00_RC02.apk' with 1 weak references
+08-09 15:41:56.739  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/InputDevices/InputDevices.apk' with 1 weak references
+08-09 15:41:56.740  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.devicelock/priv-app/DeviceLockControllerGoogle@AE3A.240806.043/DeviceLockControllerGoogle.apk' with 1 weak references
+08-09 15:41:56.740  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/GoogleDialer/GoogleDialer.apk' with 1 weak references
+08-09 15:41:56.740  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/BuiltInPrintService/BuiltInPrintService.apk' with 1 weak references
+08-09 15:41:56.740  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/BuiltInPrintService__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.740  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/CaptivePortalLoginGoogle/CaptivePortalLoginGoogle.apk' with 1 weak references
+08-09 15:41:56.740  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/MusicFX/MusicFX.apk' with 1 weak references
+08-09 15:41:56.741  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Drive/Drive.apk' with 1 weak references
+08-09 15:41:56.741  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Maps/Maps.apk' with 1 weak references
+08-09 15:41:56.753  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/ModuleMetadataGoogle/ModuleMetadataGoogle.apk' with 1 weak references
+08-09 15:41:56.753  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/DisplayCutoutEmulationEmu01/DisplayCutoutEmulationEmu01Overlay.apk' with 1 weak references
+08-09 15:41:56.753  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/AvatarPickerGoogle/AvatarPickerGoogle.apk' with 1 weak references
+08-09 15:41:56.753  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/MarkupGoogle_v2/MarkupGoogle_v2.apk' with 1 weak references
+08-09 15:41:56.754  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/NetworkStackGoogle/NetworkStackGoogle.apk' with 1 weak references
+08-09 15:41:56.754  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.rkpd/priv-app/rkpdapp.google@350820300/rkpdapp.google.apk' with 1 weak references
+08-09 15:41:56.754  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/GoogleContacts/GoogleContacts.apk' with 1 weak references
+08-09 15:41:56.754  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/Telecom/Telecom.apk' with 1 weak references
+08-09 15:41:56.755  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/Telecom__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.755  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/KeyChain/KeyChain.apk' with 1 weak references
+08-09 15:41:56.755  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~CVeHSyplFh-a9XR3CfVe9g==/com.android.chrome-ONIel0Bczi9QcmVmHLNDoQ==/Chrome.apk' with 1 weak references
+08-09 15:41:56.756  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /data/app/~~dZpnlwpBPRwfR92TgsPPMg==/com.google.android.trichromelibrary_636771938-89Z4T2wkmPwJUdtUUrXKOw==/TrichromeLibrary.apk' with 1 weak references
+08-09 15:41:56.756  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/GooglePackageInstaller/GooglePackageInstaller.apk' with 1 weak references
+08-09 15:41:56.756  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/PixelThemesStub/PixelThemesStub.apk' with 1 weak references
+08-09 15:41:56.756  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/GoogleServicesFramework/GoogleServicesFramework.apk' with 1 weak references
+08-09 15:41:56.761  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/TagGoogle/TagGoogle.apk' with 1 weak references
+08-09 15:41:56.763  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/GoogleTTS/GoogleTTS.apk' with 1 weak references
+08-09 15:41:56.766  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/CallLogBackup/CallLogBackup.apk' with 1 weak references
+08-09 15:41:56.767  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/PartnerSetupPrebuilt/PartnerSetupPrebuilt.apk' with 1 weak references
+08-09 15:41:56.772  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/CameraExtensionsProxy/CameraExtensionsProxy.apk' with 1 weak references
+08-09 15:41:56.772  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/NexusWallpapersStubPrebuilt2018/NexusWallpapersStubPrebuilt2018.apk' with 1 weak references
+08-09 15:41:56.772  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/NexusLauncherRelease/NexusLauncherRelease.apk' with 1 weak references
+08-09 15:41:56.779  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/CarrierDefaultApp/CarrierDefaultApp.apk' with 1 weak references
+08-09 15:41:56.779  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/CredentialManager/CredentialManager.apk' with 1 weak references
+08-09 15:41:56.779  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/FontNotoSerifSource/FontNotoSerifSourceOverlay.apk' with 1 weak references
+08-09 15:41:56.780  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/DeviceAsWebcam/DeviceAsWebcam.apk' with 1 weak references
+08-09 15:41:56.780  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/ProxyHandler/ProxyHandler.apk' with 1 weak references
+08-09 15:41:56.781  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.permission/priv-app/GoogleSafetyCenterResources@350820360/GoogleSafetyCenterResources.apk' with 1 weak references
+08-09 15:41:56.783  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/DisplayCutoutEmulationWaterfall/DisplayCutoutEmulationWaterfallOverlay.apk' with 1 weak references
+08-09 15:41:56.784  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/IntentResolver/IntentResolver.apk' with 1 weak references
+08-09 15:41:56.784  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/TransparentNavigationBar/TransparentNavigationBarOverlay.apk' with 1 weak references
+08-09 15:41:56.784  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/E2eeContactKeysProvider/E2eeContactKeysProvider.apk' with 1 weak references
+08-09 15:41:56.784  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.tethering/priv-app/ServiceConnectivityResourcesGoogle@350820300/ServiceConnectivityResourcesGoogle.apk' with 1 weak references
+08-09 15:41:56.784  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/vendor/overlay/goldfish_overlay_connectivity_google.apk' with 1 weak references
+08-09 15:41:56.786  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/GoogleFeedback/GoogleFeedback.apk' with 1 weak references
+08-09 15:41:56.786  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/GooglePrintRecommendationService/GooglePrintRecommendationService.apk' with 1 weak references
+08-09 15:41:56.787  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/Photos/Photos.apk' with 1 weak references
+08-09 15:41:56.789  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/CalendarGooglePrebuilt/CalendarGooglePrebuilt.apk' with 1 weak references
+08-09 15:41:56.790  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/ManagedProvisioning/ManagedProvisioning.apk' with 1 weak references
+08-09 15:41:56.791  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/SoundPicker/SoundPicker.apk' with 1 weak references
+08-09 15:41:56.792  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/DocumentsUIGoogle/DocumentsUIGoogle.apk' with 1 weak references
+08-09 15:41:56.793  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/PrebuiltGoogleTelemetryTvp/PrebuiltGoogleTelemetryTvp.apk' with 1 weak references
+08-09 15:41:56.793  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/MultiDisplayProvider/MultiDisplayProvider.apk' with 1 weak references
+08-09 15:41:56.793  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/DeviceDiagnostics/DeviceDiagnostics.apk' with 1 weak references
+08-09 15:41:56.793  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/DeviceDiagnostics__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.793  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/NotesRoleEnabled/NotesRoleEnabledOverlay.apk' with 1 weak references
+08-09 15:41:56.793  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/LiveWallpapersPicker/LiveWallpapersPicker.apk' with 1 weak references
+08-09 15:41:56.794  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/PrebuiltGoogleAdservicesTvp/PrebuiltGoogleAdservicesTvp.apk' with 1 weak references
+08-09 15:41:56.794  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.healthfitness/priv-app/HealthConnectControllerGoogle@350820300/HealthConnectControllerGoogle.apk' with 1 weak references
+08-09 15:41:56.797  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/KidsSupervisionStub/KidsSupervisionStub.apk' with 1 weak references
+08-09 15:41:56.800  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/StorageManager/StorageManager.apk' with 1 weak references
+08-09 15:41:56.801  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/StorageManager__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.802  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/BookmarkProvider/BookmarkProvider.apk' with 1 weak references
+08-09 15:41:56.802  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/SettingsGoogle/SettingsGoogle.apk' with 1 weak references
+08-09 15:41:56.804  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/SettingsGoogle__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.804  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/SettingsIntelligenceGooglePrebuilt/SettingsIntelligenceGooglePrebuilt.apk' with 1 weak references
+08-09 15:41:56.804  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.uwb/priv-app/ServiceUwbResourcesGoogle@350820300/ServiceUwbResourcesGoogle.apk' with 1 weak references
+08-09 15:41:56.804  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.wifi/priv-app/ServiceWifiResourcesGoogle@350820300/ServiceWifiResourcesGoogle.apk' with 1 weak references
+08-09 15:41:56.805  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/ThemePicker/ThemePicker.apk' with 1 weak references
+08-09 15:41:56.805  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/WallpaperPickerGoogleRelease/WallpaperPickerGoogleRelease.apk' with 1 weak references
+08-09 15:41:56.805  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/OdadPrebuilt/OdadPrebuilt.apk' with 1 weak references
+08-09 15:41:56.806  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/TeleService/TeleService.apk' with 1 weak references
+08-09 15:41:56.807  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/vendor/overlay/TeleService__sdk_gphone64_x86_64__auto_generated_rro_vendor.apk' with 1 weak references
+08-09 15:41:56.807  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/TeleService__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.807  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/Shell/Shell.apk' with 1 weak references
+08-09 15:41:56.807  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/BlockedNumberProvider/BlockedNumberProvider.apk' with 1 weak references
+08-09 15:41:56.808  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/UserDictionaryProvider/UserDictionaryProvider.apk' with 1 weak references
+08-09 15:41:56.808  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/app/EmergencyInfoGoogleNoUi/EmergencyInfoGoogleNoUi.apk' with 1 weak references
+08-09 15:41:56.808  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk' with 1 weak references
+08-09 15:41:56.808  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/FusedLocation/FusedLocation.apk' with 1 weak references
+08-09 15:41:56.808  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system_ext/priv-app/SystemUIGoogle/SystemUIGoogle.apk' with 1 weak references
+08-09 15:41:56.808  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/vendor/overlay/SystemUIGoogle__sdk_gphone64_x86_64__auto_generated_rro_vendor.apk' with 1 weak references
+08-09 15:41:56.809  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/SystemUIGoogle__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.809  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/YouTubeMusicPrebuilt/YouTubeMusicPrebuilt.apk' with 1 weak references
+08-09 15:41:56.809  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/BluetoothMidiService/BluetoothMidiService.apk' with 1 weak references
+08-09 15:41:56.809  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/app/Traceur/Traceur.apk' with 1 weak references
+08-09 15:41:56.809  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /apex/com.android.cellbroadcast/priv-app/GoogleCellBroadcastApp@350820300/GoogleCellBroadcastApp.apk' with 1 weak references
+08-09 15:41:56.810  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /system/priv-app/ContactsProvider/ContactsProvider.apk' with 1 weak references
+08-09 15:41:56.810  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '/product/overlay/ContactsProvider__sdk_gphone64_x86_64__auto_generated_rro_product.apk' with 1 weak references
+08-09 15:41:56.810  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/app/LatinIMEGooglePrebuilt/LatinIMEGooglePrebuilt.apk' with 1 weak references
+08-09 15:41:56.811  5178  5184 W .apps.wellbeing: ApkAssets: Deleting an ApkAssets object '<empty> and /product/priv-app/GoogleRestorePrebuilt-v526684/GoogleRestorePrebuilt-v526684.apk' with 1 weak references
+08-09 15:41:57.108   573   689 D ActivityManager: freezing 3772 com.google.android.apps.messaging
+08-09 15:41:58.364   573  2119 D TelephonyManager: requestModemActivityInfo: Sending result to app: ModemActivityInfo{ mTimestamp=1231885 mSleepTimeMs=0 mIdleTimeMs=1225383 mActivityStatsTechSpecificInfo=[{mRat=UNKNOWN,mFrequencyRange=UNKNOWN,mTxTimeMs[]=[0, 0, 0, 0, 0],mRxTimeMs=0}]}
+08-09 15:41:58.379   362   431 I netd    : tetherGetStats() -> {[]} <0.66ms>
+08-09 15:41:58.433  6727  6733 I AidlLazyServiceRegistrar: Process has 0 (of 2 available) client(s) in use after notification android.system.virtualizationmaintenance has clients: 0
+08-09 15:41:58.433  6727  6733 I AidlLazyServiceRegistrar: Trying to shut down the service. No clients in use for any service in process.
+08-09 15:41:58.409     0     0 I servicemanager: Notifying android.system.virtualizationmaintenance they don't (previously: do) have clients when we now have no record of a client
+08-09 15:41:58.412     0     0 I servicemanager: Caller(pid=6727,uid=1000,sid=u:r:virtualizationservice:s0) Unregistering android.system.virtualizationmaintenance
+08-09 15:41:58.414     0     0 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+08-09 15:41:58.417     0     0 I servicemanager: Caller(pid=6727,uid=1000,sid=u:r:virtualizationservice:s0) Unregistering android.system.virtualizationservice
+08-09 15:41:58.419     0     0 I BpBinder: onLastStrongRef automatically unlinking death recipients:
+08-09 15:41:58.443  6727  6733 I AidlLazyServiceRegistrar: Unregistered all clients and exiting
+08-09 15:41:58.429     0     0 I init    : Service 'virtualizationservice' (pid 6727) exited with status 0 oneshot service took 6.251000 seconds in background
+08-09 15:41:58.430     0     0 I init    : Sending signal 9 to service 'virtualizationservice' (pid 6727) process group...
+08-09 15:41:58.432     0     0 I libprocessgroup: Removed cgroup /sys/fs/cgroup/uid_1000/pid_6727
+08-09 15:41:59.506     0     0 I logd    : start watching /data/system/packages.list ...
+08-09 15:41:59.508     0     0 I logd    : ReadPackageList, total packages: 216
+08-09 15:41:59.829  4509  5132 I ChimeraSrvcProxy: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl
+08-09 15:41:59.838  4509  5132 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+08-09 15:41:59.844   573   744 W IPCThreadState: Sending oneway calls to frozen process.
+08-09 15:41:59.845   573   744 W IPCThreadState: Sending oneway calls to frozen process.
+08-09 15:41:59.850   573   744 W IPCThreadState: Sending oneway calls to frozen process.
+08-09 15:41:59.851   573   744 W IPCThreadState: Sending oneway calls to frozen process.
+08-09 15:41:59.854  4061  4155 I BugleRcsEngine: Connected state: [1], networkType: [WIFI] [CONTEXT thread_id=55 ]
+08-09 15:41:59.855  4061  4260 I BugleRcsEngine: handleMessage processing message:[NOTIFY_UPTIME_IGNORE_STATE_CHANGED] with [non-null]:RcsEngineImpl reference [CONTEXT log_prefix="RcsEngineImpl[DUAL_REG]:[31597434-af0c]>Handler" thread_id=64 ]
+08-09 15:41:59.870   573  1092 D ActivityManager: sync unfroze 3772 com.google.android.apps.messaging for 7
+08-09 15:41:59.900  4061  4260 I BugleRcsEngine: No RCS Configuration was found in Bugle for simID: redacted-pii:sim_id[chars:20,last3:897] [CONTEXT log_prefix="ProvisioningEngineDataRetriever" thread_id=64 ]
+08-09 15:41:59.927   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:41:59.929   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:41:59.929   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={10142} in 2ms
+08-09 15:41:59.931   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:41:59.932   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:41:59.932   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={20142} in 3ms
+08-09 15:42:00.028  1877  1978 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+08-09 15:42:00.029  1877  1978 I AiAiEcho: EchoTargets: 
+08-09 15:42:00.029  1877  1978 I AiAiEcho: Filtered by AiAi flag check: 
+08-09 15:42:00.029  1877  1978 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+08-09 15:42:00.030  1877  1978 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+08-09 15:42:00.032  1877  1978 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+08-09 15:42:00.033  1877  1978 I AiAiEcho: Predicting[0]:  [CONTEXT sampling_count=5 ]
+08-09 15:42:00.033  1877  1978 I AiAiEcho: EchoTargets: 
+08-09 15:42:00.033  1877  1978 I AiAiEcho: Filtered by AiAi flag check: 
+08-09 15:42:00.033  1877  1978 I AiAiEcho: [CONTEXT ratelimit_period="10 SECONDS" ]
+08-09 15:42:00.033  1877  1978 I AiAiEcho: Ranked targets strategy: SORT, count: 0, ranking metadata:  [CONTEXT ratelimit_period="10 SECONDS" ]
+08-09 15:42:00.033  1877  1978 I AiAiEcho: #remoteViewsTwiddler: feature disabled.
+08-09 15:42:00.036  1877  1978 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface lockscreen with targets# 0 (types=[])
+08-09 15:42:00.037  1877  1978 I AiAiEcho: #postPredictionTargets: Sending updates to UISurface home with targets# 0 (types=[])
+08-09 15:42:00.039  1244  1244 D SsBaseTemplateCard: No text view can be set up
+08-09 15:42:00.039  1244  1244 D SsBaseTemplateCard: Passed-in item info is null
+08-09 15:42:00.039  1244  1244 D SsBaseTemplateCard: Passed-in item info is null
+08-09 15:42:00.039  1244  1244 D SsBaseTemplateCard: Passed-in item info is null
+08-09 15:42:00.041  1244  1244 I SsBaseTemplateCard: Secondary card pane is null
+08-09 15:42:00.049   934   934 W PageIndicator: Total number of pages invalid: 0. Assuming 1 page.
+08-09 15:42:00.059   934  1168 D EGL_emulation: app_time_stats: avg=59930.62ms min=59930.62ms max=59930.62ms count=1
+08-09 15:42:00.252   180  6696 I keystore2: system/security/keystore2/watchdog/src/lib.rs:319 - Watchdog thread idle -> terminating. Have a great day.
+08-09 15:42:00.438   573   689 D ActivityManager: freezing 4298 com.android.chrome
+08-09 15:42:00.446   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:42:00.451   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:42:00.452   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={10145} in 7ms
+08-09 15:42:00.574   573   816 W FileUtils: Failed to chmod(AtomicFile[/data/system_de/0/system/game-manager-service.xml]): android.system.ErrnoException: chmod failed: ENOENT (No such file or directory)
+08-09 15:42:00.776   362   431 I netd    : tetherGetStats() -> {[]} <1.00ms>
+08-09 15:42:01.661   573   689 D ActivityManager: freezing 6318 com.google.android.documentsui
+08-09 15:42:01.662   573   689 D ActivityManager: freezing 6374 com.android.externalstorage
+08-09 15:42:01.664   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:42:01.665   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:42:01.665   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={10096} in 1ms
+08-09 15:42:01.708   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:42:01.709   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:42:01.709   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={10104} in 2ms
+08-09 15:42:02.079   573   689 D ActivityManager: freezing 6388 android.process.media
+08-09 15:42:02.080   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:42:02.082   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:42:02.082   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={10095} in 3ms
+08-09 15:42:03.098   573   689 D ActivityManager: freezing 1779 com.google.android.permissioncontroller
+08-09 15:42:03.100   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+08-09 15:42:03.101   573   744 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+08-09 15:42:03.101   573   744 D InetDiagMessage: Destroyed live tcp sockets for uids={10192} in 2ms

@@ -48,7 +48,7 @@ class ThuMuaProductCard extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '${receipt.sku} • Tồn hiện tại: ${receipt.currentStock} bao',
+              '${receipt.sku} • Lúa nguyên liệu',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(

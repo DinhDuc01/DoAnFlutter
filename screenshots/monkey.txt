@@ -1,0 +1,5 @@
+  bash arg: -p
+  bash arg: com.stocklite.app
+  bash arg: 1
+Events injected: 1
+## Network stats: elapsed time=3418ms (0ms mobile, 0ms wifi, 3418ms not connected)

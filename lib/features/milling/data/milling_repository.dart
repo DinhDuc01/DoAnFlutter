@@ -2,6 +2,8 @@ import '../models/milling_order.dart';
 
 /// Data boundary for the mobile milling completion workflow.
 abstract class MillingRepository {
+  Future<List<MillingProductOption>> getOutputProducts() async => const [];
+
   Future<MillingOrder> getActiveOrder();
 
   Future<void> saveRiceBags(MillingOrder order);
@@ -13,6 +15,28 @@ abstract class MillingRepository {
 
 /// Offline implementation used to exercise all screens before API wiring.
 class MockMillingRepository implements MillingRepository {
+  @override
+  Future<List<MillingProductOption>> getOutputProducts() async => const [
+        MillingProductOption(
+          id: 101,
+          sku: 'RICE-001',
+          name: 'Gạo thành phẩm',
+          outputType: 'RICE',
+        ),
+        MillingProductOption(
+          id: 102,
+          sku: 'BRAN-001',
+          name: 'Cám',
+          outputType: 'BRAN',
+        ),
+        MillingProductOption(
+          id: 103,
+          sku: 'BROKEN-001',
+          name: 'Tấm',
+          outputType: 'BROKEN',
+        ),
+      ];
+
   @override
   Future<MillingOrder> getActiveOrder() async {
     await Future<void>.delayed(const Duration(milliseconds: 450));
@@ -36,6 +60,9 @@ class MockMillingRepository implements MillingRepository {
         MillingBag(index: 4, weightKg: 20),
         MillingBag(index: 5, weightKg: 20),
       ],
+      riceProductVariantId: 101,
+      branProductVariantId: 102,
+      brokenProductVariantId: 103,
     );
   }
 

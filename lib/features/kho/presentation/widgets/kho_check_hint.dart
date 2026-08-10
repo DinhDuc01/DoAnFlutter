@@ -18,7 +18,7 @@ class KhoCheckHint extends StatelessWidget {
         border: Border.all(color: const Color(0xFFF3E8FF)),
       ),
       child: const Text(
-        'Kiểm kê số lượng: nhập số đếm thực tế, hệ thống tự tính chênh lệch.',
+        'Chọn sản phẩm cần kiểm, sau đó nhập số thực tế. Tồn hệ thống được ẩn trong lúc kiểm kê.',
         style: TextStyle(
           color: _accentDark,
           fontSize: 12,

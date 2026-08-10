@@ -68,77 +68,20 @@ class HomeTodayTab extends StatelessWidget {
           const SizedBox(height: 6),
           // Tiêu đề chính
           const Text(
-            'Việc cần làm hôm nay',
+            'Trang chủ',
             style: TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 14),
-
-          // Các thẻ thống kê số lượng công việc (Thu mua, Giao, Cảnh báo)
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatBox(
-                  label: 'Thu mua',
-                  value: '4',
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildStatBox(
-                  label: 'Bán',
-                  value: '3',
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildStatBox(
-                  label: 'Cảnh báo',
-                  value: '2',
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatBox({
-    required String label,
-    required String value,
-    required Color backgroundColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
+          const SizedBox(height: 6),
+          const Text(
+            'Thu mua, quản lý kho và xay xát lúa gạo',
+            style: TextStyle(
               color: Colors.white70,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -156,53 +99,6 @@ class HomeTodayTab extends StatelessWidget {
 
         // 2. Lưới phím tắt 6 tính năng
         _buildShortcutGrid(),
-        const SizedBox(height: 20),
-
-        // 3. Tiêu đề danh sách công việc
-        _buildListHeader('Công việc trong ngày'),
-        const SizedBox(height: 8),
-
-        // 4. Danh sách công việc gom chung trong 1 Container thẻ màu trắng bo góc có chia Divider
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-            border: Border.all(color: const Color(0xFFF1F5F9)),
-          ),
-          child: Column(
-            children: [
-              _buildScheduleItem(
-                time: '08:00',
-                title: 'Đi thu Nguyễn Văn An',
-              ),
-              const Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: Color(0xFFF1F5F9)),
-              _buildScheduleItem(
-                time: '10:00',
-                title: 'Kiểm L1 / A03 ẩm cao',
-              ),
-              const Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: Color(0xFFF1F5F9)),
-              _buildScheduleItem(
-                time: '14:00',
-                title: 'Giao đơn bán Phú Thịnh',
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -215,17 +111,17 @@ class HomeTodayTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFFDE68A)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(
+          const Icon(
             Icons.warning_amber_rounded,
             color: Color(0xFFD97706),
             size: 20,
           ),
-          SizedBox(width: 8),
-          Expanded(
+          const SizedBox(width: 8),
+          const Expanded(
             child: Text(
-              'L1 A03 cách ly - công nợ quá hạn',
+              'Xem các mặt hàng và lô lúa sắp hết trong kho',
               style: TextStyle(
                 color: Color(0xFF92400E),
                 fontSize: 12,
@@ -233,10 +129,13 @@ class HomeTodayTab extends StatelessWidget {
               ),
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            color: Color(0xFFD97706),
-            size: 18,
+          IconButton(
+            onPressed: () => onTabChanged?.call(4),
+            icon: const Icon(
+              Icons.chevron_right,
+              color: Color(0xFFD97706),
+              size: 18,
+            ),
           ),
         ],
       ),
@@ -269,12 +168,6 @@ class HomeTodayTab extends StatelessWidget {
         'icon': Icons.grain_outlined,
         'color': const Color(0xFFD97706),
         'route': AppRoutes.milling,
-      },
-      {
-        'label': 'Kiểm chất',
-        'icon': Icons.gpp_maybe_outlined,
-        'color': const Color(0xFFEA580C),
-        'route': AppRoutes.qualityInspection,
       },
       {
         'label': 'Kiểm kê',
@@ -360,60 +253,6 @@ class HomeTodayTab extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildListHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w900,
-        color: AppColors.textPrimary,
-      ),
-    );
-  }
-
-  Widget _buildScheduleItem({
-    required String time,
-    required String title,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {},
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-          child: Row(
-            children: [
-              Text(
-                time,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF159447),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right,
-                color: Color(0xFF94A3B8),
-                size: 18,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -65,10 +65,19 @@ class ApiAuthService implements AuthService {
             'API đăng nhập không trả thông tin người dùng');
       }
 
+      final accessToken = JsonReader.string(resources, 'accessToken');
+      final refreshToken = JsonReader.string(resources, 'refreshToken');
+      if (accessToken == null || accessToken.isEmpty ||
+          refreshToken == null || refreshToken.isEmpty) {
+        throw const AuthException(
+          'API đăng nhập không trả đủ thông tin token phiên',
+        );
+      }
+
       // Khởi tạo và trả về đối tượng AuthSession từ dữ liệu API đã parse thành công
       return AuthSession(
-        accessToken: JsonReader.string(resources, 'accessToken') ?? '',
-        refreshToken: JsonReader.string(resources, 'refreshToken') ?? '',
+        accessToken: accessToken,
+        refreshToken: refreshToken,
         user: AuthUser(
           id: JsonReader.integer(userInfo, 'id') ?? 0,
           fullName: JsonReader.string(userInfo, 'fullName') ?? '',

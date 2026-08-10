@@ -43,20 +43,29 @@ class ApiNotificationsRepository implements NotificationsRepository {
       token: token,
       body: body,
     );
-    final resources = JsonReader.map(json, 'resources');
-    if (resources == null) {
-      return const NotificationPage(items: [], total: 0);
-    }
-
-    final data = JsonReader.list(resources, 'dataSource') ?? const [];
-    final total = JsonReader.integer(resources, 'totalFiltered') ??
-        JsonReader.integer(resources, 'total') ??
-        data.length;
+    final resourcesValue = JsonReader.value(json, 'resources');
+    final resources =
+        resourcesValue is Map<String, dynamic> ? resourcesValue : null;
+    final data = resources == null
+        ? resourcesValue is List
+            ? resourcesValue
+            : const <dynamic>[]
+        : JsonReader.list(resources, 'dataSource') ?? const [];
+    final total = resources == null
+        ? data.length
+        : JsonReader.integer(resources, 'totalFiltered') ??
+            JsonReader.integer(resources, 'total') ??
+            data.length;
 
     final items = <AppNotification>[
       for (final item in data)
         if (item is Map<String, dynamic>) _fromJson(item),
     ];
+    items.sort((a, b) {
+      if (a.isLowStock != b.isLowStock) return a.isLowStock ? -1 : 1;
+      if (a.isRead != b.isRead) return a.isRead ? 1 : -1;
+      return 0;
+    });
     return NotificationPage(items: items, total: total);
   }
 

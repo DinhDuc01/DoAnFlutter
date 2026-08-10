@@ -48,9 +48,14 @@ class NotificationsHeader extends StatelessWidget {
             ),
           ),
           // Nút bấm "Đọc tất cả", bị vô hiệu hóa nếu không có thông báo chưa đọc
-          TextButton(
-            onPressed: unreadCount == 0 ? null : onMarkAllAsRead,
-            child: const Text('Đọc tất cả'),
+          Flexible(
+            child: TextButton(
+              onPressed: unreadCount == 0 ? null : onMarkAllAsRead,
+              child: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Đọc tất cả'),
+              ),
+            ),
           ),
         ],
       ),

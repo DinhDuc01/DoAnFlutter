@@ -19,14 +19,14 @@ class KhoSummaryFields extends StatelessWidget {
           children: [
             Expanded(
               child: _ReadonlyField(
-                label: 'Mã phiếu kiểm kê',
+                label: 'Mã phiếu',
                 value: check.checkCode,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _ReadonlyField(
-                label: 'Kho',
+                label: 'Kho kiểm kê',
                 value: check.warehouseName,
               ),
             ),
@@ -37,16 +37,17 @@ class KhoSummaryFields extends StatelessWidget {
           children: [
             Expanded(
               child: _ReadonlyField(
-                label: 'Sản phẩm',
+                label: 'Số sản phẩm',
                 value: '${check.totalProducts}',
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _ReadonlyField(
-                label: 'Tổng tồn hệ thống',
-                value: '${check.totalSystemQuantity}',
-                valueColor: AppColors.primaryDark,
+                label: 'Ngày kiểm kê',
+                value: '${check.checkedAt.day.toString().padLeft(2, '0')}/'
+                    '${check.checkedAt.month.toString().padLeft(2, '0')}/'
+                    '${check.checkedAt.year}',
               ),
             ),
           ],
@@ -60,12 +61,10 @@ class _ReadonlyField extends StatelessWidget {
   const _ReadonlyField({
     required this.label,
     required this.value,
-    this.valueColor,
   });
 
   final String label;
   final String value;
-  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +100,7 @@ class _ReadonlyField extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: valueColor ?? AppColors.textPrimaryFor(context),
+              color: AppColors.textPrimaryFor(context),
               fontWeight: FontWeight.w800,
             ),
           ),

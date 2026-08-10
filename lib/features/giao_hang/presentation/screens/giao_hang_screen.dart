@@ -30,6 +30,7 @@ class _GiaoHangScreenState extends State<GiaoHangScreen> {
       TextEditingController();
   late final Future<GiaoHangReceipt> _receiptFuture;
   late final Future<List<GiaoHangCustomer>> _customersFuture;
+  late final Future<List<Object>> _initialDataFuture;
   GiaoHangReceipt? _receipt;
   int _quantity = 1;
   bool _isSubmitting = false;
@@ -42,6 +43,8 @@ class _GiaoHangScreenState extends State<GiaoHangScreen> {
         ? _repository.getDraftReceipt()
         : Future.value(widget.initialReceipt!);
     _customersFuture = _repository.getCustomers();
+    _initialDataFuture =
+        Future.wait<Object>([_receiptFuture, _customersFuture]);
   }
 
   @override
@@ -142,7 +145,7 @@ class _GiaoHangScreenState extends State<GiaoHangScreen> {
       backgroundColor: AppColors.backgroundFor(context),
       body: SafeArea(
         child: FutureBuilder<List<Object>>(
-          future: Future.wait<Object>([_receiptFuture, _customersFuture]),
+          future: _initialDataFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
               return const Center(child: CircularProgressIndicator());

@@ -6,17 +6,20 @@ import '../../../scale/models/weight_reading.dart';
 import '../../../scale/presentation/screens/scale_screen.dart';
 import '../widgets/milling_widgets.dart';
 import 'milling_result_confirmation_screen.dart';
+import 'broken_weighing_screen.dart';
 
 /// Displays live scale data and the recorded bran by-product bags.
 class BranWeighingScreen extends StatefulWidget {
   const BranWeighingScreen({
     required this.order,
     required this.repository,
+    this.includeBroken = false,
     super.key,
   });
 
   final MillingOrder order;
   final MillingRepository repository;
+  final bool includeBroken;
 
   @override
   State<BranWeighingScreen> createState() => _BranWeighingScreenState();
@@ -36,15 +39,22 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
   MillingOrder get _currentOrder => widget.order.copyWith(branBags: _bags);
 
   Future<void> _captureWeight() async {
-    final reading = await Navigator.of(context).push<WeightReading>(
-      MaterialPageRoute(builder: (_) => const ScaleScreen()),
-    );
-    if (!mounted || reading == null) return;
+    final double? weight;
+    if (widget.order.scaleMode == MillingScaleMode.iot) {
+      final reading = await Navigator.of(context).push<WeightReading>(
+        MaterialPageRoute(builder: (_) => const ScaleScreen()),
+      );
+      weight = reading?.weight;
+    } else {
+      weight = await showManualWeightDialog(context, productLabel: 'cám');
+    }
+    if (!mounted || weight == null) return;
+    final capturedWeight = weight;
     setState(() {
-      _latestWeightKg = reading.weight;
+      _latestWeightKg = capturedWeight;
       _bags = [
         ..._bags,
-        MillingBag(index: _bags.length + 1, weightKg: reading.weight),
+        MillingBag(index: _bags.length + 1, weightKg: capturedWeight),
       ];
     });
   }
@@ -56,10 +66,15 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
     setState(() => _isSaving = false);
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => MillingResultConfirmationScreen(
-          order: _currentOrder,
-          repository: widget.repository,
-        ),
+        builder: (_) => widget.includeBroken
+            ? BrokenWeighingScreen(
+                order: _currentOrder,
+                repository: widget.repository,
+              )
+            : MillingResultConfirmationScreen(
+                order: _currentOrder,
+                repository: widget.repository,
+              ),
       ),
     );
   }
@@ -80,6 +95,7 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
             instruction: 'Đặt bao cám lên cân rồi nhận số ổn định.',
             onCapture: _captureWeight,
             color: millingOrange,
+            manualMode: widget.order.scaleMode == MillingScaleMode.manual,
           ),
           const SizedBox(height: 10),
           WeighingSummary(
@@ -97,7 +113,8 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
         ],
       ),
       bottomNavigationBar: MillingPrimaryButton(
-        label: 'Xác nhận kết quả xay',
+        label:
+            widget.includeBroken ? 'Tiếp tục cân tấm' : 'Xác nhận kết quả xay',
         color: millingOrange,
         isLoading: _isSaving,
         onPressed: bags.isEmpty ? null : _confirm,

@@ -5,6 +5,10 @@ class PurchaseSchedule {
   const PurchaseSchedule({
     required this.id,
     required this.farmerId,
+    this.riceVarietyId,
+    this.warehouseId,
+    this.warehouseName,
+    this.statusId,
     required this.code,
     required this.farmerName,
     required this.status,
@@ -22,16 +26,30 @@ class PurchaseSchedule {
     return PurchaseSchedule(
       id: JsonReader.integer(json, 'id') ?? 0,
       farmerId: JsonReader.integer(json, 'farmerId') ?? 0,
-      code: JsonReader.string(json, 'scheduleCode') ?? '',
+      riceVarietyId: JsonReader.integer(json, 'riceVarietyId'),
+      warehouseId: JsonReader.integer(json, 'warehouseId'),
+      warehouseName: JsonReader.string(json, 'warehouseName'),
+      statusId: JsonReader.integer(json, 'statusId'),
+      code: JsonReader.string(json, 'scheduleCode') ??
+          JsonReader.string(json, 'code') ??
+          '',
       farmerName: JsonReader.string(json, 'farmerName') ?? 'Nông hộ',
-      status: JsonReader.string(json, 'statusName') ?? 'Chưa xác định',
+      status: JsonReader.string(json, 'statusName') ??
+          JsonReader.string(json, 'status') ??
+          'Chưa xác định',
       riceVariety:
           JsonReader.string(json, 'riceVarietyName') ?? 'Chưa rõ giống',
       scheduledAt: DateTime.tryParse(
-            JsonReader.string(json, 'scheduleDate') ?? '',
+            JsonReader.string(json, 'scheduleDate') ??
+                JsonReader.string(json, 'scheduledAt') ??
+                JsonReader.string(json, 'date') ??
+                '',
           ) ??
           DateTime.now(),
-      estimatedWeightKg: JsonReader.decimal(json, 'estimatedQtyKg') ?? 0,
+      estimatedWeightKg: JsonReader.decimal(json, 'estimatedQtyKg') ??
+          JsonReader.decimal(json, 'estimatedWeightKg') ??
+          JsonReader.decimal(json, 'quantityKg') ??
+          0,
       location: JsonReader.string(json, 'location') ?? 'Chưa có địa điểm',
       expectedPrice: JsonReader.decimal(json, 'expectedPrice'),
       note: JsonReader.string(json, 'note'),
@@ -40,6 +58,10 @@ class PurchaseSchedule {
 
   final int id;
   final int farmerId;
+  final int? riceVarietyId;
+  final int? warehouseId;
+  final String? warehouseName;
+  final int? statusId;
   final String code;
   final String farmerName;
   final String status;
@@ -52,7 +74,15 @@ class PurchaseSchedule {
   final double? expectedPrice;
   final String? note;
 
-  bool get isCancelled => status.toLowerCase().contains('hủy');
+  bool get isCancelled => statusId == 6 || status.toLowerCase().contains('hủy');
+
+  bool get canCreateReceipt {
+    final normalized = status.toLowerCase();
+    return !isCancelled &&
+        statusId != 5 &&
+        !normalized.contains('đã nhập kho') &&
+        !normalized.contains('stocked');
+  }
 
   PurchaseSchedule copyWith({
     String? farmerName,
@@ -62,6 +92,10 @@ class PurchaseSchedule {
     return PurchaseSchedule(
       id: id,
       farmerId: farmerId,
+      riceVarietyId: riceVarietyId,
+      warehouseId: warehouseId,
+      warehouseName: warehouseName,
+      statusId: statusId,
       code: code,
       farmerName: farmerName ?? this.farmerName,
       status: status,

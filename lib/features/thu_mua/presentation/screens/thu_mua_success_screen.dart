@@ -23,9 +23,23 @@ class _ThuMuaSuccessScreenState extends State<ThuMuaSuccessScreen> {
   Future<void> _confirmOrder() async {
     final result = _result;
     if (result == null || result.orderId <= 0 || _confirming) return;
+    DateTime? dueDate;
+    if (result.debtAmount > 0) {
+      dueDate = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now().add(const Duration(days: 30)),
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 3650)),
+        helpText: 'Chọn hạn thanh toán công nợ',
+      );
+      if (dueDate == null || !mounted) return;
+    }
     setState(() => _confirming = true);
     try {
-      await _repository.confirmPurchaseOrder(result.orderId);
+      await _repository.confirmPurchaseOrder(
+        result.orderId,
+        dueDate: dueDate,
+      );
       if (!mounted) return;
       setState(() => _result = result.copyWithStatus('Đã xác nhận'));
       ScaffoldMessenger.of(context).showSnackBar(
@@ -57,7 +71,7 @@ class _ThuMuaSuccessScreenState extends State<ThuMuaSuccessScreen> {
       performedBy: 'Nhân viên kho',
       completedAt: DateTime.now(),
       orderId: 0,
-      status: 'Chờ xác nhận',
+      status: 'Phiếu nháp',
       unitCostPrice: 0,
     );
     _result ??= args is ThuMuaSuccessResult ? args : fallbackResult;
@@ -89,7 +103,7 @@ class _ThuMuaSuccessScreenState extends State<ThuMuaSuccessScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Phiếu đang chờ xác nhận',
+                      'Phiếu nháp đã được lưu trên hệ thống',
                       style: TextStyle(color: AppColors.textSecondary),
                     ),
                     const SizedBox(height: 10),
@@ -114,7 +128,7 @@ class _ThuMuaSuccessScreenState extends State<ThuMuaSuccessScreen> {
                     // Thẻ hiển thị các dòng thông số biên nhận
                     _SuccessInfoCard(result: result),
                     const Spacer(),
-                    if (result.status == 'Chờ xác nhận') ...[
+                    if (result.status == 'Phiếu nháp') ...[
                       FilledButton.icon(
                         onPressed: _confirming ? null : _confirmOrder,
                         icon: _confirming
@@ -125,7 +139,7 @@ class _ThuMuaSuccessScreenState extends State<ThuMuaSuccessScreen> {
                               )
                             : const Icon(Icons.verified_outlined),
                         label: Text(
-                          _confirming ? 'Đang xác nhận...' : 'Xác nhận đơn mua',
+                          _confirming ? 'Đang chốt...' : 'Chốt phiếu mua lúa',
                         ),
                       ),
                       const SizedBox(height: 10),
@@ -211,15 +225,26 @@ class _SuccessInfoCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _InfoRow(label: 'Mã phiếu nhập', value: result.receiptCode),
+          _InfoRow(label: 'Mã phiếu mua lúa', value: result.receiptCode),
           const SizedBox(height: 8),
           _InfoRow(label: 'Trạng thái', value: result.status),
           const SizedBox(height: 8),
           _InfoRow(
             label: 'Đơn giá',
-            value: '${result.unitCostPrice.toStringAsFixed(0)} đ/bao',
+            value: '${result.unitCostPrice.toStringAsFixed(0)} đ/kg',
           ),
           const SizedBox(height: 8),
+          _InfoRow(
+            label: 'Khối lượng',
+            value: '${result.actualWeightKg.toStringAsFixed(1)} kg',
+          ),
+          if (result.moisturePercent != null) ...[
+            const SizedBox(height: 8),
+            _InfoRow(
+              label: 'Độ ẩm',
+              value: '${result.moisturePercent!.toStringAsFixed(1)}%',
+            ),
+          ],
           _InfoRow(
               label: 'Thời gian', value: _formatDateTime(result.completedAt)),
           const SizedBox(height: 8),

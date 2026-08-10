@@ -2,6 +2,10 @@
 class KhoCheck {
   /// Khởi tạo [KhoCheck] với các thông số bắt buộc.
   const KhoCheck({
+    this.id = 0,
+    this.statusId = 1,
+    this.status = 'Phiếu nháp',
+    this.note,
     required this.warehouseId,
     required this.checkCode,
     required this.warehouseName,
@@ -9,6 +13,11 @@ class KhoCheck {
     required this.items,
     required this.checkedAt,
   });
+
+  final int id;
+  final int statusId;
+  final String status;
+  final String? note;
 
   final int warehouseId;
 
@@ -40,14 +49,19 @@ class KhoCheck {
 class KhoCheckItem {
   /// Khởi tạo một dòng kiểm kê sản phẩm [KhoCheckItem].
   const KhoCheckItem({
+    this.id = 0,
     required this.productVariantId,
     required this.productName,
     required this.sku,
     required this.systemQuantity,
     this.locationId,
+    this.paddyLotId,
     this.lastStockTakeDate,
     this.actualQuantity,
+    this.unitLabel = 'kg',
   });
+
+  final int id;
 
   final int productVariantId;
 
@@ -60,11 +74,13 @@ class KhoCheckItem {
   /// Số lượng sản phẩm ghi nhận trên hệ thống.
   final int systemQuantity;
   final int? locationId;
+  final int? paddyLotId;
 
   final DateTime? lastStockTakeDate;
 
   /// Số lượng sản phẩm đếm được thực tế (có thể null nếu chưa nhập).
   final int? actualQuantity;
+  final String unitLabel;
 
   /// Số lượng chênh lệch giữa thực tế và hệ thống. Trả về null nếu chưa kiểm đếm thực tế.
   int? get difference {
@@ -78,14 +94,17 @@ class KhoCheckItem {
     bool clearActualQuantity = false,
   }) {
     return KhoCheckItem(
+      id: id,
       productVariantId: productVariantId,
       productName: productName,
       sku: sku,
       systemQuantity: systemQuantity,
       locationId: locationId,
+      paddyLotId: paddyLotId,
       lastStockTakeDate: lastStockTakeDate,
       actualQuantity:
           clearActualQuantity ? null : actualQuantity ?? this.actualQuantity,
+      unitLabel: unitLabel,
     );
   }
 }

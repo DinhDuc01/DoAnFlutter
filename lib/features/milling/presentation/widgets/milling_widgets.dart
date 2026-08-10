@@ -6,11 +6,55 @@ const millingBackground = Color(0xFFF2FBF6);
 const millingGreen = Color(0xFF159447);
 const millingOrange = Color(0xFFD97706);
 
+Future<double?> showManualWeightDialog(
+  BuildContext context, {
+  required String productLabel,
+}) async {
+  final controller = TextEditingController();
+  final value = await showDialog<double>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text('Nhập cân $productLabel'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: const InputDecoration(
+          labelText: 'Khối lượng mỗi bao',
+          suffixText: 'kg',
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final weight = double.tryParse(controller.text.trim());
+            if (weight != null && weight > 0) {
+              Navigator.of(dialogContext).pop(weight);
+            }
+          },
+          child: const Text('Thêm bao'),
+        ),
+      ],
+    ),
+  );
+  controller.dispose();
+  return value;
+}
+
 /// Shared compact app bar for every milling step.
 class MillingAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const MillingAppBar({required this.title, super.key});
+  const MillingAppBar({
+    required this.title,
+    this.actions,
+    super.key,
+  });
 
   final String title;
+  final List<Widget>? actions;
 
   @override
   Size get preferredSize => const Size.fromHeight(56);
@@ -40,6 +84,7 @@ class MillingAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
         ),
       ),
+      actions: actions,
       titleSpacing: 2,
       title: Text(
         title,
@@ -63,6 +108,7 @@ class MillingPrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.color = millingGreen,
+    this.manualMode = false,
     this.isLoading = false,
     super.key,
   });
@@ -70,6 +116,7 @@ class MillingPrimaryButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final Color color;
+  final bool manualMode;
   final bool isLoading;
 
   @override
@@ -117,6 +164,7 @@ class BleScaleCaptureCard extends StatelessWidget {
     required this.instruction,
     required this.onCapture,
     this.latestWeightKg,
+    this.manualMode = false,
     this.color = millingGreen,
     super.key,
   });
@@ -125,6 +173,7 @@ class BleScaleCaptureCard extends StatelessWidget {
   final String instruction;
   final VoidCallback onCapture;
   final double? latestWeightKg;
+  final bool manualMode;
   final Color color;
 
   @override
@@ -141,11 +190,16 @@ class BleScaleCaptureCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.bluetooth_rounded, color: Colors.white),
+              Icon(
+                manualMode ? Icons.edit_outlined : Icons.bluetooth_rounded,
+                color: Colors.white,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '$scaleCode · Cân Bluetooth',
+                  manualMode
+                      ? 'Cân thường · nhập thủ công'
+                      : '$scaleCode · Cân IoT',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,
@@ -179,7 +233,9 @@ class BleScaleCaptureCard extends StatelessWidget {
             ),
             onPressed: onCapture,
             icon: const Icon(Icons.scale_rounded),
-            label: const Text('Kết nối cân và nhận số'),
+            label: Text(
+              manualMode ? 'Nhập khối lượng bao' : 'Kết nối cân và nhận số',
+            ),
           ),
         ],
       ),

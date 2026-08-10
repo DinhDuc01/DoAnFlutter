@@ -48,7 +48,7 @@ class MainBottomNavigation extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             activeIcon: Icon(Icons.home, color: AppColors.primary),
-            label: 'Hôm nay',
+            label: 'Trang chủ',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.shopping_cart_outlined),

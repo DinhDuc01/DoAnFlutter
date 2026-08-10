@@ -17,15 +17,17 @@ class ThuMuaReceiptFields extends StatelessWidget {
       children: [
         Expanded(
           child: _ReadonlyField(
-            label: 'Mã phiếu nhập',
+            label: 'Mã phiếu mua lúa',
             value: receipt.receiptCode,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _ReadonlyField(
-            label: 'Khối lượng (kg)',
-            value: receipt.weightKg.toStringAsFixed(2),
+            label: 'Trạng thái',
+            value: receipt.receiptCode == 'Tự động sau khi lưu'
+                ? 'Phiếu nháp mới'
+                : receipt.status,
           ),
         ),
       ],
