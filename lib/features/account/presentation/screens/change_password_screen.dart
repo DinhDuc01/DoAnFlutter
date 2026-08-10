@@ -74,7 +74,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đổi mật khẩu thành công!'),
-          backgroundColor: Color(0xFF159447),
+          backgroundColor: Color(0xFF16A34A),
         ),
       );
       Navigator.of(context).pop();
@@ -136,7 +136,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             child: const Text(
               'Mật khẩu mới phải khác mật khẩu hiện tại, tối thiểu 10 ký tự.',
               style: TextStyle(
-                color: Color(0xFF159447),
+                color: Color(0xFF16A34A),
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 height: 1.5,
@@ -190,7 +190,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
           FilledButton(
             onPressed: _isSaving ? null : _savePassword,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF159447),
+              backgroundColor: const Color(0xFF16A34A),
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),

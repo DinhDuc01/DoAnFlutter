@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/purchase_schedule_repository.dart';
 import '../../data/api_thu_mua_repository.dart';
@@ -232,32 +233,82 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
         for (final receipt in _receipts) ...[
-          Card(
-            child: ListTile(
-              leading: Icon(
-                receipt.isFullyStored
-                    ? Icons.check_circle_outline
-                    : Icons.pending_actions_outlined,
-                color: receipt.status.toLowerCase().contains('hủy')
-                    ? Colors.red
-                    : receipt.isFullyStored
-                        ? Colors.green
-                        : Colors.orange,
+          Builder(builder: (context) {
+            final cancelled = receipt.status.toLowerCase().contains('hủy');
+            final tone = cancelled
+                ? AppTone.danger
+                : receipt.isFullyStored
+                    ? AppTone.success
+                    : AppTone.warning;
+            return AppCard(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: tone.bg,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      receipt.isFullyStored
+                          ? Icons.check_circle_outline
+                          : Icons.pending_actions_outlined,
+                      color: tone.fg,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                receipt.code,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimaryFor(context),
+                                ),
+                              ),
+                            ),
+                            AppStatusChip(
+                                label: receipt.status, tone: tone, dense: true),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${receipt.farmerName} • ${receipt.riceVarietyName}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            height: 1.3,
+                            color: AppColors.textSecondaryFor(context),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${receipt.actualWeightKg.toStringAsFixed(1)} kg',
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primaryDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              title: Text(
-                receipt.code,
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              subtitle: Text(
-                '${receipt.farmerName} • ${receipt.riceVarietyName}\n'
-                '${receipt.actualWeightKg.toStringAsFixed(1)} kg • ${receipt.status}',
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              isThreeLine: true,
-            ),
-          ),
-          const SizedBox(height: 8),
+            );
+          }),
         ],
       ],
     );
@@ -269,38 +320,36 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
       '[ThuMua] build section=$_section loading=$_isLoadingDrafts rows=${_drafts.length}',
     );
     return ColoredBox(
-      color: const Color(0xFFF4FBF7),
+      color: AppColors.backgroundFor(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
+          AppGradientHeader(
+            title: 'Thu mua lúa',
+            subtitle: 'Lịch thu mua, phiếu nhập và phiếu nháp',
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Expanded(
-                  child: Text(
-                    'Thu mua lúa',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
                 IconButton(
                   tooltip: 'Tải lại',
                   onPressed: _reload,
+                  color: Colors.white,
                   icon: const Icon(Icons.refresh),
                 ),
-                IconButton.filled(
+                IconButton(
                   tooltip: 'Tạo phiếu mua lúa',
                   onPressed: () =>
                       Navigator.of(context).pushNamed(AppRoutes.inbound),
+                  color: Colors.white,
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: 0.18),
+                  ),
                   icon: const Icon(Icons.add),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: SegmentedButton<_ThuMuaSection>(
@@ -352,52 +401,85 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                                     const EdgeInsets.fromLTRB(16, 8, 16, 24),
                                 children: [
                                   for (final draft in _drafts) ...[
-                                    Card(
-                                      clipBehavior: Clip.antiAlias,
-                                      child: InkWell(
-                                        onTap: () => _showDraftDetails(draft),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(14),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                    AppCard(
+                                      onTap: () => _showDraftDetails(draft),
+                                      padding: const EdgeInsets.all(14),
+                                      margin:
+                                          const EdgeInsets.only(bottom: 10),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
                                             children: [
-                                              Text(
-                                                draft.code,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w800,
+                                              Expanded(
+                                                child: Text(
+                                                  draft.code,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w800,
+                                                    color: AppColors
+                                                        .textPrimaryFor(
+                                                            context),
+                                                  ),
                                                 ),
                                               ),
-                                              const SizedBox(height: 6),
-                                              Text(
-                                                '${draft.farmerName} • ${draft.riceVarietyName}',
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                '${draft.actualWeightKg.toStringAsFixed(1)} kg • ${draft.bagCount} bao',
-                                              ),
-                                              if (draft.debtAmount > 0) ...[
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Công nợ: ${draft.debtAmount.toStringAsFixed(0)} đ',
-                                                ),
-                                              ],
-                                              const SizedBox(height: 10),
-                                              Align(
-                                                alignment:
-                                                    Alignment.centerRight,
-                                                child: FilledButton(
-                                                  onPressed: () => _editDraft(draft),
-                                                  child: const Text(
-                                                      'Tiếp tục chỉnh sửa'),
-                                                ),
+                                              const AppStatusChip(
+                                                label: 'Phiếu nháp',
+                                                tone: AppTone.warning,
+                                                dense: true,
                                               ),
                                             ],
                                           ),
-                                        ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            '${draft.farmerName} • ${draft.riceVarietyName}',
+                                            style: TextStyle(
+                                              fontSize: 12.5,
+                                              color:
+                                                  AppColors.textSecondaryFor(
+                                                      context),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            '${draft.actualWeightKg.toStringAsFixed(1)} kg • ${draft.bagCount} bao',
+                                            style: const TextStyle(
+                                              fontSize: 12.5,
+                                              fontWeight: FontWeight.w700,
+                                              color: AppColors.primaryDark,
+                                            ),
+                                          ),
+                                          if (draft.debtAmount > 0) ...[
+                                            const SizedBox(height: 3),
+                                            Text(
+                                              'Công nợ: ${draft.debtAmount.toStringAsFixed(0)} đ',
+                                              style: const TextStyle(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: AppColors.danger,
+                                              ),
+                                            ),
+                                          ],
+                                          const SizedBox(height: 12),
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: FilledButton(
+                                              onPressed: () =>
+                                                  _editDraft(draft),
+                                              style: FilledButton.styleFrom(
+                                                minimumSize:
+                                                    const Size(0, 40),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 18),
+                                              ),
+                                              child: const Text(
+                                                  'Tiếp tục chỉnh sửa'),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
                                   ],
                                 ],
                               )
@@ -464,62 +546,176 @@ class _ScheduleList extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         for (final item in schedules) ...[
-          Card(
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => Navigator.of(context).pushNamed(
-                AppRoutes.purchaseScheduleDetail,
-                arguments: item,
-              ),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: item.isCancelled
-                      ? Colors.red.shade50
-                      : Colors.green.shade50,
-                  child: Icon(
-                    item.isCancelled ? Icons.event_busy : Icons.agriculture,
-                    color: item.isCancelled ? Colors.red : AppColors.primary,
-                  ),
-                ),
-                title: Text(
-                  item.code.isEmpty ? 'Lịch chưa có mã' : item.code,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                subtitle: Text(
-                  '${item.farmerName} • '
-                  '${item.scheduledAt.day.toString().padLeft(2, '0')}/'
-                  '${item.scheduledAt.month.toString().padLeft(2, '0')}/'
-                  '${item.scheduledAt.year}\n'
-                  '${item.riceVariety} • '
-                  '${item.estimatedWeightKg.toStringAsFixed(0)} kg • '
-                  '${item.status}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                isThreeLine: true,
-                trailing: IconButton(
-                  tooltip: 'Nhập kho theo lịch này',
-                  onPressed: item.canCreateReceipt
-                      ? () {
-                          Navigator.of(context).pushNamed(
-                            AppRoutes.inbound,
-                            arguments: item,
-                          );
-                        }
-                      : null,
-                  icon: const Icon(Icons.add_circle_outline, size: 30),
-                  color: AppColors.primary,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
+          _ScheduleCard(schedule: item),
         ],
       ],
     );
   }
+}
+
+/// Thẻ một lịch thu mua — nêu bật ngày giờ, hiển thị đầy đủ thông tin (không
+/// cắt dòng), kèm nút nhập kho theo lịch.
+class _ScheduleCard extends StatelessWidget {
+  const _ScheduleCard({required this.schedule});
+
+  final PurchaseSchedule schedule;
+
+  @override
+  Widget build(BuildContext context) {
+    final cancelled = schedule.isCancelled;
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      onTap: () => Navigator.of(context).pushNamed(
+        AppRoutes.purchaseScheduleDetail,
+        arguments: schedule,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor:
+                    cancelled ? AppColors.dangerTint : AppColors.brandTintStrong,
+                child: Icon(
+                  cancelled ? Icons.event_busy : Icons.agriculture,
+                  color: cancelled ? AppColors.danger : AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  schedule.code.isEmpty ? 'Lịch chưa có mã' : schedule.code,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimaryFor(context),
+                  ),
+                ),
+              ),
+              AppStatusChip(
+                label: schedule.status,
+                tone: cancelled ? AppTone.danger : AppTone.brand,
+                dense: true,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Ngày giờ hẹn — dữ kiện chính, làm nổi bật.
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.brandTint,
+              borderRadius: BorderRadius.circular(AppColors.radiusMd),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.event_available_outlined,
+                    color: AppColors.primaryDark, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _formatScheduleWhen(schedule.scheduledAt),
+                    style: const TextStyle(
+                      color: AppColors.primaryDark,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          _ScheduleInfoLine(
+            icon: Icons.person_outline,
+            text: schedule.farmerName,
+          ),
+          const SizedBox(height: 6),
+          _ScheduleInfoLine(
+            icon: Icons.grass_outlined,
+            text:
+                '${schedule.riceVariety} • dự kiến ${schedule.estimatedWeightKg.toStringAsFixed(0)} kg',
+          ),
+          if (schedule.location.trim().isNotEmpty &&
+              schedule.location != 'Chưa có địa điểm') ...[
+            const SizedBox(height: 6),
+            _ScheduleInfoLine(
+              icon: Icons.location_on_outlined,
+              text: schedule.location,
+            ),
+          ],
+          if (schedule.canCreateReceipt) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).pushNamed(
+                  AppRoutes.inbound,
+                  arguments: schedule,
+                ),
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Nhập kho theo lịch này'),
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Dòng thông tin phụ (icon + text) tự xuống dòng theo nội dung.
+class _ScheduleInfoLine extends StatelessWidget {
+  const _ScheduleInfoLine({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: AppColors.textSecondaryFor(context)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimaryFor(context),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Định dạng "Thứ ..., dd/MM/yyyy • HH:mm" (bỏ giờ nếu là 00:00 — dữ liệu chỉ có ngày).
+String _formatScheduleWhen(DateTime value) {
+  const weekdays = [
+    'Thứ 2',
+    'Thứ 3',
+    'Thứ 4',
+    'Thứ 5',
+    'Thứ 6',
+    'Thứ 7',
+    'Chủ nhật',
+  ];
+  final wd = weekdays[value.weekday - 1];
+  final d = value.day.toString().padLeft(2, '0');
+  final m = value.month.toString().padLeft(2, '0');
+  final date = '$wd, $d/$m/${value.year}';
+  final hasTime = value.hour != 0 || value.minute != 0;
+  if (!hasTime) return date;
+  final hh = value.hour.toString().padLeft(2, '0');
+  final mm = value.minute.toString().padLeft(2, '0');
+  return '$date • $hh:$mm';
 }
 
 class _LoadingState extends StatelessWidget {
@@ -553,15 +749,15 @@ class _Metric extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: AppColors.surfaceFor(context),
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Text(
         label,
         textAlign: TextAlign.center,
         style: const TextStyle(
-          color: AppColors.primary,
+          color: AppColors.primaryDark,
           fontSize: 12,
           fontWeight: FontWeight.w800,
         ),

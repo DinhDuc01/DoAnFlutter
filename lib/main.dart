@@ -12,29 +12,24 @@ import 'features/character/data/character_appearance_store.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  runApp(const StockLiteApp());
+  await CharacterAppearanceController.instance.load();
 
-  Future<void> main() async {
-    WidgetsFlutterBinding.ensureInitialized();
-    await CharacterAppearanceController.instance.load();
+  // Gắn hook tự làm mới token khi API trả về 401 (tránh phụ thuộc vòng).
+  ApiClient.onUnauthorized =
+      TokenRefreshCoordinator.instance.refreshAccessToken;
 
-    // Gắn hook tự làm mới token khi API trả về 401 (tránh phụ thuộc vòng).
-    ApiClient.onUnauthorized =
-        TokenRefreshCoordinator.instance.refreshAccessToken;
+  // Nạp lại phiên đăng nhập đã lưu để không phải đăng nhập lại mỗi lần mở app.
+  await AuthSessionStore.load();
+  final isLoggedIn = AuthSessionStore.current != null;
 
-    // Nạp lại phiên đăng nhập đã lưu để không phải đăng nhập lại mỗi lần mở app.
-    await AuthSessionStore.load();
-    final isLoggedIn = AuthSessionStore.current != null;
+  // Khởi tạo Firebase + đăng ký handler thông báo đẩy khi app ở nền/đã tắt.
+  await FcmService.instance.initApp();
 
-    // Khởi tạo Firebase + đăng ký handler thông báo đẩy khi app ở nền/đã tắt.
-    await FcmService.instance.initApp();
-
-    // Nếu đã có phiên, bật lại thông báo đẩy + realtime cho người dùng.
-    if (isLoggedIn) {
-      unawaited(FcmService.instance.startForUser());
-      unawaited(RealtimeService.instance.start());
-    }
-
-    runApp(StockLiteApp(isLoggedIn: isLoggedIn));
+  // Nếu đã có phiên, bật lại thông báo đẩy + realtime cho người dùng.
+  if (isLoggedIn) {
+    unawaited(FcmService.instance.startForUser());
+    unawaited(RealtimeService.instance.start());
   }
+
+  runApp(StockLiteApp(isLoggedIn: isLoggedIn));
 }

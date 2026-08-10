@@ -255,7 +255,7 @@ class _KhoScreenState extends State<KhoScreen> {
 
             return Column(
               children: [
-                KhoCheckHeader(status: _check?.status ?? 'Phiáº¿u nhÃ¡p'),
+                KhoCheckHeader(status: _check?.status ?? 'Phiếu nháp'),
                 Expanded(
                   child: switch (snapshot.connectionState) {
                     ConnectionState.done when snapshot.hasData =>

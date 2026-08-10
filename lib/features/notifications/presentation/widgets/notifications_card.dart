@@ -64,15 +64,15 @@ class NotificationsCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
                         notification.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: colorScheme.onSurface,
                           fontSize: 13,
+                          height: 1.3,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -80,6 +80,7 @@ class NotificationsCard extends StatelessWidget {
                     // Chấm nhỏ báo hiệu thông báo chưa đọc
                     if (!notification.isRead)
                       Container(
+                        margin: const EdgeInsets.only(top: 5, left: 6),
                         width: 7,
                         height: 7,
                         decoration: BoxDecoration(
@@ -90,13 +91,13 @@ class NotificationsCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
+                // Hiển thị đầy đủ nội dung, không cắt dòng để tránh ẩn thông tin.
                 Text(
                   notification.message,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: colorScheme.onSurfaceVariant,
                     fontSize: 12,
+                    height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 4),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/api_giao_hang_repository.dart';
 import '../../models/giao_hang_receipt.dart';
@@ -30,27 +31,20 @@ class _GiaoHangTabState extends State<GiaoHangTab> {
   @override
   Widget build(BuildContext context) {
     return ColoredBox(
-      color: const Color(0xFFF4FBF7),
+      color: AppColors.backgroundFor(context),
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    'Bán hàng (xuất kho)',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _controller.reload,
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Tải lại',
-                ),
-              ],
+          AppGradientHeader(
+            title: 'Bán hàng (xuất kho)',
+            subtitle: 'Hàng có thể bán và phiếu bán nháp',
+            trailing: IconButton(
+              onPressed: _controller.reload,
+              color: Colors.white,
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Tải lại',
             ),
           ),
+          const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: SegmentedButton<bool>(
@@ -108,8 +102,11 @@ class _GiaoHangTabState extends State<GiaoHangTab> {
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final draft = drafts[index];
-                          return Card(
+                          return AppCard(
+                            padding: EdgeInsets.zero,
                             child: ListTile(
+                              contentPadding:
+                                  const EdgeInsets.fromLTRB(14, 6, 14, 6),
                               title: Text(draft.code,
                                   style: const TextStyle(
                                       fontWeight: FontWeight.w800)),
@@ -119,7 +116,8 @@ class _GiaoHangTabState extends State<GiaoHangTab> {
                               trailing: Text(
                                 '${draft.totalAmount.toStringAsFixed(0)} đ',
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w700),
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.primaryDark),
                               ),
                               onTap: () => showModalBottomSheet<void>(
                                 context: context,
@@ -194,21 +192,23 @@ class _GiaoHangTabState extends State<GiaoHangTab> {
                         separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (context, index) {
                           final receipt = receipts[index];
-                          return Card(
-                            margin: EdgeInsets.zero,
-                            child: ListTile(
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => GiaoHangScreen(
-                                    initialReceipt: receipt,
-                                  ),
+                          return AppCard(
+                            padding: EdgeInsets.zero,
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => GiaoHangScreen(
+                                  initialReceipt: receipt,
                                 ),
                               ),
+                            ),
+                            child: ListTile(
+                              contentPadding:
+                                  const EdgeInsets.fromLTRB(12, 6, 12, 6),
                               leading: const CircleAvatar(
-                                backgroundColor: Color(0xFFEFF6FF),
+                                backgroundColor: AppColors.infoTint,
                                 child: Icon(
                                   Icons.point_of_sale_outlined,
-                                  color: Color(0xFF2563EB),
+                                  color: AppColors.info,
                                 ),
                               ),
                               title: Text(

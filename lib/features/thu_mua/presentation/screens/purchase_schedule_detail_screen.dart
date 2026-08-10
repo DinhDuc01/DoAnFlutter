@@ -119,7 +119,7 @@ class _PurchaseScheduleDetailScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FBF4),
+      backgroundColor: AppColors.backgroundFor(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -214,16 +214,19 @@ class _DetailContent extends StatelessWidget {
             children: [
               _ScheduleStatusRow(schedule: schedule),
               const SizedBox(height: 10),
+              // Ngày giờ hẹn thu mua — dữ kiện chính, làm nổi bật lên đầu.
+              _WhenBanner(scheduledAt: schedule.scheduledAt),
+              const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.brandTintStrong,
+                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
                 ),
                 child: const Text(
                   'Đặt từng bao lúa lên cân. Số cân từ thiết bị IoT sẽ tự động ghi vào điện thoại.',
                   style: TextStyle(
-                    color: Color(0xFF166534),
+                    color: AppColors.forest,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     height: 1.45,
@@ -272,11 +275,11 @@ class _DetailContent extends StatelessWidget {
                       arguments: schedule,
                     ),
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF16B957),
-              disabledBackgroundColor: const Color(0xFF94A3B8),
+              backgroundColor: AppColors.primary,
+              disabledBackgroundColor: AppColors.textTertiary,
               minimumSize: const Size.fromHeight(52),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppColors.radiusMd),
               ),
             ),
             child: Text(
@@ -363,6 +366,82 @@ class _ScheduleStatusRow extends StatelessWidget {
   }
 }
 
+/// Khối ngày giờ hẹn thu mua — nổi bật, luôn hiển thị đầy đủ.
+class _WhenBanner extends StatelessWidget {
+  const _WhenBanner({required this.scheduledAt});
+
+  final DateTime scheduledAt;
+
+  static const _weekdays = [
+    'Thứ 2',
+    'Thứ 3',
+    'Thứ 4',
+    'Thứ 5',
+    'Thứ 6',
+    'Thứ 7',
+    'Chủ nhật',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final wd = _weekdays[scheduledAt.weekday - 1];
+    final d = scheduledAt.day.toString().padLeft(2, '0');
+    final m = scheduledAt.month.toString().padLeft(2, '0');
+    final hasTime = scheduledAt.hour != 0 || scheduledAt.minute != 0;
+    final hh = scheduledAt.hour.toString().padLeft(2, '0');
+    final mm = scheduledAt.minute.toString().padLeft(2, '0');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.brandTint,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.brandTintStrong),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.event_available_outlined,
+                color: AppColors.primaryDark, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Thời gian hẹn thu mua',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$wd, $d/$m/${scheduledAt.year}${hasTime ? ' • $hh:$mm' : ''}',
+                  style: const TextStyle(
+                    color: AppColors.primaryDark,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DetailCard extends StatelessWidget {
   const _DetailCard({required this.label, required this.value});
 
@@ -376,9 +455,9 @@ class _DetailCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD8DEE8)),
+        color: AppColors.surfaceFor(context),
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Text.rich(
         TextSpan(

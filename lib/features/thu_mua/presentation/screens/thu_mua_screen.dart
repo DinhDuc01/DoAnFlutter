@@ -9,6 +9,7 @@ import '../../../products/data/product_variant_api.dart';
 import '../../../scale/models/weight_reading.dart';
 import '../../../scale/presentation/screens/scale_screen.dart';
 import '../../data/api_thu_mua_repository.dart';
+import '../../data/paddy_variety_api.dart';
 import '../../data/thu_mua_repository.dart';
 import '../../models/thu_mua_receipt.dart';
 import '../../models/purchase_schedule.dart';
@@ -37,10 +38,20 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   final TextEditingController _moistureController = TextEditingController();
   final TextEditingController _paidAmountController = TextEditingController();
 
+  final PaddyVarietyApi _varietyApi = PaddyVarietyApi();
   late final Future<ThuMuaReceipt> _receiptFuture;
   late final Future<List<ProductVariantStock>> _productsFuture;
   late final Future<List<ThuMuaSupplier>> _suppliersFuture;
+  late final Future<List<RiceVarietyOption>> _varietiesFuture;
   List<ProductVariantStock> _products = const [];
+  List<RiceVarietyOption> _varieties = const [];
+  // variantId -> riceVarietyId (để lọc sản phẩm theo giống đã chọn)
+  Map<int, int?> _variantVarietyMap = const {};
+  int? _riceVarietyId;
+  /// Ngưỡng khối lượng trung bình tối đa cho mỗi bao lúa (kg). Vượt ngưỡng này
+  /// coi là nhập sai (ví dụ nhầm tổng khối lượng với số bao).
+  static const int _maxKgPerBag = 200;
+
   ThuMuaReceipt? _receipt;
   int _quantity = 0;
   bool _quantityInitialized = false;
@@ -63,6 +74,35 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     _receiptFuture = _loadReceipt();
     _productsFuture = _loadProducts();
     _suppliersFuture = _loadSuppliers();
+    _varietiesFuture = _loadVarieties();
+  }
+
+  /// Tải danh sách giống lúa + bản đồ variant→giống (đồng bộ web: chọn giống
+  /// trước, sau đó lọc sản phẩm theo giống).
+  Future<List<RiceVarietyOption>> _loadVarieties() async {
+    try {
+      final varieties = await _varietyApi.getRiceVarieties();
+      final variants = await _varietyApi.getProductVariants();
+      _varieties = varieties;
+      _variantVarietyMap = {
+        for (final v in variants) v.id: v.riceVarietyId,
+      };
+      return varieties;
+    } catch (_) {
+      // Không chặn form nếu API giống lúa lỗi — vẫn cho chọn sản phẩm như cũ.
+      _varieties = const [];
+      _variantVarietyMap = const {};
+      return const [];
+    }
+  }
+
+  int? _varietyOf(int variantId) => _variantVarietyMap[variantId];
+
+  /// Sản phẩm hiện chọn đã khớp giống đã chọn chưa (khi có dữ liệu giống).
+  bool _productMatchesVariety(int productVariantId) {
+    if (_riceVarietyId == null) return true;
+    if (_variantVarietyMap.isEmpty) return true; // không có dữ liệu → không chặn
+    return _varietyOf(productVariantId) == _riceVarietyId;
   }
 
   Future<ThuMuaReceipt> _loadReceipt() async {
@@ -110,6 +150,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   void _setInitialQuantity(ThuMuaReceipt receipt) {
     if (_quantityInitialized) return;
     _receipt = receipt;
+    _riceVarietyId ??= receipt.riceVarietyId;
     _quantity = receipt.quantity;
     if (_unitCostController.text.isEmpty && receipt.unitCostPrice > 0) {
       _unitCostController.text = receipt.unitCostPrice.toStringAsFixed(0);
@@ -143,8 +184,11 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     try {
       final receipt = await _repository.getDraftReceiptForProduct(product);
       if (!mounted) return;
+      final varietyId =
+          _varietyOf(product.id) ?? _riceVarietyId ?? receipt.riceVarietyId;
       setState(() {
-        _receipt = receipt;
+        _riceVarietyId = varietyId;
+        _receipt = receipt.copyWith(riceVarietyId: varietyId);
         _quantity = receipt.quantity;
         _quantityInitialized = true;
         _noteController.clear();
@@ -168,6 +212,21 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   Future<void> _showProductPicker(ThuMuaReceipt receipt) async {
     if (_isChangingProduct || _isSubmitting || _products.isEmpty) return;
 
+    // Lọc sản phẩm theo giống lúa đã chọn (khi có dữ liệu giống).
+    final products = (_riceVarietyId != null && _variantVarietyMap.isNotEmpty)
+        ? _products
+            .where((item) => _varietyOf(item.id) == _riceVarietyId)
+            .toList()
+        : _products;
+    if (products.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Giống lúa này chưa có sản phẩm tương ứng.'),
+        ),
+      );
+      return;
+    }
+
     final selectedId = await showModalBottomSheet<int>(
       context: context,
       showDragHandle: true,
@@ -188,10 +247,10 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
               const Divider(height: 1),
               Expanded(
                 child: ListView.separated(
-                  itemCount: _products.length,
+                  itemCount: products.length,
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
-                    final product = _products[index];
+                    final product = products[index];
                     final isSelected = product.id == receipt.productVariantId;
                     return ListTile(
                       leading: CircleAvatar(
@@ -244,6 +303,22 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       );
       return;
     }
+    // Bắt buộc chọn giống lúa trước, rồi sản phẩm thuộc giống đó (đồng bộ web).
+    if (_varieties.isNotEmpty && _riceVarietyId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chọn giống lúa')),
+      );
+      return;
+    }
+    if (receipt.productVariantId <= 0 ||
+        !_productMatchesVariety(receipt.productVariantId)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn sản phẩm thuộc giống lúa đã chọn'),
+        ),
+      );
+      return;
+    }
     if (receipt.warehouseId <= 0 || receipt.warehouseName.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -277,6 +352,20 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       );
       return;
     }
+    // Ràng buộc tỉ lệ khối lượng/số bao: chặn giá trị vô lý
+    // (ví dụ 500000 kg cho 2 bao). Bao lúa thực tế hiếm khi vượt _maxKgPerBag.
+    final avgKgPerBag = actualWeightKg / _quantity;
+    if (avgKgPerBag > _maxKgPerBag) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Trung bình ${avgKgPerBag.toStringAsFixed(0)} kg/bao vượt mức hợp lý '
+            '(tối đa $_maxKgPerBag kg/bao). Kiểm tra lại số bao hoặc khối lượng.',
+          ),
+        ),
+      );
+      return;
+    }
     if (moisturePercent == null ||
         moisturePercent < 0 ||
         moisturePercent > 100) {
@@ -306,6 +395,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           actualWeightKg: actualWeightKg,
           moisturePercent: moisturePercent,
           paidAmount: paidAmount,
+          riceVarietyId: _riceVarietyId ?? receipt.riceVarietyId,
         ),
         quantity: _quantity,
         unitCostPrice: unitCostPrice,
@@ -474,6 +564,45 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 1) Chọn GIỐNG LÚA trước (đồng bộ web).
+          FutureBuilder<List<RiceVarietyOption>>(
+            future: _varietiesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const LinearProgressIndicator();
+              }
+              final varieties = _varieties;
+              if (varieties.isEmpty) return const SizedBox.shrink();
+              final value =
+                  varieties.any((v) => v.id == _riceVarietyId)
+                      ? _riceVarietyId
+                      : null;
+              return DropdownButtonFormField<int>(
+                initialValue: value,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Giống lúa',
+                  prefixIcon: Icon(Icons.grass_outlined),
+                ),
+                items: [
+                  for (final v in varieties)
+                    DropdownMenuItem(
+                      value: v.id,
+                      child: Text(
+                        v.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: _isSubmitting || _isChangingProduct
+                    ? null
+                    : (id) => setState(() => _riceVarietyId = id),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          // 2) Chọn SẢN PHẨM — lọc theo giống đã chọn; khoá tới khi có giống.
           FutureBuilder<List<ProductVariantStock>>(
             future: _productsFuture,
             builder: (context, snapshot) {
@@ -482,14 +611,23 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                 return const LinearProgressIndicator();
               }
               if (products.isEmpty) return const SizedBox.shrink();
+              final hasVarietyData = _varieties.isNotEmpty;
+              final varietyChosen = _riceVarietyId != null || !hasVarietyData;
+              final matches = _productMatchesVariety(receipt.productVariantId);
+              final showProduct = receipt.productVariantId > 0 && matches;
               return InkWell(
-                key: ValueKey('inbound_product_${receipt.productVariantId}'),
+                key: ValueKey(
+                  'inbound_product_${receipt.productVariantId}_$_riceVarietyId',
+                ),
                 borderRadius: BorderRadius.circular(12),
-                onTap: () => _showProductPicker(receipt),
+                onTap:
+                    varietyChosen ? () => _showProductPicker(receipt) : null,
                 child: InputDecorator(
                   decoration: InputDecoration(
                     labelText: 'Chọn sản phẩm thu mua',
                     prefixIcon: const Icon(Icons.inventory_2_outlined),
+                    helperText:
+                        varietyChosen ? null : 'Vui lòng chọn giống lúa trước',
                     suffixIcon: _isChangingProduct
                         ? const Padding(
                             padding: EdgeInsets.all(14),
@@ -501,9 +639,16 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                         : const Icon(Icons.expand_more),
                   ),
                   child: Text(
-                    '${receipt.productName} · ${receipt.sku}',
+                    showProduct
+                        ? '${receipt.productName} · ${receipt.sku}'
+                        : 'Chọn sản phẩm thu mua',
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: showProduct
+                          ? AppColors.textPrimaryFor(context)
+                          : AppColors.textTertiary,
+                    ),
                   ),
                 ),
               );
@@ -664,6 +809,12 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
             quantity: _quantity,
             onChanged: _changeQuantity,
           ),
+          const SizedBox(height: 8),
+          _QuantityWeightHint(
+            quantity: _quantity,
+            actualWeightKg: _enteredWeight,
+            maxKgPerBag: _maxKgPerBag,
+          ),
           const SizedBox(height: 12),
           ThuMuaNoteField(
             controller: _noteController,
@@ -788,6 +939,76 @@ class _PurchaseAmountSummary extends StatelessWidget {
               color: AppColors.textSecondaryFor(context),
               fontSize: 11,
               fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dòng nhắc đơn vị + trung bình kg/bao, cảnh báo khi tỉ lệ vô lý.
+class _QuantityWeightHint extends StatelessWidget {
+  const _QuantityWeightHint({
+    required this.quantity,
+    required this.actualWeightKg,
+    required this.maxKgPerBag,
+  });
+
+  final int quantity;
+  final double actualWeightKg;
+  final int maxKgPerBag;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasData = quantity > 0 && actualWeightKg > 0;
+    final avg = hasData ? actualWeightKg / quantity : 0;
+    final tooHigh = hasData && avg > maxKgPerBag;
+
+    final Color fg;
+    final Color bg;
+    final IconData icon;
+    final String text;
+    if (!hasData) {
+      fg = AppColors.textSecondary;
+      bg = AppColors.canvasAlt;
+      icon = Icons.info_outline_rounded;
+      text = 'Đơn vị: bao • nhập khối lượng (kg) để tính trung bình mỗi bao';
+    } else if (tooHigh) {
+      fg = AppColors.danger;
+      bg = AppColors.dangerTint;
+      icon = Icons.error_outline_rounded;
+      text =
+          'Trung bình ${avg.toStringAsFixed(0)} kg/bao — vượt mức hợp lý (tối đa $maxKgPerBag kg/bao). Kiểm tra lại số bao hoặc khối lượng.';
+    } else {
+      fg = AppColors.primaryDark;
+      bg = AppColors.brandTint;
+      icon = Icons.check_circle_outline_rounded;
+      text =
+          'Đơn vị: bao • trung bình ${avg.toStringAsFixed(1)} kg/bao ($quantity bao · ${actualWeightKg.toStringAsFixed(1)} kg)';
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: fg),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: fg,
+                fontSize: 12.5,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

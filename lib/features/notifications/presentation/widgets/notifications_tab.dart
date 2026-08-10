@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../../core/routes/app_routes.dart';
-import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/api_notifications_repository.dart';
 import '../../data/notification_center.dart';
@@ -35,7 +35,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
     super.initState();
     _repository = widget.repository ?? ApiNotificationsRepository();
     _notificationsFuture = _repository.getNotifications();
-    // Táº£i láº¡i preview khi cÃ³ thÃ´ng bÃ¡o Ä‘áº©y realtime.
+    // Tải lại preview khi có thông báo đẩy realtime.
     _refreshSub = NotificationCenter.instance.onRefresh.listen((_) {
       if (mounted) _reload();
     });
@@ -65,7 +65,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
         await api.markRead(notification.numericId);
         await NotificationCenter.instance.refreshUnread();
       } catch (_) {
-        // Bá» qua.
+        // Bỏ qua.
       }
     }
     if (!mounted) return;
@@ -80,28 +80,17 @@ class _NotificationsTabState extends State<NotificationsTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
-          child: Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Cảnh báo kho',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-              IconButton(
-                onPressed: _reload,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Tải lại',
-              ),
-            ],
+        AppGradientHeader(
+          title: 'Cảnh báo kho',
+          subtitle: 'Thông báo & cảnh báo tồn kho',
+          trailing: IconButton(
+            onPressed: _reload,
+            color: Colors.white,
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Tải lại',
           ),
         ),
+        const SizedBox(height: 8),
         Expanded(
           child: FutureBuilder<List<AppNotification>>(
             future: _notificationsFuture,

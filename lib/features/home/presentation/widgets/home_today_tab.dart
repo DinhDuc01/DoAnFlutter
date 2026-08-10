@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../../core/widgets/app_ui.dart';
+import '../../../auth/data/auth_session_store.dart';
 
+/// Tab Trang chủ: header xanh gradient + banner cảnh báo + lưới phím tắt.
 class HomeTodayTab extends StatelessWidget {
   const HomeTodayTab({this.onTabChanged, super.key});
 
@@ -11,20 +14,31 @@ class HomeTodayTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color:
-          const Color(0xFFF4FBF7), // Nền xanh lá nhạt cho toàn bộ màn hình dưới
+      color: AppColors.backgroundFor(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Green Header Section
-          _buildHeader(),
-
+          _header(),
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-                child: _buildDataState(),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppInfoBanner(
+                    message: 'Xem các mặt hàng và lô lúa sắp hết trong kho',
+                    tone: AppTone.warning,
+                    icon: Icons.warning_amber_rounded,
+                    onTap: () => onTabChanged?.call(4),
+                  ),
+                  const SizedBox(height: 18),
+                  const AppSectionHeader(
+                    title: 'Tác vụ nhanh',
+                    icon: Icons.bolt_rounded,
+                  ),
+                  _shortcutGrid(context),
+                ],
               ),
             ),
           ),
@@ -33,154 +47,40 @@ class HomeTodayTab extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
-      decoration: const BoxDecoration(
-        color: Color(0xFF166534), // Màu xanh rừng đậm thống nhất
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
+  Widget _header() {
+    final name = AuthSessionStore.current?.user.fullName;
+    final greeting = (name != null && name.trim().isNotEmpty)
+        ? 'Xin chào, $name'
+        : 'Lúa gạo Tuấn Mây';
+    return AppGradientHeader(
+      overline: greeting,
+      title: 'Trang chủ',
+      subtitle: 'Thu mua, quản lý kho và xay xát lúa gạo',
+      trailing: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          shape: BoxShape.circle,
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Dòng đầu: Tên App & Icon lá cây màu trắng
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Lúa gạo Tuấn Mây',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Icon(
-                Icons.eco_outlined,
-                color: Colors.white.withValues(alpha: 0.9),
-                size: 20,
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          // Tiêu đề chính
-          const Text(
-            'Trang chủ',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Thu mua, quản lý kho và xay xát lúa gạo',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
+        child: const Icon(Icons.eco_rounded, color: Colors.white, size: 22),
       ),
     );
   }
 
-  Widget _buildDataState() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // 1. Thẻ cảnh báo màu vàng
-        _buildAlertBox(),
-        const SizedBox(height: 16),
-
-        // 2. Lưới phím tắt 6 tính năng
-        _buildShortcutGrid(),
-      ],
-    );
-  }
-
-  Widget _buildAlertBox() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFEF3C7), // Nền màu vàng cam nhạt
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFFDE68A)),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.warning_amber_rounded,
-            color: Color(0xFFD97706),
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          const Expanded(
-            child: Text(
-              'Xem các mặt hàng và lô lúa sắp hết trong kho',
-              style: TextStyle(
-                color: Color(0xFF92400E),
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: () => onTabChanged?.call(4),
-            icon: const Icon(
-              Icons.chevron_right,
-              color: Color(0xFFD97706),
-              size: 18,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildShortcutGrid() {
-    // Cấu hình danh sách lưới phím tắt theo mockup Image 2
-    final List<Map<String, dynamic>> items = [
-      {
-        'label': 'Thu mua',
-        'icon': Icons.shopping_cart_outlined,
-        'color': const Color(0xFF159447),
-        'tabIndex': 1
-      },
-      {
-        'label': 'Kho',
-        'icon': Icons.warehouse_outlined,
-        'color': const Color(0xFF2563EB),
-        'tabIndex': 2
-      },
-      {
-        'label': 'Bán / xuất kho',
-        'icon': Icons.local_shipping_outlined,
-        'color': const Color(0xFFDB2777),
-        'tabIndex': 3
-      },
-      {
-        'label': 'Xay xát',
-        'icon': Icons.grain_outlined,
-        'color': const Color(0xFFD97706),
-        'route': AppRoutes.milling,
-      },
-      {
-        'label': 'Kiểm kê',
-        'icon': Icons.assignment_outlined,
-        'color': const Color(0xFF7C3AED),
-        'route': AppRoutes.stocktake,
-      },
-      {
-        'label': 'Cân',
-        'icon': Icons.scale_outlined,
-        'color': const Color(0xFF0F766E),
-        'route': AppRoutes.scale,
-      },
+  Widget _shortcutGrid(BuildContext context) {
+    const items = <_Shortcut>[
+      _Shortcut('Thu mua', Icons.shopping_cart_outlined, AppColors.primary,
+          tabIndex: 1),
+      _Shortcut('Kho', Icons.warehouse_outlined, AppColors.info, tabIndex: 2),
+      _Shortcut('Bán / xuất kho', Icons.local_shipping_outlined,
+          AppColors.accentPink,
+          tabIndex: 3),
+      _Shortcut('Xay xát', Icons.grain_outlined, AppColors.warning,
+          route: AppRoutes.milling),
+      _Shortcut('Kiểm kê', Icons.assignment_outlined, AppColors.accentPurple,
+          route: AppRoutes.stocktake),
+      _Shortcut('Cân', Icons.scale_outlined, AppColors.accentTeal,
+          route: AppRoutes.scale),
     ];
 
     return GridView.builder(
@@ -188,71 +88,62 @@ class HomeTodayTab extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 1.1,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.98,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+        return AppCard(
+          radius: AppColors.radiusMd,
+          padding: const EdgeInsets.all(10),
+          onTap: () {
+            if (item.route != null) {
+              Navigator.of(context).pushNamed(item.route!);
+            } else if (item.tabIndex != null) {
+              onTabChanged?.call(item.tabIndex!);
+            }
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: item.color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(item.icon, color: item.color, size: 24),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                item.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  height: 1.15,
+                  color: AppColors.textPrimaryFor(context),
+                ),
               ),
             ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                final route = item['route'] as String?;
-                if (route != null) {
-                  Navigator.of(context).pushNamed(route);
-                  return;
-                }
-
-                final tabIndex = item['tabIndex'] as int?;
-                if (tabIndex != null) {
-                  onTabChanged?.call(tabIndex);
-                }
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: (item['color'] as Color).withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      item['icon'] as IconData,
-                      color: item['color'] as Color,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    item['label'] as String,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         );
       },
     );
   }
+}
+
+class _Shortcut {
+  const _Shortcut(this.label, this.icon, this.color, {this.tabIndex, this.route});
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final int? tabIndex;
+  final String? route;
 }

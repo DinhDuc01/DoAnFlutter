@@ -6,6 +6,6 @@ class ApiConfig {
   /// flutter run --dart-define=API_BASE_URL=https://your-api-url
   static const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://backend-do-an-api-new.onrender.com',
+    defaultValue: 'https://stocklite.km0.vn',
   );
 }

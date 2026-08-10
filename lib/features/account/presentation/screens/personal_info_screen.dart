@@ -275,7 +275,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
           FilledButton(
             onPressed: _saving ? null : _save,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF159447),
+              backgroundColor: const Color(0xFF16A34A),
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -320,7 +320,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
       children: [
         CircleAvatar(
           radius: 48,
-          backgroundColor: const Color(0xFF159447),
+          backgroundColor: const Color(0xFF16A34A),
           backgroundImage: image,
           child: image == null
               ? Text(
@@ -352,13 +352,13 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
                           valueColor:
-                              AlwaysStoppedAnimation<Color>(Color(0xFF159447)),
+                              AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
                         ),
                       )
                     : const Icon(
                         Icons.photo_camera,
                         size: 18,
-                        color: Color(0xFF159447),
+                        color: Color(0xFF16A34A),
                       ),
               ),
             ),
@@ -391,13 +391,13 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
             color: selected ? const Color(0xFFDCFCE7) : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: selected ? const Color(0xFF159447) : const Color(0xFFE2E8F0),
+              color: selected ? const Color(0xFF16A34A) : const Color(0xFFE2E8F0),
             ),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? const Color(0xFF159447) : const Color(0xFF64748B),
+              color: selected ? const Color(0xFF16A34A) : const Color(0xFF64748B),
               fontWeight: FontWeight.w700,
               fontSize: 14,
             ),
@@ -447,7 +447,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFF159447)),
+          borderSide: const BorderSide(color: Color(0xFF16A34A)),
         ),
       ),
     );
