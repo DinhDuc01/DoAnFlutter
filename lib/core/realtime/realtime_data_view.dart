@@ -85,8 +85,8 @@ class _RealtimeDataViewState<T> extends State<RealtimeDataView<T>> {
 
   void _onEntitiesChanged(Set<String> changed) {
     if (!mounted) return;
-    final relevant = widget.entities.isEmpty ||
-        changed.any(widget.entities.contains);
+    final relevant =
+        widget.entities.isEmpty || changed.any(widget.entities.contains);
     if (relevant) _load(showLoading: false);
   }
 

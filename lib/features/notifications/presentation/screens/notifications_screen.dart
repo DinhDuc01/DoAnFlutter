@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../../data/api_notifications_repository.dart';
 import '../../data/notification_center.dart';
-import '../../data/notification_navigator.dart';
 import '../../data/notifications_repository.dart';
 import '../../models/app_notification.dart';
 import '../widgets/notifications_bottom_bar.dart';
@@ -40,9 +39,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   /// Chỉ có API thật mới hỗ trợ phân trang + đổi trạng thái. Test tiêm repo giả
   /// (chỉ có getNotifications) nên các thao tác này sẽ chạy cục bộ (optimistic).
   ApiNotificationsRepository? get _api =>
-      _repository is ApiNotificationsRepository
-          ? _repository as ApiNotificationsRepository
-          : null;
+      _repository is ApiNotificationsRepository ? _repository : null;
 
   bool? get _serverIsReadFilter =>
       _filter == NotificationFilter.unread ? false : null;
@@ -124,8 +121,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
   }
 
-  /// Bấm vào thông báo: đánh dấu đã đọc rồi điều hướng tới màn liên quan.
-  /// Nếu không có màn liên quan thì chỉ đổi trạng thái, không chuyển trang.
+  /// Bấm vào thông báo: chỉ đánh dấu đã đọc, giữ nguyên danh sách thông báo.
   Future<void> _onTapNotification(AppNotification notification) async {
     if (!notification.isRead) {
       _replaceItem(notification.copyWith(isRead: true));
@@ -138,11 +134,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           // Bỏ qua: UI đã cập nhật optimistic.
         }
       }
-    }
-
-    final route = NotificationNavigator.routeFor(notification.directionId);
-    if (route != null && mounted) {
-      await Navigator.of(context).pushNamed(route);
     }
   }
 
@@ -226,6 +217,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             NotificationsFilterChips(
               selectedFilter: _filter,
               unreadCount: _unreadCount,
+              alertCount: _notifications.where((n) => n.isAlert).length,
               onChanged: _onFilterChanged,
             ),
             if (!_isLoading)

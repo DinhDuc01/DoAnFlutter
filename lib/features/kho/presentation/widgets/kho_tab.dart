@@ -107,13 +107,6 @@ class _InventoryList extends StatelessWidget {
                 value: '${check.totalProducts}',
               ),
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _SummaryCard(
-                label: 'Tổng tồn',
-                value: '${check.totalSystemQuantity}',
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 14),
@@ -166,8 +159,12 @@ class _InventoryList extends StatelessWidget {
         const SizedBox(height: 8),
         FilledButton.icon(
           onPressed: () => Navigator.of(context).pushNamed(AppRoutes.stocktake),
-          icon: const Icon(Icons.fact_check_outlined),
-          label: const Text('Tạo phiếu kiểm kê'),
+          icon: Icon(
+            check.id > 0 ? Icons.drafts_outlined : Icons.fact_check_outlined,
+          ),
+          label: Text(
+            check.id > 0 ? 'Tiếp tục phiếu kiểm kê nháp' : 'Tạo phiếu kiểm kê',
+          ),
         ),
       ],
     );

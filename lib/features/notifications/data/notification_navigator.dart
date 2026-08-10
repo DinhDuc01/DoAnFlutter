@@ -22,7 +22,6 @@ class NotificationNavigator {
     // Kiểm kê kho.
     '/admin/stock-takes': AppRoutes.stocktake,
     // Kiểm định & cách ly.
-    '/admin/quality-inspections': AppRoutes.qualityInspection,
     // Xay xát.
     '/admin/milling-orders': AppRoutes.milling,
   };

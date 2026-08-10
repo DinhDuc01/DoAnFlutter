@@ -44,7 +44,8 @@ class _MillingResultConfirmationScreenState
           content: Text(
             '${widget.order.millingCode} đã được chốt với '
             '${widget.order.totalRiceKg.toStringAsFixed(1)}kg gạo và '
-            '${widget.order.totalBranKg.toStringAsFixed(1)}kg cám.',
+            '${widget.order.totalBranKg.toStringAsFixed(1)}kg cám'
+            '${widget.order.brokenBags.isEmpty ? '.' : ' và ${widget.order.totalBrokenKg.toStringAsFixed(1)}kg tấm.'}',
             textAlign: TextAlign.center,
           ),
           actionsAlignment: MainAxisAlignment.center,
@@ -149,6 +150,13 @@ class _MillingResultConfirmationScreenState
               ),
             ],
           ),
+          if (order.brokenBags.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _ResultStat(
+              label: 'Tấm (${order.brokenBags.length} bao)',
+              value: '${order.totalBrokenKg.toStringAsFixed(1)}kg',
+            ),
+          ],
           const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,6 +178,14 @@ class _MillingResultConfirmationScreenState
               ),
             ],
           ),
+          if (order.brokenBags.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _CompactBagColumn(
+              title: 'Bao tấm (${order.brokenBags.length})',
+              bags: order.brokenBags,
+              color: const Color(0xFF7C3AED),
+            ),
+          ],
         ],
       ),
       bottomNavigationBar: MillingPrimaryButton(

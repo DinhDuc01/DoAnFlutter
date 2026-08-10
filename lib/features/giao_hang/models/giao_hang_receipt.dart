@@ -105,6 +105,24 @@ class SalesOrderSubmission {
   final String status;
 }
 
+class SalesOrderDraftSummary {
+  const SalesOrderDraftSummary({
+    required this.id,
+    required this.code,
+    required this.customerName,
+    required this.status,
+    required this.totalAmount,
+    required this.createdAt,
+  });
+
+  final int id;
+  final String code;
+  final String customerName;
+  final String status;
+  final double totalAmount;
+  final DateTime createdAt;
+}
+
 class GiaoHangSuccessResult {
   const GiaoHangSuccessResult({
     required this.receiptCode,

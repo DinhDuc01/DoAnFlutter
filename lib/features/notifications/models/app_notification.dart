@@ -71,6 +71,14 @@ class AppNotification {
         type == AppNotificationType.warning;
   }
 
+  bool get isLowStock {
+    final value = '$title $message'.toLowerCase();
+    return value.contains('tồn kho thấp') ||
+        value.contains('sắp hết') ||
+        value.contains('gần hết') ||
+        value.contains('low stock');
+  }
+
   /// Tạo bản sao với một vài trường được thay đổi (VD: đánh dấu đã đọc).
   AppNotification copyWith({bool? isRead}) {
     return AppNotification(

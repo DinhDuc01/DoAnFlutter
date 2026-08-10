@@ -6,9 +6,12 @@ import '../../../auth/data/auth_session_store.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../../home/presentation/widgets/main_bottom_navigation.dart';
 import '../../../products/data/product_variant_api.dart';
+import '../../../scale/models/weight_reading.dart';
+import '../../../scale/presentation/screens/scale_screen.dart';
 import '../../data/api_thu_mua_repository.dart';
 import '../../data/thu_mua_repository.dart';
 import '../../models/thu_mua_receipt.dart';
+import '../../models/purchase_schedule.dart';
 import '../widgets/thu_mua_header.dart';
 import '../widgets/thu_mua_note_field.dart';
 import '../widgets/thu_mua_product_card.dart';
@@ -16,9 +19,11 @@ import '../widgets/thu_mua_quantity_stepper.dart';
 import '../widgets/thu_mua_receipt_fields.dart';
 
 class ThuMuaScreen extends StatefulWidget {
-  const ThuMuaScreen({this.repository, super.key});
+  const ThuMuaScreen({this.repository, this.schedule, this.draft, super.key});
 
   final ThuMuaRepository? repository;
+  final PurchaseSchedule? schedule;
+  final ThuMuaReceipt? draft;
 
   @override
   State<ThuMuaScreen> createState() => _ThuMuaScreenState();
@@ -28,31 +33,62 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   late final ThuMuaRepository _repository;
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _unitCostController = TextEditingController();
+  final TextEditingController _actualWeightController = TextEditingController();
+  final TextEditingController _moistureController = TextEditingController();
+  final TextEditingController _paidAmountController = TextEditingController();
 
   late final Future<ThuMuaReceipt> _receiptFuture;
   late final Future<List<ProductVariantStock>> _productsFuture;
   late final Future<List<ThuMuaSupplier>> _suppliersFuture;
   List<ProductVariantStock> _products = const [];
-  List<ThuMuaSupplier> _suppliers = const [];
   ThuMuaReceipt? _receipt;
   int _quantity = 0;
   bool _quantityInitialized = false;
   bool _isSubmitting = false;
   bool _isChangingProduct = false;
+  bool _useIotScale = true;
+
+  double get _enteredWeight =>
+      double.tryParse(_actualWeightController.text.trim()) ?? 0;
+
+  double get _enteredUnitPrice =>
+      double.tryParse(_unitCostController.text.trim()) ?? 0;
+
+  double get _totalPurchaseAmount => _enteredWeight * _enteredUnitPrice;
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiThuMuaRepository();
-    _receiptFuture = _repository.getDraftReceipt();
+    _receiptFuture = _loadReceipt();
     _productsFuture = _loadProducts();
     _suppliersFuture = _loadSuppliers();
   }
 
+  Future<ThuMuaReceipt> _loadReceipt() async {
+    if (widget.draft != null) return widget.draft!;
+    final receipt = await _repository.getDraftReceipt();
+    final schedule = widget.schedule;
+    if (schedule == null) return receipt;
+
+    return receipt.copyWith(
+      supplier: ThuMuaSupplier(
+        id: schedule.farmerId,
+        code: '',
+        name: schedule.farmerName,
+      ),
+      scheduleId: schedule.id,
+      riceVarietyId: schedule.riceVarietyId,
+      actualWeightKg: schedule.estimatedWeightKg,
+      expectedDate: schedule.scheduledAt,
+      unitCostPrice: schedule.expectedPrice,
+      warehouseId: schedule.warehouseId ?? 0,
+      warehouseName: schedule.warehouseName ?? '',
+    );
+  }
+
   Future<List<ThuMuaSupplier>> _loadSuppliers() async {
-    final suppliers = await _repository.getSuppliers();
-    _suppliers = suppliers;
-    return suppliers;
+    return _repository.getSuppliers();
   }
 
   Future<List<ProductVariantStock>> _loadProducts() async {
@@ -65,6 +101,9 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   void dispose() {
     _noteController.dispose();
     _unitCostController.dispose();
+    _actualWeightController.dispose();
+    _moistureController.dispose();
+    _paidAmountController.dispose();
     super.dispose();
   }
 
@@ -75,17 +114,18 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     if (_unitCostController.text.isEmpty && receipt.unitCostPrice > 0) {
       _unitCostController.text = receipt.unitCostPrice.toStringAsFixed(0);
     }
+    if (_actualWeightController.text.isEmpty && receipt.actualWeightKg > 0) {
+      _actualWeightController.text = receipt.actualWeightKg.toStringAsFixed(1);
+    }
+    if (_moistureController.text.isEmpty && receipt.moisturePercent != null) {
+      _moistureController.text = receipt.moisturePercent!.toStringAsFixed(1);
+    }
     _quantityInitialized = true;
   }
 
-  void _decreaseQuantity() {
-    if (_quantity <= 0 || _isSubmitting) return;
-    setState(() => _quantity--);
-  }
-
-  void _increaseQuantity() {
+  void _changeQuantity(int value) {
     if (_isSubmitting) return;
-    setState(() => _quantity++);
+    setState(() => _quantity = value);
   }
 
   Future<void> _changeProduct(int? productVariantId) async {
@@ -111,6 +151,9 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
         _unitCostController.text = receipt.unitCostPrice > 0
             ? receipt.unitCostPrice.toStringAsFixed(0)
             : '';
+        _actualWeightController.clear();
+        _moistureController.clear();
+        _paidAmountController.clear();
       });
     } catch (error) {
       if (!mounted) return;
@@ -167,7 +210,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
                       subtitle: Text(
-                        '${product.sku} · Tồn hiện tại ${product.quantityOnHand} bao',
+                        '${product.sku} · Tồn hiện tại ${product.quantityOnHand} kg',
                       ),
                       trailing: isSelected
                           ? const Icon(
@@ -201,10 +244,24 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       );
       return;
     }
+    if (receipt.warehouseId <= 0 || receipt.warehouseName.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Chưa xác định kho nhập. Vui lòng chọn kho trước khi lưu phiếu.',
+          ),
+        ),
+      );
+      return;
+    }
     final unitCostPrice = double.tryParse(_unitCostController.text.trim()) ?? 0;
+    final actualWeightKg =
+        double.tryParse(_actualWeightController.text.trim()) ?? 0;
+    final moisturePercent = double.tryParse(_moistureController.text.trim());
+    final paidAmount = double.tryParse(_paidAmountController.text.trim()) ?? 0;
     if (receipt.supplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn nhà cung cấp')),
+        const SnackBar(content: Text('Vui lòng chọn nông dân')),
       );
       return;
     }
@@ -214,18 +271,56 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       );
       return;
     }
+    if (actualWeightKg <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Khối lượng thực tế phải lớn hơn 0')),
+      );
+      return;
+    }
+    if (moisturePercent == null ||
+        moisturePercent < 0 ||
+        moisturePercent > 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Độ ẩm phải nằm trong khoảng 0-100%')),
+      );
+      return;
+    }
+    final totalAmount = actualWeightKg * unitCostPrice;
+    if (paidAmount < 0 || paidAmount > totalAmount) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Số tiền đã trả không hợp lệ')),
+      );
+      return;
+    }
+
+    if (receipt.id != null) {
+      final shouldUpdate = await _confirmDraftUpdate();
+      if (!shouldUpdate || !mounted) return;
+    }
 
     setState(() => _isSubmitting = true);
 
     try {
       final submission = await _repository.confirmInbound(
-        receipt: receipt,
+        receipt: receipt.copyWith(
+          actualWeightKg: actualWeightKg,
+          moisturePercent: moisturePercent,
+          paidAmount: paidAmount,
+        ),
         quantity: _quantity,
         unitCostPrice: unitCostPrice,
         note: _noteController.text,
       );
 
       if (!mounted) return;
+
+      if (receipt.id != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Đã lưu thay đổi phiếu nháp.')),
+        );
+        Navigator.of(context).pop(true);
+        return;
+      }
 
       final user = AuthSessionStore.current?.user;
       final result = ThuMuaSuccessResult(
@@ -242,6 +337,10 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
         status: submission.status,
         unitCostPrice: unitCostPrice,
         expectedDate: receipt.expectedDate,
+        actualWeightKg: actualWeightKg,
+        moisturePercent: moisturePercent,
+        debtAmount: (actualWeightKg * unitCostPrice - paidAmount)
+            .clamp(0, double.infinity),
       );
 
       Navigator.of(context).pushReplacementNamed(
@@ -251,11 +350,50 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không cập nhật được tồn kho: $error')),
+        SnackBar(
+          content: Text(
+            receipt.id != null
+                ? 'Không lưu được phiếu nháp: $error'
+                : 'Không tạo được phiếu nhập: $error',
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  Future<bool> _confirmDraftUpdate() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Lưu thay đổi phiếu nháp?'),
+        content: const Text(
+          'Thông tin hiện tại sẽ được cập nhật lên hệ thống. Phiếu vẫn ở trạng thái nháp và chưa được chốt.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Lưu thay đổi'),
+          ),
+        ],
+      ),
+    );
+    return result == true;
+  }
+
+  Future<void> _readIotWeight() async {
+    final reading = await Navigator.of(context).push<WeightReading>(
+      MaterialPageRoute(builder: (_) => const ScaleScreen()),
+    );
+    if (!mounted || reading == null) return;
+    setState(() {
+      _actualWeightController.text = reading.weight.toStringAsFixed(3);
+    });
   }
 
   void _openMainTab(int index) {
@@ -331,11 +469,6 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
 
   Widget _buildReceiptForm(ThuMuaReceipt receipt) {
     _setInitialQuantity(receipt);
-    if (receipt.supplier == null && _suppliers.isNotEmpty) {
-      _receipt = receipt.copyWith(supplier: _suppliers.first);
-      receipt = _receipt!;
-    }
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -388,7 +521,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                 initialValue: receipt.supplier?.id,
                 isExpanded: true,
                 decoration: const InputDecoration(
-                  labelText: 'Nhà cung cấp',
+                  labelText: 'Nông dân',
                   prefixIcon: Icon(Icons.storefront_outlined),
                 ),
                 items: [
@@ -419,10 +552,82 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
             controller: _unitCostController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
-              labelText: 'Đơn giá mỗi bao',
-              suffixText: 'đ/bao',
+              labelText: 'Đơn giá',
+              suffixText: 'đ/kg',
               prefixIcon: Icon(Icons.payments_outlined),
             ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(
+                value: true,
+                icon: Icon(Icons.bluetooth),
+                label: Text('Cân IoT'),
+              ),
+              ButtonSegment(
+                value: false,
+                icon: Icon(Icons.edit_outlined),
+                label: Text('Cân thường'),
+              ),
+            ],
+            selected: {_useIotScale},
+            onSelectionChanged: (values) {
+              setState(() => _useIotScale = values.first);
+            },
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: const ValueKey('thu_mua_actual_weight'),
+            controller: _actualWeightController,
+            readOnly: _useIotScale,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Khối lượng thực tế',
+              suffixText: 'kg',
+              prefixIcon: const Icon(Icons.scale_outlined),
+              helperText: _useIotScale
+                  ? 'Mở cân IoT để nhận khối lượng ổn định'
+                  : 'Nhập khối lượng khi dùng cân thường',
+              suffixIcon: _useIotScale
+                  ? IconButton(
+                      tooltip: 'Mở cân IoT',
+                      onPressed: _readIotWeight,
+                      icon: const Icon(Icons.bluetooth_searching),
+                    )
+                  : null,
+            ),
+            onTap: _useIotScale ? _readIotWeight : null,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: const ValueKey('thu_mua_moisture'),
+            controller: _moistureController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Độ ẩm',
+              suffixText: '%',
+              prefixIcon: Icon(Icons.water_drop_outlined),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: _paidAmountController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(
+              labelText: 'Số tiền đã trả',
+              suffixText: 'đ',
+              prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          _PurchaseAmountSummary(
+            unitPrice: _enteredUnitPrice,
+            actualWeightKg: _enteredWeight,
+            totalAmount: _totalPurchaseAmount,
           ),
           const SizedBox(height: 12),
           ListTile(
@@ -457,8 +662,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           const SizedBox(height: 12),
           ThuMuaQuantityStepper(
             quantity: _quantity,
-            onDecrease: _decreaseQuantity,
-            onIncrease: _increaseQuantity,
+            onChanged: _changeQuantity,
           ),
           const SizedBox(height: 12),
           ThuMuaNoteField(
@@ -484,7 +688,11 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : const Text('Tạo phiếu chờ xác nhận'),
+                : Text(
+                    receipt.id != null
+                        ? 'Lưu thay đổi phiếu nháp'
+                        : 'Tạo phiếu chờ xác nhận',
+                  ),
           ),
         ],
       ),
@@ -524,6 +732,65 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       bottomNavigationBar: MainBottomNavigation(
         currentIndex: 1,
         onTap: _openMainTab,
+      ),
+    );
+  }
+}
+
+class _PurchaseAmountSummary extends StatelessWidget {
+  const _PurchaseAmountSummary({
+    required this.unitPrice,
+    required this.actualWeightKg,
+    required this.totalAmount,
+  });
+
+  final double unitPrice;
+  final double actualWeightKg;
+  final double totalAmount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8F7EE),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFB7E4C7)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'TỔNG TIỀN PHIẾU NÀY',
+            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${totalAmount.toStringAsFixed(0)} đ',
+            style: const TextStyle(
+              color: AppColors.primaryDark,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${actualWeightKg.toStringAsFixed(1)} kg × ${unitPrice.toStringAsFixed(0)} đ/kg',
+            style: TextStyle(
+              color: AppColors.textSecondaryFor(context),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Đơn giá chỉ áp dụng cho phiếu này; giá gốc sản phẩm không thay đổi.',
+            style: TextStyle(
+              color: AppColors.textSecondaryFor(context),
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ),
     );
   }

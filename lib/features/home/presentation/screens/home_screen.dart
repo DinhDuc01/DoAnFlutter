@@ -10,7 +10,7 @@ import '../../../account/presentation/widgets/account_tab.dart';
 import '../widgets/main_bottom_navigation.dart';
 
 /// HomeScreen represents the unified 6-tab layout container for:
-/// Hôm nay, Thu mua, Kho, Giao hàng, Thông báo, Tôi.
+/// Trang chủ, Thu mua, Kho, Giao hàng, Thông báo, Tôi.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({this.initialIndex = 0, super.key})
       : assert(initialIndex >= 0 && initialIndex < 6);
@@ -23,6 +23,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late int _currentIndex;
+  final GlobalKey<ThuMuaTabState> _thuMuaKey = GlobalKey<ThuMuaTabState>();
 
   late final List<Widget> _tabs;
 
@@ -36,9 +37,10 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+          if (index == 1) _thuMuaKey.currentState?.refreshLatest();
         },
-      ), // Index 0: Hôm nay
-      const ThuMuaTab(), // Index 1: Thu mua
+      ), // Index 0: Trang chủ
+      ThuMuaTab(key: _thuMuaKey), // Index 1: Thu mua
       const KhoTab(), // Index 2: Kho
       const GiaoHangTab(), // Index 3: Giao
       const NotificationsTab(), // Index 4: Thông báo
@@ -60,6 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() => _currentIndex = index);
+          if (index == 1) _thuMuaKey.currentState?.refreshLatest();
         },
       ),
     );

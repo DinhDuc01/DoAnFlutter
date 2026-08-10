@@ -18,7 +18,7 @@ void main() {
     await tester.pump();
 
     expect(find.text('1250'), findsOneWidget);
-    expect(find.text('+1240'), findsOneWidget);
+    expect(find.text('+1240'), findsNothing);
   });
 }
 

@@ -1,9 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
-import '../../../../core/notifications/fcm_service.dart';
-import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/api_auth_service.dart';
@@ -64,9 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
       await AuthSessionStore.save(session);
 
       // Bắt đầu nhận thông báo đẩy realtime + đăng ký token FCM cho phiên này.
-      unawaited(FcmService.instance.startForUser());
       // Mở kết nối realtime dữ liệu (SignalR) để tự làm mới các màn khi có thay đổi.
-      unawaited(RealtimeService.instance.start());
 
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.home);
@@ -183,7 +177,7 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-class _LoginCard extends StatelessWidget {
+class _LoginCard extends StatefulWidget {
   const _LoginCard({
     required this.emailController,
     required this.passwordController,
@@ -197,6 +191,13 @@ class _LoginCard extends StatelessWidget {
   final bool isLoading;
   final String? errorMessage;
   final VoidCallback onLogin;
+
+  @override
+  State<_LoginCard> createState() => _LoginCardState();
+}
+
+class _LoginCardState extends State<_LoginCard> {
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {
@@ -238,7 +239,7 @@ class _LoginCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          if (errorMessage != null)
+          if (widget.errorMessage != null)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               margin: const EdgeInsets.only(bottom: 16),
@@ -253,7 +254,7 @@ class _LoginCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      errorMessage!,
+                      widget.errorMessage!,
                       style: TextStyle(
                         color: Colors.red.shade800,
                         fontSize: 11,
@@ -269,8 +270,8 @@ class _LoginCard extends StatelessWidget {
           const SizedBox(height: 6),
           TextField(
             key: const ValueKey('login_username'),
-            controller: emailController,
-            enabled: !isLoading,
+            controller: widget.emailController,
+            enabled: !widget.isLoading,
             keyboardType: TextInputType.text,
             textInputAction: TextInputAction.next,
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
@@ -285,16 +286,35 @@ class _LoginCard extends StatelessWidget {
           const SizedBox(height: 6),
           TextField(
             key: const ValueKey('login_password'),
-            controller: passwordController,
-            enabled: !isLoading,
-            obscureText: true,
+            controller: widget.passwordController,
+            enabled: !widget.isLoading,
+            obscureText: _obscurePassword,
             textInputAction: TextInputAction.done,
-            onSubmitted: (_) => onLogin(),
+            onSubmitted: (_) => widget.onLogin(),
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            decoration: const InputDecoration(
-              prefixIcon:
-                  Icon(Icons.lock_outline, color: Color(0xFF159447), size: 20),
-              contentPadding: EdgeInsets.symmetric(vertical: 12),
+            decoration: InputDecoration(
+              prefixIcon: const Icon(
+                Icons.lock_outline,
+                color: Color(0xFF159447),
+                size: 20,
+              ),
+              suffixIcon: IconButton(
+                key: const ValueKey('login_password_visibility'),
+                tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                onPressed: widget.isLoading
+                    ? null
+                    : () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: const Color(0xFF159447),
+                  size: 20,
+                ),
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
           const SizedBox(height: 10),
@@ -303,7 +323,7 @@ class _LoginCard extends StatelessWidget {
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
-              onPressed: isLoading ? null : () {},
+              onPressed: widget.isLoading ? null : () {},
               style: TextButton.styleFrom(
                 padding: EdgeInsets.zero,
                 minimumSize: Size.zero,
@@ -323,7 +343,7 @@ class _LoginCard extends StatelessWidget {
 
           FilledButton(
             key: const ValueKey('login_submit'),
-            onPressed: isLoading ? null : onLogin,
+            onPressed: widget.isLoading ? null : widget.onLogin,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF159447),
               disabledBackgroundColor:
@@ -333,7 +353,7 @@ class _LoginCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(24),
               ),
             ),
-            child: isLoading
+            child: widget.isLoading
                 ? const SizedBox(
                     width: 18,
                     height: 18,

@@ -16,7 +16,7 @@ void main() {
     );
 
     for (final label in [
-      'Hôm nay',
+      'Trang chủ',
       'Thu mua',
       'Kho',
       'Bán',

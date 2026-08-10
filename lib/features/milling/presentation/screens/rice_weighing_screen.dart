@@ -12,11 +12,13 @@ class RiceWeighingScreen extends StatefulWidget {
   const RiceWeighingScreen({
     required this.order,
     required this.repository,
+    this.includeBroken = false,
     super.key,
   });
 
   final MillingOrder order;
   final MillingRepository repository;
+  final bool includeBroken;
 
   @override
   State<RiceWeighingScreen> createState() => _RiceWeighingScreenState();
@@ -36,15 +38,22 @@ class _RiceWeighingScreenState extends State<RiceWeighingScreen> {
   MillingOrder get _currentOrder => widget.order.copyWith(riceBags: _bags);
 
   Future<void> _captureWeight() async {
-    final reading = await Navigator.of(context).push<WeightReading>(
-      MaterialPageRoute(builder: (_) => const ScaleScreen()),
-    );
-    if (!mounted || reading == null) return;
+    final double? weight;
+    if (widget.order.scaleMode == MillingScaleMode.iot) {
+      final reading = await Navigator.of(context).push<WeightReading>(
+        MaterialPageRoute(builder: (_) => const ScaleScreen()),
+      );
+      weight = reading?.weight;
+    } else {
+      weight = await showManualWeightDialog(context, productLabel: 'gạo');
+    }
+    if (!mounted || weight == null) return;
+    final capturedWeight = weight;
     setState(() {
-      _latestWeightKg = reading.weight;
+      _latestWeightKg = capturedWeight;
       _bags = [
         ..._bags,
-        MillingBag(index: _bags.length + 1, weightKg: reading.weight),
+        MillingBag(index: _bags.length + 1, weightKg: capturedWeight),
       ];
     });
   }
@@ -59,6 +68,7 @@ class _RiceWeighingScreenState extends State<RiceWeighingScreen> {
         builder: (_) => BranWeighingScreen(
           order: _currentOrder,
           repository: widget.repository,
+          includeBroken: widget.includeBroken,
         ),
       ),
     );
@@ -79,6 +89,7 @@ class _RiceWeighingScreenState extends State<RiceWeighingScreen> {
             latestWeightKg: _latestWeightKg,
             instruction: 'Đặt bao gạo thành phẩm lên cân rồi nhận số ổn định.',
             onCapture: _captureWeight,
+            manualMode: widget.order.scaleMode == MillingScaleMode.manual,
           ),
           const SizedBox(height: 10),
           WeighingSummary(

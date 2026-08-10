@@ -203,14 +203,6 @@ class _AccountScreenState extends State<AccountScreen> {
                           title: 'TÀI KHOẢN',
                           items: [
                             AccountMenuItem.navigation(
-                              icon: Icons.lock_outline,
-                              iconColor: const Color(0xFF8B5CF6),
-                              title: 'Đổi mật khẩu',
-                              onTap: () => Navigator.of(context).pushNamed(
-                                AppRoutes.changePassword,
-                              ),
-                            ),
-                            AccountMenuItem.navigation(
                               icon: Icons.support_agent,
                               iconColor: const Color(0xFF06B6D4),
                               title: 'Trợ giúp & hỗ trợ',

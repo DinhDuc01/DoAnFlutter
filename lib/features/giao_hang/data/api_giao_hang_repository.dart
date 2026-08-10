@@ -83,6 +83,41 @@ class ApiGiaoHangRepository implements GiaoHangRepository {
     }
   }
 
+  Future<List<SalesOrderDraftSummary>> getDraftSalesOrders() async {
+    final json = await _apiClient.post(
+      '/api/v1/sales-orders/paged',
+      token: _currentToken(),
+      body: {
+        'pageIndex': 1,
+        'pageSize': 100,
+      },
+    );
+    final resources = JsonReader.value(json, 'resources');
+    final rows = resources is Map<String, dynamic>
+        ? JsonReader.list(resources, 'items') ?? const []
+        : const <dynamic>[];
+    final drafts = <SalesOrderDraftSummary>[];
+    for (final row in rows.whereType<Map<String, dynamic>>()) {
+      final statusId = JsonReader.integer(row, 'statusId') ?? 0;
+      if (statusId != 1 && statusId != 2) continue;
+      drafts.add(
+        SalesOrderDraftSummary(
+          id: JsonReader.integer(row, 'id') ?? 0,
+          code: JsonReader.string(row, 'soCode') ?? 'SO',
+          customerName: JsonReader.string(row, 'customerName') ?? 'Khách hàng',
+          status: JsonReader.string(row, 'statusName') ?? 'Phiếu nháp',
+          totalAmount: JsonReader.decimal(row, 'totalAmount') ?? 0,
+          createdAt: DateTime.tryParse(
+                JsonReader.string(row, 'createdDate') ?? '',
+              ) ??
+              DateTime.fromMillisecondsSinceEpoch(0),
+        ),
+      );
+    }
+    drafts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return drafts;
+  }
+
   @override
   Future<SalesOrderSubmission> confirmOutbound({
     required GiaoHangReceipt receipt,

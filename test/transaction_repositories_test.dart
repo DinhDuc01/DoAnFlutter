@@ -99,11 +99,46 @@ void main() {
       );
     });
 
-    test('creates a pending purchase order with the selected item', () async {
+    test('loads unconfirmed receipts from the backend resources list',
+        () async {
+      final repository = ApiThuMuaRepository(
+        apiClient: FakeApiClient(
+          onGet: (path, _, __) async {
+            expect(path, '/api/v1/paddy-purchase-receipts');
+            return {
+              'resources': [
+                {
+                  'id': 9,
+                  'receiptCode': 'PPR-9',
+                  'farmerName': 'Farmer',
+                  'isConfirmed': false,
+                  'actualWeightKg': 50,
+                  'bagCount': 2,
+                  'createdDate': '2026-08-08T10:00:00',
+                },
+                {
+                  'id': 10,
+                  'receiptCode': 'PPR-10',
+                  'isConfirmed': true,
+                },
+              ],
+            };
+          },
+        ),
+      );
+
+      final drafts = await repository.getDraftReceipts();
+
+      expect(drafts.map((item) => item.id), [9]);
+      expect(drafts.single.code, 'PPR-9');
+      expect(drafts.single.bagCount, 2);
+    });
+
+    test('creates a draft paddy purchase receipt', () async {
       final client = FakeApiClient(
         onPost: (_, __, ___) async => {
           'isSucceeded': true,
-          'resources': {'id': 21, 'poCode': 'PO-21'},
+          'resources': {'id': 21, 'receiptCode': 'PPR-20260804-0001'},
         },
       );
 
@@ -116,17 +151,16 @@ void main() {
       );
 
       final call = client.calls.single;
-      expect(call.path, '/api/v1/purchase-orders');
-      expect(call.body?['supplierId'], 4);
+      expect(call.path, '/api/v1/paddy-purchase-receipts');
+      expect(call.body?['farmerId'], 4);
       expect(call.body?['warehouseId'], 2);
-      expect(call.body?['note'], isNull);
-      final item = (call.body?['items'] as List).single as Map<String, dynamic>;
-      expect(item['productVariantId'], 1);
-      expect(item['quantityOrdered'], 3);
-      expect(item['unitCostPrice'], 10000);
+      expect(call.body?['bagCount'], 3);
+      expect(call.body?['actualWeightKg'], 75);
+      expect(call.body?['agreedPrice'], 10000);
+      expect(call.body?['priceAdjustReason'], isNull);
       expect(result.id, 21);
-      expect(result.code, 'PO-21');
-      expect(result.status, 'Chờ xác nhận');
+      expect(result.code, 'PPR-20260804-0001');
+      expect(result.status, 'Phiếu nháp');
     });
 
     test('uses trimmed note and backend failure message', () async {
@@ -139,10 +173,10 @@ void main() {
         unitCostPrice: 10000,
         note: '  Lúa mới  ',
       );
-      expect(successClient.calls.single.body?['note'], 'Lúa mới');
-      final successItem = (successClient.calls.single.body?['items'] as List)
-          .single as Map<String, dynamic>;
-      expect(successItem['note'], 'Lúa mới');
+      expect(
+        successClient.calls.first.body?['priceAdjustReason'],
+        'Lúa mới',
+      );
 
       final failureClient = FakeApiClient(
         onPost: (_, __, ___) async => {
@@ -424,6 +458,64 @@ void main() {
         ),
         throwsA(isA<KhoCheckException>()),
       );
+    });
+
+    test('loads the existing backend stocktake draft', () async {
+      final repository = ApiKhoCheckRepository(
+        productVariantApi: _FakeProductApi(
+          products: [_product(1, 'Gạo', onHand: 12, available: 12)],
+        ),
+        apiClient: FakeApiClient(
+          onGet: (_, __, ___) async => {
+            'resources': [
+              {
+                'id': 10,
+                'warehouseId': 1,
+                'stockTakeStatusId': 1,
+                'stCode': 'ST-DRAFT-10',
+                'createdDate': '2026-08-09T08:00:00',
+                'stockTakeItems': [
+                  {
+                    'id': 8,
+                    'productVariantId': 1,
+                    'locationId': 3,
+                    'systemQuantity': 12,
+                    'actualQuantity': 11,
+                  },
+                ],
+              },
+            ],
+          },
+        ),
+      );
+
+      final check = await repository.getDraftCheck();
+
+      expect(check.id, 10);
+      expect(check.statusId, 1);
+      expect(check.items.single.id, 8);
+      expect(check.items.single.actualQuantity, 11);
+    });
+
+    test('submits a stocktake draft with status Submitted', () async {
+      final client = FakeApiClient(
+        onPut: (_, __, ___) async => {'isSucceeded': true},
+      );
+      final check = _stockCheck();
+
+      await ApiKhoCheckRepository(apiClient: client).submitStockTake(
+        stockTakeId: 77,
+        check: check,
+        items: check.items,
+        note: '  Đã kiểm đủ  ',
+      );
+
+      final call = client.calls.single;
+      expect(call.method, 'PUT');
+      expect(call.path, '/api/v1/stocktake');
+      expect(call.body?['id'], 77);
+      expect(call.body?['stockTakeStatusId'], 2);
+      expect(call.body?['note'], 'Đã kiểm đủ');
     });
 
     test('posts stocktake items and parses map id', () async {

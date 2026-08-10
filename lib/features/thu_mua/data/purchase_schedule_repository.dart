@@ -28,13 +28,20 @@ class PurchaseScheduleRepository {
     }
 
     // Backend supports both a plain resource list and a paginated result.
-    final resourcesValue = JsonReader.value(json, 'resources');
+    final resourcesValue =
+        JsonReader.value(json, 'resources') ?? JsonReader.value(json, 'data');
     final resources = switch (resourcesValue) {
       List<dynamic> items => items,
       Map<String, dynamic> page => JsonReader.list(page, 'dataSource') ??
           JsonReader.list(page, 'items') ??
+          JsonReader.list(page, 'data') ??
+          JsonReader.list(page, 'results') ??
+          JsonReader.list(page, 'resources') ??
           const <dynamic>[],
-      _ => const <dynamic>[],
+      _ => JsonReader.list(json, 'dataSource') ??
+          JsonReader.list(json, 'items') ??
+          JsonReader.list(json, 'results') ??
+          const <dynamic>[],
     };
     final schedules = [
       for (final item in resources)

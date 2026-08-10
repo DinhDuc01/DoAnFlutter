@@ -14,6 +14,7 @@ import 'package:stocklite/features/kho/presentation/screens/kho_screen.dart';
 import 'package:stocklite/features/products/data/product_variant_api.dart';
 import 'package:stocklite/features/thu_mua/data/thu_mua_repository.dart';
 import 'package:stocklite/features/thu_mua/models/thu_mua_receipt.dart';
+import 'package:stocklite/features/thu_mua/models/purchase_schedule.dart';
 import 'package:stocklite/features/thu_mua/presentation/screens/thu_mua_screen.dart';
 
 void main() {
@@ -53,7 +54,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.remove));
+      await tester.enterText(
+        find.byKey(const ValueKey('inbound_quantity_input')),
+        '0',
+      );
       await tester.ensureVisible(find.text('Tạo phiếu chờ xác nhận'));
       await tester.tap(find.text('Tạo phiếu chờ xác nhận'));
       await tester.pump();
@@ -82,7 +86,10 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.enterText(
+        find.byKey(const ValueKey('inbound_quantity_input')),
+        '2',
+      );
       await tester.ensureVisible(find.text('Tạo phiếu chờ xác nhận'));
       await tester.tap(find.text('Tạo phiếu chờ xác nhận'));
       await tester.pumpAndSettle();
@@ -141,7 +148,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Lúa thơm'), findsWidgets);
-      await tester.tap(find.byIcon(Icons.add));
+      await tester.tap(find.text('Cân thường'));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const ValueKey('thu_mua_actual_weight')),
+        '100',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('thu_mua_moisture')),
+        '14',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('inbound_quantity_input')),
+        '2',
+      );
       final noteField = find.byWidgetPredicate(
         (widget) =>
             widget is TextField && widget.decoration?.labelText == 'Ghi chú',
@@ -155,6 +175,57 @@ void main() {
       expect(repository.lastQuantity, 2);
       expect(repository.lastNote, '  Lúa mới về  ');
       expect(find.text('Saved inbound'), findsOneWidget);
+    });
+
+    phoneTestWidgets('prefills and submits an inbound receipt from a schedule',
+        (tester) async {
+      final repository = _ThuMuaRepository(Future.value(_inboundReceipt()));
+      final schedule = PurchaseSchedule(
+        id: 42,
+        farmerId: 1,
+        riceVarietyId: 7,
+        warehouseId: 9,
+        warehouseName: 'Kho lúa 9',
+        code: 'SCH-42',
+        farmerName: 'Nông dân A',
+        status: 'Đã xác nhận',
+        riceVariety: 'ST25',
+        scheduledAt: DateTime(2026, 8, 9),
+        estimatedWeightKg: 120,
+        expectedPrice: 6500,
+        location: 'Ruộng A',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ThuMuaScreen(repository: repository, schedule: schedule),
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRoutes.thuMuaSuccess) {
+              return MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('Schedule saved')),
+              );
+            }
+            return null;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('6500'), findsOneWidget);
+      expect(find.text('120.0'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('thu_mua_moisture')),
+        '14',
+      );
+      await tester.ensureVisible(find.text('Tạo phiếu chờ xác nhận'));
+      await tester.tap(find.text('Tạo phiếu chờ xác nhận'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastReceipt?.scheduleId, 42);
+      expect(repository.lastReceipt?.riceVarietyId, 7);
+      expect(repository.lastReceipt?.warehouseId, 9);
+      expect(repository.lastReceipt?.actualWeightKg, 120);
+      expect(find.text('Schedule saved'), findsOneWidget);
     });
   });
 
@@ -274,6 +345,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.pump();
       await tester.tap(find.text('Tạo phiếu kiểm kê'));
       await tester.pump();
 
@@ -291,6 +364,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      await tester.tap(find.byType(Checkbox).first);
+      await tester.pump();
       await tester.enterText(
         find.byKey(const ValueKey('actual_1_3')),
         '15',
@@ -460,6 +535,8 @@ ThuMuaReceipt _inboundReceipt() {
       name: 'Nhà cung cấp A',
     ),
     expectedDate: DateTime(2026, 7, 30),
+    actualWeightKg: 25,
+    moisturePercent: 14,
   );
 }
 

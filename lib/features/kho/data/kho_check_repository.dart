@@ -11,3 +11,13 @@ abstract class KhoCheckRepository {
     String? note,
   });
 }
+
+abstract class StockTakeSubmitRepository {
+  /// Chuyển phiếu nháp sang trạng thái Submitted để chờ duyệt.
+  Future<void> submitStockTake({
+    required int stockTakeId,
+    required KhoCheck check,
+    required List<KhoCheckItem> items,
+    String? note,
+  });
+}

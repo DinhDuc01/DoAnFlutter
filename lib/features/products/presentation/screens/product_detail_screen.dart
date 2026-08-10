@@ -244,17 +244,12 @@ class _WarehouseStockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stockedWarehouses = product.warehouses
-        .where((inventory) => inventory.quantityOnHand > 0)
-        .toList();
+    // Show every warehouse, including zero-stock rows, so the warehouse
+    // split is complete and operators can see where a product is missing.
+    final stockedWarehouses = product.warehouses;
     return _SectionCard(
       title: 'Tồn kho',
       children: [
-        _InfoRow(
-          label: 'Tổng tồn hệ thống',
-          value: '${product.quantityOnHand}',
-          valueColor: AppColors.primaryDark,
-        ),
         _InfoRow(label: 'Đã giữ', value: '${product.quantityReserved}'),
         _InfoRow(label: 'Có thể xuất', value: '${product.quantityAvailable}'),
         _InfoRow(

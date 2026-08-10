@@ -1,0 +1,7 @@
+PING gcp-us-west1-1.origin.onrender.com.cdn.cloudflare.net (216.24.57.15) 56(84) bytes of data.
+64 bytes from 216.24.57.15: icmp_seq=1 ttl=255 time=156 ms
+64 bytes from 216.24.57.15: icmp_seq=2 ttl=255 time=505 ms
+
+--- gcp-us-west1-1.origin.onrender.com.cdn.cloudflare.net ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 8215ms
+rtt min/avg/max/mdev = 156.028/330.707/505.386/174.679 ms

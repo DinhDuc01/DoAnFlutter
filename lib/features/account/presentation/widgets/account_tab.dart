@@ -79,14 +79,6 @@ class AccountTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   _MenuRow(
-                    icon: Icons.key_outlined,
-                    title: 'Đổi mật khẩu',
-                    onTap: () => Navigator.of(context).pushNamed(
-                      AppRoutes.changePassword,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _MenuRow(
                     icon: Icons.sync,
                     title: 'Đồng bộ dữ liệu',
                     onTap: () {

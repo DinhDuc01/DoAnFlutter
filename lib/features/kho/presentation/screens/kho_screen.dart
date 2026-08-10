@@ -5,7 +5,7 @@ import '../../data/api_kho_check_repository.dart';
 import '../../data/kho_check_repository.dart';
 import '../../models/kho_check.dart';
 import '../widgets/kho_bottom_action.dart';
-import '../widgets/kho_bottom_bar.dart';
+import '../../../home/presentation/widgets/main_bottom_navigation.dart';
 import '../widgets/kho_check_header.dart';
 import '../widgets/kho_check_hint.dart';
 import '../widgets/kho_check_item_card.dart';
@@ -30,6 +30,7 @@ class _KhoScreenState extends State<KhoScreen> {
   List<KhoCheckItem> _items = const [];
   bool _initialized = false;
   bool _isSubmitting = false;
+  final Set<int> _selectedProductIds = {};
 
   @override
   void initState() {
@@ -48,6 +49,14 @@ class _KhoScreenState extends State<KhoScreen> {
     if (_initialized) return;
     _check = check;
     _items = List.from(check.items);
+    if (check.note?.trim().isNotEmpty == true) {
+      _noteController.text = check.note!;
+    }
+    _selectedProductIds.addAll(
+      _items
+          .where((item) => item.actualQuantity != null)
+          .map((item) => item.productVariantId),
+    );
     _initialized = true;
   }
 
@@ -70,7 +79,18 @@ class _KhoScreenState extends State<KhoScreen> {
   Future<void> _confirmKhoCheck() async {
     final check = _check;
     if (check == null || _isSubmitting) return;
-    if (_items.any((item) => item.actualQuantity == null)) {
+    final selectedItems = _items
+        .where((item) => _selectedProductIds.contains(item.productVariantId))
+        .toList();
+    if (selectedItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn ít nhất một sản phẩm cần kiểm kê.'),
+        ),
+      );
+      return;
+    }
+    if (selectedItems.any((item) => item.actualQuantity == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vui lòng nhập số lượng thực tế cho tất cả sản phẩm.'),
@@ -81,11 +101,24 @@ class _KhoScreenState extends State<KhoScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final id = await _repository.createStockTake(
-        check: check,
-        items: _items,
-        note: _noteController.text,
-      );
+      var id = check.id;
+      if (id <= 0) {
+        // Persist a Draft first; submitting only changes it to waiting approval.
+        id = await _repository.createStockTake(
+          check: check,
+          items: selectedItems,
+          note: _noteController.text,
+        );
+      }
+      if (_repository is StockTakeSubmitRepository) {
+        final submitRepository = _repository as StockTakeSubmitRepository;
+        await submitRepository.submitStockTake(
+          stockTakeId: id,
+          check: check,
+          items: selectedItems,
+          note: _noteController.text,
+        );
+      }
       if (!mounted) return;
       await showDialog<void>(
         context: context,
@@ -165,6 +198,14 @@ class _KhoScreenState extends State<KhoScreen> {
           const SizedBox(height: 12),
           const KhoCheckHint(),
           const SizedBox(height: 12),
+          Text(
+            'Chọn sản phẩm cần tạo phiếu kiểm kê',
+            style: TextStyle(
+              color: AppColors.textPrimaryFor(context),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
           if (_items.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 32),
@@ -173,6 +214,19 @@ class _KhoScreenState extends State<KhoScreen> {
           for (var index = 0; index < _items.length; index++) ...[
             KhoCheckItemCard(
               item: _items[index],
+              selected: _selectedProductIds.contains(
+                _items[index].productVariantId,
+              ),
+              onSelectedChanged: (selected) {
+                setState(() {
+                  final id = _items[index].productVariantId;
+                  if (selected) {
+                    _selectedProductIds.add(id);
+                  } else {
+                    _selectedProductIds.remove(id);
+                  }
+                });
+              },
               onActualChanged: (value) => _updateActualQuantity(index, value),
             ),
             const SizedBox(height: 8),
@@ -201,7 +255,7 @@ class _KhoScreenState extends State<KhoScreen> {
 
             return Column(
               children: [
-                const KhoCheckHeader(),
+                KhoCheckHeader(status: _check?.status ?? 'Phiáº¿u nhÃ¡p'),
                 Expanded(
                   child: switch (snapshot.connectionState) {
                     ConnectionState.done when snapshot.hasData =>
@@ -222,7 +276,16 @@ class _KhoScreenState extends State<KhoScreen> {
           },
         ),
       ),
-      bottomNavigationBar: const KhoBottomBar(),
+      bottomNavigationBar: MainBottomNavigation(
+        currentIndex: 2,
+        onTap: (index) {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/home',
+            (route) => false,
+            arguments: index,
+          );
+        },
+      ),
     );
   }
 }

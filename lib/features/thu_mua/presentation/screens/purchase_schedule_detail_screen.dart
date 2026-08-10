@@ -267,7 +267,10 @@ class _DetailContent extends StatelessWidget {
           child: FilledButton(
             onPressed: schedule.isCancelled
                 ? null
-                : () => Navigator.of(context).pushNamed(AppRoutes.inbound),
+                : () => Navigator.of(context).pushNamed(
+                      AppRoutes.inbound,
+                      arguments: schedule,
+                    ),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF16B957),
               disabledBackgroundColor: const Color(0xFF94A3B8),
