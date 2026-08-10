@@ -145,7 +145,7 @@ class ApiNotificationsRepository implements NotificationsRepository {
     return Platform.operatingSystem;
   }
 
-  String get _deviceName => 'Tuấn Mây Mobile ($_platformName)';
+  String get _deviceName => 'Lúa gạo Tuấn Mây ($_platformName)';
 
   String get _osVersion => Platform.operatingSystemVersion;
 

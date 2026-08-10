@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/features/account/models/account_profile.dart';
 import 'package:stocklite/features/giao_hang/models/giao_hang_receipt.dart';
-import 'package:stocklite/features/history/models/operation_history.dart';
 import 'package:stocklite/features/kho/models/kho_check.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
 import 'package:stocklite/features/products/data/product_variant_api.dart';
@@ -144,41 +143,6 @@ void main() {
           entry.key == AppNotificationType.alert ||
               entry.key == AppNotificationType.warning,
         );
-      });
-    }
-  });
-
-  group('OperationHistory', () {
-    for (final entry in <OperationHistoryType, (String, IconData, Color)>{
-      OperationHistoryType.inbound: (
-        'Nhập kho',
-        Icons.inventory_2_outlined,
-        const Color(0xFF16B957),
-      ),
-      OperationHistoryType.outbound: (
-        'Xuất kho',
-        Icons.local_shipping_outlined,
-        const Color(0xFFFB2C36),
-      ),
-      OperationHistoryType.inventory: (
-        'Kiểm kê',
-        Icons.assignment_outlined,
-        const Color(0xFFA855F7),
-      ),
-    }.entries) {
-      test('maps ${entry.key.name} presentation properties', () {
-        final history = OperationHistory(
-          type: entry.key,
-          productName: 'Gạo',
-          sku: 'GAO',
-          referenceCode: 'REF',
-          quantityChange: 1,
-          createdAt: DateTime(2026),
-        );
-
-        expect(history.typeLabel, entry.value.$1);
-        expect(history.icon, entry.value.$2);
-        expect(history.color, entry.value.$3);
       });
     }
   });

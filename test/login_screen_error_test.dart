@@ -119,6 +119,9 @@ class _RejectingAuthService implements AuthService {
     receivedPassword = password;
     throw AuthException(message);
   }
+
+  @override
+  Future<AuthSession> refresh(AuthSession session) async => session;
 }
 
 class _AcceptingAuthService implements AuthService {
@@ -137,4 +140,7 @@ class _AcceptingAuthService implements AuthService {
     receivedPassword = password;
     return session;
   }
+
+  @override
+  Future<AuthSession> refresh(AuthSession session) async => session;
 }

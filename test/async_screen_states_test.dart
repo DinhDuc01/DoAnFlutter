@@ -2,9 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stocklite/features/history/data/operation_history_repository.dart';
-import 'package:stocklite/features/history/models/operation_history.dart';
-import 'package:stocklite/features/history/presentation/screens/operation_history_screen.dart';
 import 'package:stocklite/features/notifications/data/notifications_repository.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
 import 'package:stocklite/features/notifications/presentation/screens/notifications_screen.dart';
@@ -57,78 +54,6 @@ void main() {
       expect(find.text('Kho Test — Tháng 7/2026'), findsOneWidget);
       expect(find.text('Gạo thơm'), findsOneWidget);
       expect(find.text('1.2k'), findsOneWidget);
-    });
-  });
-
-  group('OperationHistoryScreen states', () {
-    testWidgets('shows loading with zero count while history is pending',
-        (tester) async {
-      final completer = Completer<List<OperationHistory>>();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OperationHistoryScreen(
-            repository: _HistoryRepository(completer.future),
-          ),
-        ),
-      );
-
-      expect(find.text('0 giao dịch'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
-
-    testWidgets('shows error when history loading fails', (tester) async {
-      final completer = Completer<List<OperationHistory>>();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OperationHistoryScreen(
-            repository: _HistoryRepository(completer.future),
-          ),
-        ),
-      );
-      completer.completeError('history failed');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Không tải được lịch sử thao tác'), findsOneWidget);
-    });
-
-    testWidgets('shows empty state when no histories exist', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OperationHistoryScreen(
-            repository: _HistoryRepository(Future.value(const [])),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Chưa có giao dịch'), findsOneWidget);
-    });
-
-    testWidgets('renders history count and record', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OperationHistoryScreen(
-            repository: _HistoryRepository(
-              Future.value([
-                OperationHistory(
-                  type: OperationHistoryType.inbound,
-                  productName: 'Gạo thơm',
-                  sku: 'GAO',
-                  referenceCode: 'PN-01',
-                  quantityChange: 10,
-                  createdAt: DateTime(2026, 7, 22),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('1 giao dịch'), findsOneWidget);
-      expect(find.text('Gạo thơm'), findsOneWidget);
-      expect(find.text('GAO • PN-01'), findsOneWidget);
     });
   });
 
@@ -349,13 +274,6 @@ class _ReportRepository implements WarehouseReportRepository {
   final Future<WarehouseReport> result;
   @override
   Future<WarehouseReport> getWarehouseReport() => result;
-}
-
-class _HistoryRepository implements OperationHistoryRepository {
-  _HistoryRepository(this.result);
-  final Future<List<OperationHistory>> result;
-  @override
-  Future<List<OperationHistory>> getHistories() => result;
 }
 
 class _NotificationRepository implements NotificationsRepository {

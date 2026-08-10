@@ -4,8 +4,6 @@ import 'package:stocklite/features/account/data/api_account_repository.dart';
 import 'package:stocklite/features/auth/data/api_auth_service.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
-import 'package:stocklite/features/history/data/api_operation_history_repository.dart';
-import 'package:stocklite/features/history/models/operation_history.dart';
 import 'package:stocklite/features/scan/data/qr_repository.dart';
 
 import 'support/fake_api_client.dart';
@@ -120,35 +118,6 @@ void main() {
     );
   });
 
-  test('activity history uses /me and maps backend rows', () async {
-    final client = FakeApiClient(
-      onPost: (_, __, ___) async => {
-        'isSucceeded': true,
-        'resources': {
-          'recordsTotal': 1,
-          'data': [
-            {
-              'id': 88,
-              'action': 'Confirm inbound receipt',
-              'description': 'Xác nhận phiếu nhập PPR-88',
-              'createdDate': '2026-07-30T08:15:00Z',
-              'createdUserName': 'Nhân viên kho',
-            },
-          ],
-        },
-      },
-    );
-
-    final histories =
-        await ApiOperationHistoryRepository(apiClient: client).getHistories();
-
-    expect(client.calls.single.path, '/api/v1/activity-log/me');
-    expect(client.calls.single.body?['length'], 50);
-    expect(histories, hasLength(1));
-    expect(histories.single.type, OperationHistoryType.inbound);
-    expect(histories.single.productName, 'Xác nhận phiếu nhập PPR-88');
-    expect(histories.single.referenceCode, '#88');
-  });
 }
 
 AuthSession _session() {

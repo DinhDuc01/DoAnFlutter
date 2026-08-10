@@ -51,7 +51,7 @@ class HomeTodayTab extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Tuấn Mây Mobile',
+                'Lúa gạo Tuấn Mây',
                 style: TextStyle(
                   color: Colors.white70,
                   fontSize: 12,
