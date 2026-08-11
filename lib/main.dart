@@ -3,10 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const StockLiteApp());
 import 'core/api/api_client.dart';
 import 'core/notifications/fcm_service.dart';
 import 'core/realtime/realtime_service.dart';
