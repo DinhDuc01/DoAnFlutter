@@ -157,6 +157,12 @@ class _InventoryList extends StatelessWidget {
           const SizedBox(height: 8),
         ],
         const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: () => Navigator.of(context).pushNamed(AppRoutes.paddyLots),
+          icon: const Icon(Icons.account_tree_outlined),
+          label: const Text('Lô & truy vết'),
+        ),
+        const SizedBox(height: 8),
         FilledButton.icon(
           onPressed: () => Navigator.of(context).pushNamed(AppRoutes.stocktake),
           icon: Icon(
