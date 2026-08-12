@@ -45,6 +45,11 @@ class ResolvedQr {
 
   bool get isLot => entityType.toUpperCase().contains('LOT');
 
+  bool get isPaddyLot {
+    final type = entityType.trim().toUpperCase();
+    return type == 'PADDY_LOT' || type == 'PADDYLOT';
+  }
+
   String get title => productName ?? displayCode;
 
   String get subtitle {

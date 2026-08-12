@@ -72,8 +72,8 @@ class HomeTodayTab extends StatelessWidget {
       _Shortcut('Thu mua', Icons.shopping_cart_outlined, AppColors.primary,
           tabIndex: 1),
       _Shortcut('Kho', Icons.warehouse_outlined, AppColors.info, tabIndex: 2),
-      _Shortcut('Bán / xuất kho', Icons.local_shipping_outlined,
-          AppColors.accentPink,
+      _Shortcut(
+          'Bán / xuất kho', Icons.local_shipping_outlined, AppColors.accentPink,
           tabIndex: 3),
       _Shortcut('Xay xát', Icons.grain_outlined, AppColors.warning,
           route: AppRoutes.milling),
@@ -81,6 +81,9 @@ class HomeTodayTab extends StatelessWidget {
           route: AppRoutes.stocktake),
       _Shortcut('Cân', Icons.scale_outlined, AppColors.accentTeal,
           route: AppRoutes.scale),
+      _Shortcut(
+          'Công nợ', Icons.account_balance_wallet_outlined, AppColors.warning,
+          route: AppRoutes.debts),
     ];
 
     return GridView.builder(
@@ -139,7 +142,8 @@ class HomeTodayTab extends StatelessWidget {
 }
 
 class _Shortcut {
-  const _Shortcut(this.label, this.icon, this.color, {this.tabIndex, this.route});
+  const _Shortcut(this.label, this.icon, this.color,
+      {this.tabIndex, this.route});
 
   final String label;
   final IconData icon;

@@ -3,6 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../products/presentation/screens/product_detail_screen.dart';
+import '../../../paddy_lots/presentation/screens/paddy_lot_detail_screen.dart';
 import '../../data/qr_repository.dart';
 import '../../models/resolved_qr.dart';
 import '../../models/scan_result_info.dart';
@@ -225,6 +226,23 @@ class _SuccessState extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          if (result.isPaddyLot && result.entityId > 0) ...[
+            FilledButton.icon(
+              key: const ValueKey('open_paddy_lot_detail'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => PaddyLotDetailScreen(lotId: result.entityId),
+                ),
+              ),
+              icon: const Icon(Icons.account_tree_outlined),
+              label: const Text('Xem chi tiết lô'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A),
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (result.productVariantId != null)
             FilledButton(
               onPressed: () => Navigator.of(context).push(
