@@ -425,12 +425,17 @@ class _ProductDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<int>(
       initialValue: products.any((item) => item.id == value) ? value : null,
+      isExpanded: true, // tránh tràn khi tên sản phẩm dài
       decoration: InputDecoration(labelText: label),
       items: [
         for (final product in products)
           DropdownMenuItem(
             value: product.id,
-            child: Text('${product.sku} - ${product.name}'),
+            child: Text(
+              '${product.sku} - ${product.name}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
       ],
       onChanged: onChanged,

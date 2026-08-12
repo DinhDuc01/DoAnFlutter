@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
+
 /// Widget Header cho màn hình kiểm kê kho (Inventory Check Header).
 /// Header của phiếu kiểm kê tồn kho.
 class KhoCheckHeader extends StatelessWidget {
@@ -19,7 +21,7 @@ class KhoCheckHeader extends StatelessWidget {
   /// Màu chữ của nhãn trạng thái (nếu null, mặc định màu tím đậm).
   final Color? statusTextColor;
 
-  static const _accent = Color(0xFF8B5CF6);
+  static const _accent = AppColors.accentPurple;
 
   @override
   Widget build(BuildContext context) {

@@ -22,7 +22,7 @@ class ScanActionPanel extends StatelessWidget {
   /// Callback đổi camera trước/sau.
   final VoidCallback onSwitchCamera;
 
-  static const _greenAccent = Color(0xFF10B981); // Màu xanh lá chủ đạo quét QR
+  static const _greenAccent = Color(0xFF16A34A); // Màu xanh lá chủ đạo quét QR
 
   @override
   Widget build(BuildContext context) {

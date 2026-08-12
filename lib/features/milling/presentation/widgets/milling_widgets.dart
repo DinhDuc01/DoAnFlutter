@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/milling_order.dart';
 
 const millingBackground = Color(0xFFF2FBF6);
-const millingGreen = Color(0xFF159447);
+const millingGreen = Color(0xFF16A34A);
 const millingOrange = Color(0xFFD97706);
 
 Future<double?> showManualWeightDialog(

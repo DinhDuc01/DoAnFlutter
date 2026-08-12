@@ -35,7 +35,7 @@ class MockWarehouseReportRepository implements WarehouseReportRepository {
         TopThuMuaProduct(
           name: 'Cáp sạc Type-C 1m',
           quantity: 150,
-          color: Color(0xFF16B957),
+          color: Color(0xFF16A34A),
         ),
         TopThuMuaProduct(
           name: 'Tai nghe bluetooth',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_ui.dart';
 import '../../data/product_variant_api.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -101,11 +102,8 @@ class _ProductSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLowStock =
         product.quantityAvailable <= (product.minStockLevel ?? 10);
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+    return AppCard(
+      child: Row(
           children: [
             _ProductImage(imageUrl: product.imageUrl),
             const SizedBox(width: 14),
@@ -136,7 +134,6 @@ class _ProductSummaryCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
       ),
     );
   }
@@ -155,7 +152,7 @@ class _ProductImage extends StatelessWidget {
       height: 68,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF7EF),
+        color: AppColors.brandTintStrong,
         borderRadius: BorderRadius.circular(16),
       ),
       child: url == null || url.isEmpty
@@ -186,7 +183,7 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: isLowStock ? const Color(0xFFFFE4E6) : const Color(0xFFDCFCE7),
+        color: isLowStock ? AppColors.dangerTint : AppColors.successTint,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -194,7 +191,7 @@ class _StatusBadge extends StatelessWidget {
         child: Text(
           isLowStock ? 'Sắp hết hàng' : 'Còn hàng',
           style: TextStyle(
-            color: isLowStock ? const Color(0xFFE11D48) : AppColors.primaryDark,
+            color: isLowStock ? AppColors.danger : AppColors.primaryDark,
             fontSize: 11,
             fontWeight: FontWeight.w800,
           ),
@@ -280,9 +277,9 @@ class _WarehouseRow extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4FBF7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD7EADF)),
+        color: AppColors.brandTint,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.brandTintStrong),
       ),
       child: Row(
         children: [
@@ -345,21 +342,21 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimaryFor(context),
             ),
-            const SizedBox(height: 8),
-            ...children,
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          ...children,
+        ],
       ),
     );
   }
@@ -369,12 +366,10 @@ class _InfoRow extends StatelessWidget {
   const _InfoRow({
     required this.label,
     required this.value,
-    this.valueColor,
   });
 
   final String label;
   final String value;
-  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -393,7 +388,7 @@ class _InfoRow extends StatelessWidget {
               value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                color: valueColor,
+                color: AppColors.textPrimaryFor(context),
                 fontWeight: FontWeight.w800,
               ),
             ),

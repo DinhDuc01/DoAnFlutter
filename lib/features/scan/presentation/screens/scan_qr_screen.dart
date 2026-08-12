@@ -126,7 +126,7 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
       case ScanState.resolving:
         return const _MessageState(
           icon: Icons.qr_code_scanner,
-          color: Color(0xFF10B981),
+          color: Color(0xFF16A34A),
           title: 'Đang kiểm tra mã QR',
           message: 'Đang đối chiếu mã với dữ liệu StockLite...',
           loading: true,
@@ -197,7 +197,7 @@ class _SuccessState extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.check_circle_outline,
-              color: Color(0xFF10B981), size: 72),
+              color: Color(0xFF16A34A), size: 72),
           const SizedBox(height: 12),
           const Text('Quét thành công!',
               style: TextStyle(
@@ -253,7 +253,7 @@ class _SuccessState extends StatelessWidget {
                 ),
               ),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
+                backgroundColor: const Color(0xFF16A34A),
                 minimumSize: const Size.fromHeight(48),
               ),
               child: const Text('Xem thông tin sản phẩm'),

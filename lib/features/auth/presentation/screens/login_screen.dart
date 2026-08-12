@@ -1,5 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../../core/notifications/fcm_service.dart';
+import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/api_auth_service.dart';
@@ -59,8 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
       // Lưu phiên xuống bộ nhớ cục bộ để lần mở app sau không phải đăng nhập lại.
       await AuthSessionStore.save(session);
 
-      // Bắt đầu nhận thông báo đẩy realtime + đăng ký token FCM cho phiên này.
-      // Mở kết nối realtime dữ liệu (SignalR) để tự làm mới các màn khi có thay đổi.
+      // Bắt đầu nhận thông báo đẩy: xin quyền + đăng ký device token FCM cho
+      // phiên này, và mở kết nối realtime dữ liệu (SignalR) để tự làm mới màn.
+      unawaited(FcmService.instance.startForUser());
+      unawaited(RealtimeService.instance.start());
 
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.home);
@@ -277,7 +283,7 @@ class _LoginCardState extends State<_LoginCard> {
             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
             decoration: const InputDecoration(
               prefixIcon: Icon(Icons.person_outline,
-                  color: Color(0xFF159447), size: 20),
+                  color: Color(0xFF16A34A), size: 20),
               contentPadding: EdgeInsets.symmetric(vertical: 12),
             ),
           ),
@@ -295,7 +301,7 @@ class _LoginCardState extends State<_LoginCard> {
             decoration: InputDecoration(
               prefixIcon: const Icon(
                 Icons.lock_outline,
-                color: Color(0xFF159447),
+                color: Color(0xFF16A34A),
                 size: 20,
               ),
               suffixIcon: IconButton(
@@ -310,7 +316,7 @@ class _LoginCardState extends State<_LoginCard> {
                   _obscurePassword
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: const Color(0xFF159447),
+                  color: const Color(0xFF16A34A),
                   size: 20,
                 ),
               ),
@@ -332,7 +338,7 @@ class _LoginCardState extends State<_LoginCard> {
               child: const Text(
                 'Quên mật khẩu?',
                 style: TextStyle(
-                  color: Color(0xFF159447),
+                  color: Color(0xFF16A34A),
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                 ),
@@ -345,9 +351,9 @@ class _LoginCardState extends State<_LoginCard> {
             key: const ValueKey('login_submit'),
             onPressed: widget.isLoading ? null : widget.onLogin,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF159447),
+              backgroundColor: const Color(0xFF16A34A),
               disabledBackgroundColor:
-                  const Color(0xFF159447).withValues(alpha: 0.55),
+                  const Color(0xFF16A34A).withValues(alpha: 0.55),
               minimumSize: const Size.fromHeight(48),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/quality_inspection_repository.dart';
 import '../../models/quality_inspection.dart';
@@ -290,11 +291,12 @@ class _InspectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        inspection.passed ? const Color(0xFF15803D) : const Color(0xFFDC2626);
-    return Card(
-      margin: EdgeInsets.zero,
+    final color = inspection.passed ? AppColors.primaryDark : AppColors.danger;
+    return AppCard(
+      padding: EdgeInsets.zero,
       child: ExpansionTile(
+        shape: const Border(),
+        collapsedShape: const Border(),
         leading: CircleAvatar(
           backgroundColor: color.withValues(alpha: 0.12),
           child: Icon(

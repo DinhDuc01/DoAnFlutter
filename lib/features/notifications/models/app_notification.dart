@@ -108,7 +108,7 @@ class AppNotification {
       AppNotificationType.alert => const Color(0xFFFF3B30),
       AppNotificationType.warning => const Color(0xFFFFA000),
       AppNotificationType.info => const Color(0xFF3B82F6),
-      AppNotificationType.success => const Color(0xFF16B957),
+      AppNotificationType.success => const Color(0xFF16A34A),
     };
   }
 }

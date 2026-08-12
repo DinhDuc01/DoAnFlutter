@@ -58,7 +58,7 @@ class AccountTab extends StatelessWidget {
     }
 
     return ColoredBox(
-      color: const Color(0xFFF4FBF7),
+      color: AppColors.backgroundFor(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -75,6 +75,14 @@ class AccountTab extends StatelessWidget {
                     title: 'Thông tin cá nhân',
                     onTap: () => Navigator.of(context).pushNamed(
                       AppRoutes.personalInfo,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _MenuRow(
+                    icon: Icons.lock_outline,
+                    title: 'Đổi mật khẩu',
+                    onTap: () => Navigator.of(context).pushNamed(
+                      AppRoutes.changePassword,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -98,17 +106,26 @@ class AccountTab extends StatelessWidget {
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFEE2E2)),
+                        color: AppColors.dangerTint,
+                        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                        border: Border.all(
+                            color: AppColors.danger.withValues(alpha: 0.25)),
                       ),
-                      child: const Text(
-                        'Đăng xuất',
-                        style: TextStyle(
-                          color: Color(0xFFEF4444),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.logout_rounded,
+                              color: AppColors.danger, size: 18),
+                          SizedBox(width: 8),
+                          Text(
+                            'Đăng xuất',
+                            style: TextStyle(
+                              color: AppColors.danger,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -136,7 +153,17 @@ class _ProfileHeader extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-      color: const Color(0xFF159447),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.forest, AppColors.primaryDark],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
       child: Column(
         children: [
           _UserAvatar(user: user, fullName: fullName),
@@ -187,7 +214,7 @@ class _UserAvatar extends StatelessWidget {
           : Text(
               initial,
               style: const TextStyle(
-                color: Color(0xFF159447),
+                color: Color(0xFF16A34A),
                 fontSize: 30,
                 fontWeight: FontWeight.w900,
               ),
@@ -215,27 +242,35 @@ class _MenuRow extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF1F5F9)),
+          color: AppColors.surfaceFor(context),
+          borderRadius: BorderRadius.circular(AppColors.radiusMd),
+          border: Border.all(color: AppColors.borderFor(context)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: const Color(0xFF159447), size: 20),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: AppColors.brandTint,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: AppColors.primary, size: 19),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textPrimaryFor(context),
                 ),
               ),
             ),
             const Icon(
               Icons.chevron_right,
-              color: Color(0xFF94A3B8),
+              color: AppColors.textTertiary,
               size: 20,
             ),
           ],

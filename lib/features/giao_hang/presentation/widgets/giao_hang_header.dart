@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
+
 /// Widget Header cho màn hình xuất kho (Outbound Header).
 /// Hiển thị nút Quay lại, tiêu đề trang và nhãn trạng thái tùy biến màu sắc (ví dụ: "Xuất kho", "Sai sản phẩm", "Thiếu hàng").
 class GiaoHangHeader extends StatelessWidget {
@@ -19,7 +21,7 @@ class GiaoHangHeader extends StatelessWidget {
   /// Màu chữ của chip trạng thái (nếu null, sử dụng màu xanh dương mặc định).
   final Color? statusTextColor;
 
-  static const _accent = Color(0xFF3478F6);
+  static const _accent = AppColors.info;
 
   @override
   Widget build(BuildContext context) {
