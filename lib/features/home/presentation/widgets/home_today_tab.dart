@@ -181,6 +181,12 @@ class HomeTodayTab extends StatelessWidget {
         'color': const Color(0xFF0F766E),
         'route': AppRoutes.scale,
       },
+      {
+        'label': 'Công nợ',
+        'icon': Icons.account_balance_wallet_outlined,
+        'color': AppColors.warning,
+        'route': AppRoutes.debts,
+      },
     ];
 
     return GridView.builder(

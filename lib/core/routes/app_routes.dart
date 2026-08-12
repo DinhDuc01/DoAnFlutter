@@ -19,6 +19,7 @@ import '../../features/scan/presentation/screens/scan_qr_screen.dart';
 import '../../features/milling/presentation/screens/milling_preparation_screen.dart';
 import '../../features/scale/presentation/screens/inventory_weighing_screen.dart';
 import '../../features/paddy_lots/presentation/screens/paddy_lot_list_screen.dart';
+import '../../features/debts/presentation/screens/debt_screen.dart';
 
 /// Lớp định nghĩa tất cả các tuyến đường (routes) và điều hướng trong ứng dụng.
 class AppRoutes {
@@ -48,6 +49,7 @@ class AppRoutes {
   static const milling = '/xay-xat'; // Luồng hoàn tất xay và cân đóng bao
   static const scale = '/scale'; // Cân sản phẩm trong kho
   static const paddyLots = '/paddy-lots';
+  static const debts = '/debts';
 
   /// Map liên kết các tên định danh của route với Widget Builder tương ứng.
   /// Được sử dụng trong MaterialApp ở file app.dart để cấu hình điều hướng.
@@ -81,6 +83,7 @@ class AppRoutes {
       milling: (_) => const MillingPreparationScreen(),
       scale: (_) => const InventoryWeighingScreen(),
       paddyLots: (_) => const PaddyLotListScreen(),
+      debts: (_) => const DebtScreen(),
     };
   }
 }
