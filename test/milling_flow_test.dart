@@ -22,10 +22,14 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 500));
 
-    expect(find.text('Hoàn tất xay & đóng bao'), findsOneWidget);
+    expect(find.text('Lệnh xay xát'), findsOneWidget);
     expect(find.textContaining('MO-2026-021'), findsOneWidget);
 
-    await tester.tap(find.text('Bắt đầu cân gạo'));
+    await tester.tap(find.textContaining('MO-2026-021').first);
+    await tester.pumpAndSettle();
+    expect(find.text('Chi tiết lệnh xay'), findsOneWidget);
+
+    await tester.tap(find.text('Tiếp tục cân/kết quả'));
     await tester.pumpAndSettle();
     expect(find.text('Cân gạo sau xay'), findsOneWidget);
     expect(find.text('10 bao'), findsOneWidget);
@@ -36,7 +40,11 @@ void main() {
     expect(find.text('Cân cám sau xay'), findsOneWidget);
     expect(find.text('5 bao'), findsOneWidget);
 
-    await tester.tap(find.text('Xác nhận kết quả xay'));
+    await tester.tap(find.text('Tiếp tục cân tấm'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cân tấm sau xay'), findsOneWidget);
+
+    await tester.tap(find.text('Bỏ qua tấm'));
     await tester.pump(const Duration(milliseconds: 550));
     await tester.pumpAndSettle();
     expect(find.text('Xác nhận kết quả xay'), findsOneWidget);
@@ -69,6 +77,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     await tester.pump();
 
-    expect(find.text('Hoàn tất xay & đóng bao'), findsOneWidget);
+    expect(find.text('Lệnh xay xát'), findsOneWidget);
   });
 }

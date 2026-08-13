@@ -283,7 +283,7 @@ class _DetailContent extends StatelessWidget {
               ),
             ),
             child: Text(
-              schedule.isCancelled ? 'Lịch đã hủy' : 'Bắt đầu cân tại nhà',
+              schedule.isCancelled ? 'Lịch đã hủy' : 'Tạo phiếu mua từ lịch',
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w900,

@@ -19,49 +19,20 @@ class SkeletonPulse extends StatefulWidget {
   State<SkeletonPulse> createState() => _SkeletonPulseState();
 }
 
-class _SkeletonPulseState extends State<SkeletonPulse>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    _animation = Tween<double>(begin: 0.35, end: 0.8).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _controller.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
+class _SkeletonPulseState extends State<SkeletonPulse> {
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _animation.value,
-          child: Container(
-            width: widget.width,
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: AppColors.isDark(context)
-                  ? AppColors.darkSurfaceAlt
-                  : const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-            ),
-          ),
-        );
-      },
+    return ExcludeSemantics(
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: AppColors.isDark(context)
+              ? AppColors.darkSurfaceAlt
+              : const Color(0xFFE5E7EB),
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+        ),
+      ),
     );
   }
 }

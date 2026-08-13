@@ -21,6 +21,7 @@ class ThuMuaReceipt {
     this.actualWeightKg = 0,
     this.moisturePercent,
     this.paidAmount = 0,
+    this.bags = const [],
   });
 
   final int? id;
@@ -65,8 +66,21 @@ class ThuMuaReceipt {
   final double actualWeightKg;
   final double? moisturePercent;
   final double paidAmount;
+  final List<ThuMuaBag> bags;
+
+  double get totalBagWeightKg =>
+      bags.fold<double>(0, (sum, bag) => sum + bag.weightKg);
 
   ThuMuaReceipt copyWith({
+    int? productVariantId,
+    String? productName,
+    String? sku,
+    int? currentStock,
+    String? receiptCode,
+    double? weightKg,
+    int? quantity,
+    String? noteHint,
+    String? status,
     ThuMuaSupplier? supplier,
     DateTime? expectedDate,
     int? scheduleId,
@@ -77,20 +91,21 @@ class ThuMuaReceipt {
     double? unitCostPrice,
     int? warehouseId,
     String? warehouseName,
+    List<ThuMuaBag>? bags,
   }) {
     return ThuMuaReceipt(
       id: id,
-      productVariantId: productVariantId,
+      productVariantId: productVariantId ?? this.productVariantId,
       warehouseId: warehouseId ?? this.warehouseId,
       warehouseName: warehouseName ?? this.warehouseName,
-      status: status,
-      productName: productName,
-      sku: sku,
-      currentStock: currentStock,
-      receiptCode: receiptCode,
-      weightKg: weightKg,
-      quantity: quantity,
-      noteHint: noteHint,
+      status: status ?? this.status,
+      productName: productName ?? this.productName,
+      sku: sku ?? this.sku,
+      currentStock: currentStock ?? this.currentStock,
+      receiptCode: receiptCode ?? this.receiptCode,
+      weightKg: weightKg ?? this.weightKg,
+      quantity: quantity ?? this.quantity,
+      noteHint: noteHint ?? this.noteHint,
       unitCostPrice: unitCostPrice ?? this.unitCostPrice,
       supplier: supplier ?? this.supplier,
       expectedDate: expectedDate ?? this.expectedDate,
@@ -99,8 +114,23 @@ class ThuMuaReceipt {
       actualWeightKg: actualWeightKg ?? this.actualWeightKg,
       moisturePercent: moisturePercent ?? this.moisturePercent,
       paidAmount: paidAmount ?? this.paidAmount,
+      bags: bags ?? this.bags,
     );
   }
+}
+
+class ThuMuaBag {
+  const ThuMuaBag({
+    this.id,
+    required this.sequenceNumber,
+    required this.weightKg,
+    this.code,
+  });
+
+  final int? id;
+  final int sequenceNumber;
+  final double weightKg;
+  final String? code;
 }
 
 class ThuMuaSupplier {
@@ -113,6 +143,23 @@ class ThuMuaSupplier {
   final int id;
   final String code;
   final String name;
+}
+
+class ThuMuaWarehouse {
+  const ThuMuaWarehouse({
+    required this.id,
+    required this.name,
+    this.code = '',
+  });
+
+  final int id;
+  final String name;
+  final String code;
+
+  String get label {
+    if (code.trim().isEmpty) return name;
+    return '$code - $name';
+  }
 }
 
 class ThuMuaOrderSubmission {
@@ -164,6 +211,10 @@ class ThuMuaReceiptSummary {
     required this.isConfirmed,
     required this.isFullyStored,
     required this.createdAt,
+    this.unitPrice = 0,
+    this.totalAmount = 0,
+    this.paidAmount = 0,
+    this.debtAmount = 0,
     this.scheduleId,
   });
 
@@ -179,6 +230,10 @@ class ThuMuaReceiptSummary {
   final bool isConfirmed;
   final bool isFullyStored;
   final DateTime createdAt;
+  final double unitPrice;
+  final double totalAmount;
+  final double paidAmount;
+  final double debtAmount;
   final int? scheduleId;
 }
 

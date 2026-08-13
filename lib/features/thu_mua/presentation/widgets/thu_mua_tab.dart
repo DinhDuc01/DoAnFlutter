@@ -34,6 +34,9 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   bool _isLoadingReceipts = false;
   StreamSubscription<Set<String>>? _entitySubscription;
   Timer? _entityRefreshTimer;
+  Timer? _searchDebounce;
+  final TextEditingController _receiptSearchController =
+      TextEditingController();
   _ThuMuaSection _section = _ThuMuaSection.schedules;
 
   static const _refreshEntities = {
@@ -65,6 +68,8 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _entityRefreshTimer?.cancel();
+    _searchDebounce?.cancel();
+    _receiptSearchController.dispose();
     _entitySubscription?.cancel();
     super.dispose();
   }
@@ -81,7 +86,6 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
     setState(() {
       _schedulesFuture = _loadSchedules();
     });
-    if (_section == _ThuMuaSection.drafts) _refreshDrafts();
     if (_section == _ThuMuaSection.receipts) _refreshReceipts();
   }
 
@@ -111,11 +115,11 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
     });
     try {
       final rows = await _receiptRepository
-          .getReceiptSummaries()
+          .getReceiptSummaries(search: _receiptSearchController.text)
           .timeout(const Duration(seconds: 12));
       if (!mounted) return;
       setState(() {
-        _receipts = rows.where((item) => !item.isDraft).toList();
+        _receipts = rows;
         _isLoadingReceipts = false;
       });
     } catch (error) {
@@ -212,7 +216,183 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
     }
   }
 
-  Widget _buildReceiptHistory() {
+  Widget _buildPurchaseReceipts() {
+    final search = Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: TextField(
+        controller: _receiptSearchController,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          labelText: 'Tìm phiếu mua',
+          hintText: 'Mã phiếu, nông dân hoặc loại lúa',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _receiptSearchController.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Xóa tìm kiếm',
+                  onPressed: () {
+                    _receiptSearchController.clear();
+                    setState(() {});
+                    _refreshReceipts();
+                  },
+                  icon: const Icon(Icons.clear),
+                ),
+          border: const OutlineInputBorder(),
+        ),
+        onChanged: (_) {
+          setState(() {});
+          _searchDebounce?.cancel();
+          _searchDebounce = Timer(const Duration(milliseconds: 450), () {
+            if (mounted) _refreshReceipts();
+          });
+        },
+      ),
+    );
+    if (_isLoadingReceipts) {
+      return Column(children: [
+        search,
+        const Expanded(child: _LoadingState(label: 'Đang tải phiếu mua...')),
+      ]);
+    }
+    if (_receiptError != null) {
+      return Column(children: [
+        search,
+        Expanded(
+          child: HErrorState(
+            message: 'Không tải được phiếu mua: $_receiptError',
+            onRetry: _refreshReceipts,
+          ),
+        ),
+      ]);
+    }
+    if (_receipts.isEmpty) {
+      return Column(children: [
+        search,
+        Expanded(
+          child: HEmptyState(
+            title: _receiptSearchController.text.trim().isEmpty
+                ? 'Chưa có phiếu mua'
+                : 'Không tìm thấy phiếu mua',
+            description: 'Phiếu nháp và phiếu đã tạo được hiển thị tại đây.',
+            icon: Icons.inventory_2_outlined,
+          ),
+        ),
+      ]);
+    }
+    return Column(children: [
+      search,
+      Expanded(
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          itemCount: _receipts.length,
+          itemBuilder: (context, index) {
+            final receipt = _receipts[index];
+            final cancelled = receipt.status.toLowerCase().contains('hủy');
+            final tone = cancelled
+                ? AppTone.danger
+                : receipt.isFullyStored
+                    ? AppTone.success
+                    : AppTone.warning;
+            return AppCard(
+              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text(
+                        receipt.code,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimaryFor(context),
+                        ),
+                      ),
+                    ),
+                    AppStatusChip(
+                      label: receipt.status,
+                      tone: tone,
+                      dense: true,
+                    ),
+                  ]),
+                  const SizedBox(height: 6),
+                  Text(
+                    '${receipt.farmerName} • ${receipt.riceVarietyName}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textSecondaryFor(context),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 14,
+                    runSpacing: 4,
+                    children: [
+                      'Khối lượng: ${receipt.actualWeightKg.toStringAsFixed(1)} kg',
+                      'Đơn giá: ${receipt.unitPrice.toStringAsFixed(0)} đ/kg',
+                      'Tổng: ${receipt.totalAmount.toStringAsFixed(0)} đ',
+                      'Đã trả: ${receipt.paidAmount.toStringAsFixed(0)} đ',
+                      'Còn nợ: ${receipt.debtAmount.toStringAsFixed(0)} đ',
+                      'Ngày: ${_formatReceiptDate(receipt.createdAt)}',
+                    ]
+                        .map((value) => Text(
+                              value,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                  if (receipt.isDraft && receipt.id > 0) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton(
+                        onPressed: () => _editReceipt(receipt),
+                        child: const Text('Tiếp tục chỉnh sửa'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    ]);
+  }
+
+  Future<void> _editReceipt(ThuMuaReceiptSummary receipt) async {
+    if (receipt.id <= 0) return;
+    try {
+      final detail = await _receiptRepository.getDraftReceiptDetail(receipt.id);
+      if (!mounted) return;
+      await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => ThuMuaScreen(
+          repository: _receiptRepository,
+          draft: detail,
+        ),
+      ));
+      if (mounted) _refreshReceipts();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không mở được phiếu mua: $error')),
+      );
+    }
+  }
+
+  String _formatReceiptDate(DateTime value) {
+    if (value.millisecondsSinceEpoch == 0) return '—';
+    return '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+  }
+
+  Widget buildReceiptHistory() {
     if (_isLoadingReceipts) {
       return const _LoadingState(label: 'Đang tải phiếu nhập...');
     }
@@ -317,7 +497,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     debugPrint(
-      '[ThuMua] build section=$_section loading=$_isLoadingDrafts rows=${_drafts.length}',
+      '[ThuMua] build section=$_section loading=$_isLoadingReceipts rows=${_receipts.length}',
     );
     return ColoredBox(
       color: AppColors.backgroundFor(context),
@@ -362,12 +542,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                 ButtonSegment(
                   value: _ThuMuaSection.receipts,
                   icon: Icon(Icons.inventory_2_outlined),
-                  label: Text('Phiếu nhập'),
-                ),
-                ButtonSegment(
-                  value: _ThuMuaSection.drafts,
-                  icon: Icon(Icons.drafts_outlined),
-                  label: Text('Phiếu nháp'),
+                  label: Text('Phiếu mua lúa'),
                 ),
               ],
               selected: {_section},
@@ -375,7 +550,6 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                 setState(() {
                   _section = values.first;
                 });
-                if (_section == _ThuMuaSection.drafts) _refreshDrafts();
                 if (_section == _ThuMuaSection.receipts) _refreshReceipts();
               },
             ),
@@ -404,8 +578,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                                     AppCard(
                                       onTap: () => _showDraftDetails(draft),
                                       padding: const EdgeInsets.all(14),
-                                      margin:
-                                          const EdgeInsets.only(bottom: 10),
+                                      margin: const EdgeInsets.only(bottom: 10),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
@@ -435,9 +608,8 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                                             '${draft.farmerName} • ${draft.riceVarietyName}',
                                             style: TextStyle(
                                               fontSize: 12.5,
-                                              color:
-                                                  AppColors.textSecondaryFor(
-                                                      context),
+                                              color: AppColors.textSecondaryFor(
+                                                  context),
                                             ),
                                           ),
                                           const SizedBox(height: 3),
@@ -467,8 +639,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                                               onPressed: () =>
                                                   _editDraft(draft),
                                               style: FilledButton.styleFrom(
-                                                minimumSize:
-                                                    const Size(0, 40),
+                                                minimumSize: const Size(0, 40),
                                                 padding:
                                                     const EdgeInsets.symmetric(
                                                         horizontal: 18),
@@ -484,7 +655,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                                 ],
                               )
                 : _section == _ThuMuaSection.receipts
-                    ? _buildReceiptHistory()
+                    ? _buildPurchaseReceipts()
                     : FutureBuilder<List<PurchaseSchedule>>(
                         future: _schedulesFuture,
                         builder: (context, snapshot) {
@@ -575,8 +746,9 @@ class _ScheduleCard extends StatelessWidget {
           Row(
             children: [
               CircleAvatar(
-                backgroundColor:
-                    cancelled ? AppColors.dangerTint : AppColors.brandTintStrong,
+                backgroundColor: cancelled
+                    ? AppColors.dangerTint
+                    : AppColors.brandTintStrong,
                 child: Icon(
                   cancelled ? Icons.event_busy : Icons.agriculture,
                   color: cancelled ? AppColors.danger : AppColors.primary,
@@ -655,7 +827,7 @@ class _ScheduleCard extends StatelessWidget {
                   arguments: schedule,
                 ),
                 icon: const Icon(Icons.add_circle_outline, size: 18),
-                label: const Text('Nhập kho theo lịch này'),
+                label: const Text('Tạo phiếu mua từ lịch'),
                 style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
               ),
             ),

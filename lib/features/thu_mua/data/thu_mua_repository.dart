@@ -11,6 +11,8 @@ abstract class ThuMuaRepository {
 
   Future<List<ThuMuaSupplier>> getSuppliers() async => const [];
 
+  Future<List<ThuMuaWarehouse>> getWarehouses() async => const [];
+
   /// Builds the draft for the product explicitly selected by the operator.
   Future<ThuMuaReceipt> getDraftReceiptForProduct(
     ProductVariantStock product,
