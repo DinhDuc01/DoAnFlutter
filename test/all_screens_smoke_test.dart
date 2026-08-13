@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stocklite/features/giao_hang/presentation/screens/giao_hang_success_screen.dart';
 import 'package:stocklite/features/reports/presentation/screens/reports_screen.dart';
 import 'package:stocklite/features/scan/presentation/screens/scan_qr_screen.dart';
 import 'package:stocklite/features/thu_mua/presentation/screens/thu_mua_success_screen.dart';
@@ -19,14 +18,6 @@ void main() {
 
     expect(find.text('Đã tạo phiếu!'), findsOneWidget);
     expect(find.text('1 bao'), findsOneWidget);
-  });
-
-  testWidgets('outbound success screen renders fallback result',
-      (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: GiaoHangSuccessScreen()));
-
-    expect(find.text('Đã tạo đơn bán'), findsOneWidget);
-    expect(find.text('1 bao • Sản phẩm'), findsOneWidget);
   });
 
   testWidgets('QR scanner screen renders its camera shell', (tester) async {

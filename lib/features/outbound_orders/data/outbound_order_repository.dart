@@ -30,6 +30,7 @@ abstract class OutboundOrderRepository {
     required String qrCode,
     double? actualWeightKg,
     String? scaleDevice,
+    List<PackingItemWeightPayload> items = const [],
   });
 
   Future<void> confirmDispatch(int id, {DateTime? dueDate, String? note});
@@ -100,6 +101,28 @@ class PickAllocationPayload {
   Map<String, dynamic> toJson() => {
         'allocationId': allocationId,
         'quantityPicked': quantityPicked,
+      };
+}
+
+/// Khối lượng đóng gói thực tế của một dòng phiếu xuất, kèm nguồn số liệu.
+///
+/// `source` để backend biết số này đến từ cân điện tử hay thủ kho gõ tay —
+/// cần cho việc đối chiếu khi khách khiếu nại khối lượng.
+class PackingItemWeightPayload {
+  const PackingItemWeightPayload({
+    required this.outboundOrderItemId,
+    required this.actualWeightKg,
+    required this.fromScale,
+  });
+
+  final int outboundOrderItemId;
+  final double actualWeightKg;
+  final bool fromScale;
+
+  Map<String, dynamic> toJson() => {
+        'outboundOrderItemId': outboundOrderItemId,
+        'actualWeightKg': actualWeightKg,
+        'source': fromScale ? 'SCALE' : 'MANUAL',
       };
 }
 
@@ -216,20 +239,22 @@ class ApiOutboundOrderRepository implements OutboundOrderRepository {
     required String qrCode,
     double? actualWeightKg,
     String? scaleDevice,
+    List<PackingItemWeightPayload> items = const [],
   }) async {
     final code = qrCode.trim();
     if (code.isEmpty) {
       throw const OutboundOrderException('Mã QR đóng gói không được để trống.');
     }
+    final device = scaleDevice?.trim();
     await _guard(() => _api.post(
           '/api/v1/outbound-orders/$id/confirm-packing',
           token: _token,
           body: {
             'qrCode': code,
             'actualWeightKg': actualWeightKg,
-            'scaleDevice': scaleDevice?.trim().isEmpty == true
-                ? null
-                : scaleDevice?.trim(),
+            'scaleDevice': device == null || device.isEmpty ? null : device,
+            if (items.isNotEmpty)
+              'items': [for (final item in items) item.toJson()],
           },
         ));
   }

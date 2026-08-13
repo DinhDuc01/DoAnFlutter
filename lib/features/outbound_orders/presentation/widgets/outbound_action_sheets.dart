@@ -4,7 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../scale/models/weight_reading.dart';
-import '../../../scale/presentation/screens/scale_screen.dart';
+import '../../../scale/presentation/widgets/scale_bar.dart';
 import '../../data/outbound_order_repository.dart';
 import '../../models/outbound_order.dart';
 
@@ -395,18 +395,52 @@ class _PickRow {
 // 3. ĐÓNG GÓI (confirm-packing) — PICKING → PACKED
 // ══════════════════════════════════════════════════════════════════════
 
+/// Khối lượng đóng gói thực tế của một dòng phiếu xuất, kèm nguồn số liệu.
+class PackingItemWeight {
+  const PackingItemWeight({
+    required this.outboundOrderItemId,
+    required this.actualWeightKg,
+    required this.fromScale,
+  });
+
+  final int outboundOrderItemId;
+  final double actualWeightKg;
+
+  /// true = số đến từ cân điện tử, false = thủ kho gõ tay.
+  final bool fromScale;
+
+  String get source => fromScale ? 'SCALE' : 'MANUAL';
+}
+
 class PackingResult {
   const PackingResult({
     required this.qrCode,
     this.actualWeightKg,
     this.scaleDevice,
+    this.items = const [],
   });
 
   final String qrCode;
+
+  /// Tổng khối lượng thực tế (= tổng các dòng). Giữ lại để tương thích ngược.
   final double? actualWeightKg;
+
+  /// Tên cân đã dùng — CHỈ khác null khi thực sự có ít nhất một số từ cân.
   final String? scaleDevice;
+
+  /// Khối lượng theo từng dòng phiếu xuất.
+  final List<PackingItemWeight> items;
 }
 
+/// Popup xác nhận đóng gói.
+///
+/// Thiết kế cân: cân là nguồn nhập chạy nền, KHÔNG phải một màn hình riêng.
+/// [ScaleBar] nằm dính phía trên danh sách; số ổn định chảy thẳng vào dòng lô
+/// đang được chọn. Mỗi lần nhận số = thêm MỘT BAO vào dòng đó, nên cân nhiều
+/// bao chỉ việc đặt lên — nhấc ra — đặt bao kế tiếp, không chạm màn hình.
+///
+/// Nhập tay luôn dùng được: gõ vào ô kg của dòng nào thì dòng đó tự chuyển
+/// nguồn sang "nhập tay" và bỏ danh sách bao đã cân của riêng nó.
 class PackingSheet extends StatefulWidget {
   const PackingSheet({required this.order, super.key});
 
@@ -417,13 +451,13 @@ class PackingSheet extends StatefulWidget {
 }
 
 class _PackingSheetState extends State<PackingSheet> {
+  final _scaleBarKey = GlobalKey<ScaleBarState>();
   late final TextEditingController _qrController;
-  late final TextEditingController _weightController;
-  final _scaleController = TextEditingController();
-  String? _error;
+  late final List<_PackRow> _rows;
 
-  /// Số cân đọc được từ cân điện tử (null = đang nhập tay).
-  WeightReading? _reading;
+  int _targetIndex = 0;
+  String? _scaleDevice;
+  String? _error;
 
   @override
   void initState() {
@@ -432,89 +466,182 @@ class _PackingSheetState extends State<PackingSheet> {
         DateTime.now().millisecondsSinceEpoch.toString().substring(7);
     _qrController =
         TextEditingController(text: 'PACK-${widget.order.id}-$suffix');
-    final weight = widget.order.pickedKg > 0
-        ? widget.order.pickedKg
-        : widget.order.plannedKg;
-    _weightController =
-        TextEditingController(text: formatQuantityInput(weight));
+
+    _rows = [
+      for (final item in widget.order.items)
+        for (final group in item.groups)
+          _PackRow(
+            item: item,
+            group: group,
+            // Gợi ý sẵn số đã lấy để thủ kho chỉ phải sửa khi lệch.
+            controller: TextEditingController(
+              text: formatQuantityInput(
+                group.totalPickedKg > 0
+                    ? group.totalPickedKg
+                    : group.totalAllocatedKg,
+              ),
+            ),
+          ),
+    ];
+    for (final row in _rows) {
+      row.controller.addListener(() => _onManualEdit(row));
+    }
   }
 
   @override
   void dispose() {
     _qrController.dispose();
-    _weightController.dispose();
-    _scaleController.dispose();
+    for (final row in _rows) {
+      row.controller.dispose();
+    }
     super.dispose();
   }
 
-  /// Mở màn cân BLE và điền số cân ổn định vào ô khối lượng.
-  Future<void> _readFromScale() async {
-    final reading = await Navigator.of(context).push<WeightReading>(
-      MaterialPageRoute<WeightReading>(builder: (_) => const ScaleScreen()),
-    );
-    if (reading == null || !mounted) return;
+  _PackRow? get _target => _targetIndex >= 0 && _targetIndex < _rows.length
+      ? _rows[_targetIndex]
+      : null;
 
+  double get _total => _rows.fold(
+        0.0,
+        (sum, row) => sum + (parseDecimal(row.controller.text) ?? 0),
+      );
+
+  bool get _anyFromScale => _rows.any((row) => row.fromScale);
+
+  // ── Nhập tay ───────────────────────────────────────────────────────
+  /// Người dùng sửa tay ô kg → dòng đó không còn là số từ cân nữa.
+  void _onManualEdit(_PackRow row) {
+    if (row.suppressListener) return;
+    // TextEditingController báo cả khi con trỏ di chuyển. Chỉ coi là "sửa tay"
+    // khi NỘI DUNG đổi — nếu không, chạm vào ô sẽ xoá oan các bao đã cân.
+    if (row.controller.text == row.lastText) return;
+    row.lastText = row.controller.text;
+
+    // Luôn setState: tổng ở cuối form phải chạy theo từng phím gõ.
     setState(() {
-      _reading = reading;
+      row.fromScale = false;
+      row.bags.clear();
       _error = null;
-      _weightController.text = formatQuantityInput(reading.weight);
-      final device = reading.deviceName?.trim();
-      _scaleController.text =
-          device == null || device.isEmpty ? 'Cân BLE StockLite' : device;
+      if (!_anyFromScale) _scaleDevice = null;
     });
   }
 
-  void _clearReading() {
-    setState(() => _reading = null);
+  // ── Nhận số từ cân ─────────────────────────────────────────────────
+  void _onScaleCapture(WeightReading reading, bool automatic) {
+    final row = _target;
+    if (row == null) return;
+
+    setState(() {
+      row.bags.add(reading.weight);
+      row.fromScale = true;
+      row.writeSum();
+      _scaleDevice = reading.deviceName?.trim().isNotEmpty == true
+          ? reading.deviceName!.trim()
+          : 'Cân BLE StockLite';
+      _error = null;
+    });
+
+    if (!automatic) return;
+    // Auto-capture thì phải có đường lùi: một chạm là bỏ bao vừa nhận.
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          content: Text(
+            'Đã nhận ${formatNumber(reading.weight, digits: 3)} kg '
+            '→ lô ${row.group.lotLabel} (bao ${row.bags.length})',
+          ),
+          action: SnackBarAction(
+            label: 'Hoàn tác',
+            onPressed: () => _removeBag(row, row.bags.length - 1),
+          ),
+        ),
+      );
   }
 
+  void _removeBag(_PackRow row, int index) {
+    if (index < 0 || index >= row.bags.length) return;
+    setState(() {
+      row.bags.removeAt(index);
+      if (row.bags.isEmpty) row.fromScale = false;
+      row.writeSum();
+      if (!_anyFromScale) _scaleDevice = null;
+    });
+    // Bao vừa nhận vẫn đang nằm trên cân — đừng nhận lại nó ngay lập tức.
+    _scaleBarKey.currentState?.suppressCurrentReading();
+  }
+
+  void _clearRow(_PackRow row) {
+    setState(() {
+      row.bags.clear();
+      row.fromScale = false;
+      row.write('');
+      if (!_anyFromScale) _scaleDevice = null;
+    });
+    _scaleBarKey.currentState?.suppressCurrentReading();
+  }
+
+  // ── Gửi ────────────────────────────────────────────────────────────
   void _submit() {
     final qr = _qrController.text.trim();
     if (qr.isEmpty) {
       setState(() => _error = 'Mã QR đóng gói không được để trống.');
       return;
     }
-    final weightText = _weightController.text.trim();
-    final weight = weightText.isEmpty ? null : parseDecimal(weightText);
-    if (weightText.isNotEmpty && (weight == null || weight < 0)) {
-      setState(() => _error = 'Khối lượng thực tế không hợp lệ.');
-      return;
+
+    // Gộp các dòng lô về từng OutboundOrderItem — backend lưu theo item.
+    final byItem = <int, double>{};
+    final scaleByItem = <int, bool>{};
+    for (final row in _rows) {
+      final raw = row.controller.text.trim();
+      if (raw.isEmpty) continue;
+      final value = parseDecimal(raw);
+      if (value == null || value < 0) {
+        setState(() =>
+            _error = 'Khối lượng của lô ${row.group.lotLabel} không hợp lệ.');
+        return;
+      }
+      byItem[row.item.id] = (byItem[row.item.id] ?? 0) + value;
+      scaleByItem[row.item.id] =
+          (scaleByItem[row.item.id] ?? false) || row.fromScale;
     }
+
+    final items = [
+      for (final entry in byItem.entries)
+        PackingItemWeight(
+          outboundOrderItemId: entry.key,
+          actualWeightKg: entry.value,
+          fromScale: scaleByItem[entry.key] ?? false,
+        ),
+    ];
+    final total = _total;
+
     Navigator.of(context).pop(PackingResult(
       qrCode: qr,
-      actualWeightKg: weight,
-      scaleDevice: _scaleController.text.trim().isEmpty
-          ? null
-          : _scaleController.text.trim(),
+      actualWeightKg: total > 0 ? total : null,
+      // Chỉ khai báo thiết bị cân khi thật sự có số đến từ cân.
+      scaleDevice: _anyFromScale ? _scaleDevice : null,
+      items: items,
     ));
   }
 
   @override
   Widget build(BuildContext context) {
-    final diff = widget.order.weightDiffKg;
+    final secondary = AppColors.textSecondaryFor(context);
+    final total = _total;
+    final planned = widget.order.plannedKg;
+    final diff = total - planned;
+
     return _SheetShell(
       title: 'Xác nhận đóng gói',
       subtitle:
-          'Sau khi đóng gói xong, phiếu chuyển sang "Chờ xuất kho". Backend kiểm tra tất cả dòng đã lấy đủ.',
+          'Cân từng lô rồi xác nhận. Phiếu chuyển sang "Chờ xuất kho"; backend kiểm tra tất cả dòng đã lấy đủ.',
       error: _error,
       confirmLabel: 'Đóng gói xong',
       confirmIcon: Icons.inventory_rounded,
       onConfirm: _submit,
       children: [
-        AppCard(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Column(
-            children: [
-              _KeyValue('Kế hoạch', formatKg(widget.order.plannedKg)),
-              _KeyValue('Thực lấy', formatKg(widget.order.pickedKg)),
-              _KeyValue(
-                'Chênh lệch',
-                '${diff >= 0 ? '+' : ''}${formatKg(diff)}',
-                strong: true,
-              ),
-            ],
-          ),
-        ),
         TextField(
           controller: _qrController,
           decoration: const InputDecoration(labelText: 'Mã QR đóng gói *'),
@@ -522,81 +649,250 @@ class _PackingSheetState extends State<PackingSheet> {
             if (_error != null) setState(() => _error = null);
           },
         ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _weightController,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Khối lượng thực tế (kg)',
-            helperText: 'Lấy từ cân điện tử hoặc nhập tay',
-          ),
-          // Sửa tay sau khi đã đọc cân → không còn là số cân từ thiết bị nữa.
-          onChanged: (_) {
-            if (_reading != null) _clearReading();
-            if (_error != null) setState(() => _error = null);
-          },
+        const SizedBox(height: 14),
+
+        // Thanh cân dính — nguồn nhập chạy nền cho mọi dòng bên dưới.
+        ScaleBar(
+          key: _scaleBarKey,
+          enabled: _rows.isNotEmpty,
+          targetLabel: _target == null ? null : 'lô ${_target!.group.lotLabel}',
+          onCapture: _onScaleCapture,
         ),
-        const SizedBox(height: 10),
-        _scaleBlock(),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _scaleController,
-          decoration: const InputDecoration(
-            labelText: 'Thiết bị cân · tùy chọn',
-          ),
-        ),
+        const SizedBox(height: 14),
+
+        if (_rows.isEmpty)
+          Text(
+            'Phiếu chưa có phân bổ lô nên không cân được. Hãy phân bổ và lấy hàng trước.',
+            style: TextStyle(color: secondary),
+          )
+        else
+          for (var index = 0; index < _rows.length; index++)
+            _rowCard(index, secondary),
+
+        const SizedBox(height: 4),
+        _totalCard(total, planned, diff, secondary),
       ],
     );
   }
 
-  /// Nút đọc cân điện tử + thẻ tóm tắt số cân vừa nhận được.
-  Widget _scaleBlock() {
-    final reading = _reading;
-    if (reading == null) {
-      return OutlinedButton.icon(
-        onPressed: _readFromScale,
-        icon: const Icon(Icons.bluetooth_searching_rounded),
-        label: const Text('Lấy số cân từ cân điện tử'),
-      );
-    }
+  Widget _rowCard(int index, Color secondary) {
+    final row = _rows[index];
+    final selected = index == _targetIndex;
 
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: selected ? AppColors.brandTintFor(context) : null,
+      onTap: selected ? null : () => setState(() => _targetIndex = index),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.scale_rounded, size: 20, color: AppColors.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
+            children: [
+              Icon(
+                selected
+                    ? Icons.radio_button_checked_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 18,
+                color: selected ? AppColors.primary : secondary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      row.item.productVariantName,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      'Lô ${row.group.lotLabel} • ${row.group.locationLabel}'
+                      ' • ${row.group.bagCount} bao',
+                      style: TextStyle(fontSize: 11.5, color: secondary),
+                    ),
+                  ],
+                ),
+              ),
+              _SourceChip(fromScale: row.fromScale),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: row.controller,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Khối lượng đóng gói (kg)',
+                    isDense: true,
+                    helperText: row.bags.isEmpty
+                        ? 'Đã lấy ${formatKg(row.group.totalPickedKg)}'
+                        : '${row.bags.length}/${row.group.bagCount} bao đã cân',
+                    helperStyle: TextStyle(fontSize: 11, color: secondary),
+                  ),
+                  onTap: () => setState(() => _targetIndex = index),
+                ),
+              ),
+              if (row.bags.isNotEmpty || row.controller.text.trim().isNotEmpty)
+                IconButton(
+                  tooltip: 'Xoá số của dòng này',
+                  onPressed: () => _clearRow(row),
+                  icon: const Icon(Icons.backspace_outlined, size: 18),
+                ),
+            ],
+          ),
+          if (row.bags.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
               children: [
-                Text(
-                  '${formatNumber(reading.weight, digits: 3)} ${reading.unit}',
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
+                for (var i = 0; i < row.bags.length; i++)
+                  InputChip(
+                    label: Text(
+                      'Bao ${i + 1}: ${formatNumber(row.bags[i], digits: 3)}',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    onDeleted: () => _removeBag(row, i),
                   ),
-                ),
-                Text(
-                  '${reading.deviceName?.trim().isNotEmpty == true ? reading.deviceName!.trim() : 'Cân BLE StockLite'}'
-                  ' • lúc ${formatDate(reading.receivedAt, withTime: true)}',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: AppColors.textSecondaryFor(context),
-                  ),
-                ),
               ],
             ),
-          ),
-          TextButton(
-            onPressed: _readFromScale,
-            child: const Text('Cân lại'),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _totalCard(
+    double total,
+    double planned,
+    double diff,
+    Color secondary,
+  ) {
+    final offPlan = diff.abs() > 0.001;
+    return AppCard(
+      color: AppColors.subtleSurfaceFor(context),
+      child: Column(
+        children: [
+          _KeyValue('Kế hoạch', formatKg(planned)),
+          _KeyValue('Thực lấy', formatKg(widget.order.pickedKg)),
+          _KeyValue('Tổng đóng gói', formatKg(total), strong: true),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(
+                offPlan
+                    ? Icons.error_outline_rounded
+                    : Icons.check_circle_outline_rounded,
+                size: 16,
+                color: offPlan ? AppColors.warning : AppColors.primary,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  offPlan
+                      ? 'Lệch ${diff >= 0 ? '+' : ''}${formatKg(diff)} so với kế hoạch'
+                      : 'Khớp kế hoạch',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: offPlan ? AppColors.warning : AppColors.primary,
+                  ),
+                ),
+              ),
+              if (_scaleDevice != null)
+                Text(
+                  _scaleDevice!,
+                  style: TextStyle(fontSize: 11, color: secondary),
+                ),
+            ],
           ),
         ],
       ),
     );
   }
 }
+
+/// Một dòng cân = một nhóm lô/vị trí của phiếu xuất.
+class _PackRow {
+  _PackRow({
+    required this.item,
+    required this.group,
+    required this.controller,
+  }) : lastText = controller.text;
+
+  final OutboundOrderItem item;
+  final OutboundAllocationGroup group;
+  final TextEditingController controller;
+
+  /// Nội dung lần trước — dùng để phân biệt "gõ phím" với "di chuyển con trỏ".
+  String lastText;
+
+  /// Các bao đã cân cho dòng này (rỗng = nhập tay).
+  final List<double> bags = [];
+
+  /// Số hiện tại đến từ cân điện tử hay gõ tay.
+  bool fromScale = false;
+
+  /// Chặn listener khi chính code ghi vào controller (tránh tự xoá bags).
+  bool suppressListener = false;
+
+  void write(String text) {
+    suppressListener = true;
+    controller.text = text;
+    lastText = text;
+    suppressListener = false;
+  }
+
+  void writeSum() {
+    final sum = bags.fold(0.0, (total, bag) => total + bag);
+    write(bags.isEmpty ? '' : formatQuantityInput(sum));
+  }
+}
+
+class _SourceChip extends StatelessWidget {
+  const _SourceChip({required this.fromScale});
+
+  final bool fromScale;
+
+  @override
+  Widget build(BuildContext context) {
+    final tone = fromScale ? AppTone.success : AppTone.neutral;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: tone.bg,
+        borderRadius: BorderRadius.circular(99),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            fromScale ? Icons.scale_rounded : Icons.keyboard_alt_outlined,
+            size: 12,
+            color: tone.fg,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            fromScale ? 'Từ cân' : 'Nhập tay',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+              color: tone.fg,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 
 // ══════════════════════════════════════════════════════════════════════
 // 4. XÁC NHẬN XUẤT KHO (confirm-dispatch) — PACKED → DISPATCHED

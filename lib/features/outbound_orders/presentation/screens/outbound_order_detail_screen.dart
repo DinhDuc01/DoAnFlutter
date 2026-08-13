@@ -5,6 +5,7 @@ import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../../sales_orders/data/sales_order_repository.dart';
+import '../../../scale/presentation/widgets/scale_status_chip.dart';
 import '../../data/outbound_order_repository.dart';
 import '../../models/outbound_order.dart';
 import '../widgets/outbound_action_sheets.dart';
@@ -174,6 +175,14 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen> {
         qrCode: result.qrCode,
         actualWeightKg: result.actualWeightKg,
         scaleDevice: result.scaleDevice,
+        items: [
+          for (final item in result.items)
+            PackingItemWeightPayload(
+              outboundOrderItemId: item.outboundOrderItemId,
+              actualWeightKg: item.actualWeightKg,
+              fromScale: item.fromScale,
+            ),
+        ],
       ),
       successMessage: 'Đóng gói hoàn tất. Phiếu chuyển sang Chờ xuất kho.',
     );
@@ -359,11 +368,18 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen> {
                 color: Colors.white,
                 icon: const Icon(Icons.arrow_back),
               ),
-              trailing: IconButton(
-                onPressed: _busy ? null : () => _load(),
-                color: Colors.white,
-                tooltip: 'Tải lại',
-                icon: const Icon(Icons.refresh),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Trạng thái cân luôn nhìn thấy được, không phải mở form.
+                  const ScaleStatusChip(),
+                  IconButton(
+                    onPressed: _busy ? null : () => _load(),
+                    color: Colors.white,
+                    tooltip: 'Tải lại',
+                    icon: const Icon(Icons.refresh),
+                  ),
+                ],
               ),
             ),
             Expanded(child: _body()),

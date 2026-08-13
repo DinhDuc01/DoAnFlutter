@@ -4,9 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../../data/ble_scale_service.dart';
+import '../../data/scale_session.dart';
 import '../../models/weight_reading.dart';
 
 /// Connects to a StockLite BLE scale and returns one stable reading.
+///
+/// Dùng [ScaleSession] — kết nối được giữ sống suốt phiên làm việc, nên lần thứ
+/// hai trở đi mở màn này số cân đã chảy về sẵn, không phải quét + nối lại.
 class ScaleScreen extends StatefulWidget {
   const ScaleScreen({super.key});
 
@@ -15,34 +19,43 @@ class ScaleScreen extends StatefulWidget {
 }
 
 class _ScaleScreenState extends State<ScaleScreen> {
-  late final BleScaleService _service;
+  BleScaleService? _service;
   bool _initializing = true;
 
   @override
   void initState() {
     super.initState();
-    _service = BleScaleService();
     unawaited(_initialize());
   }
 
   Future<void> _initialize() async {
     try {
-      await _service.initialize();
+      final service = await ScaleSession.instance.ensureInitialized();
+      if (!mounted) return;
+      _service = service;
+      // Chưa nối thì tự quét luôn — bớt một lần bấm "Tìm cân".
+      if (!service.isConnected) {
+        unawaited(ScaleSession.instance.scanAndAutoConnect());
+      }
     } finally {
       if (mounted) setState(() => _initializing = false);
     }
   }
 
-  @override
-  void dispose() {
-    _service.dispose();
-    super.dispose();
-  }
+  // KHÔNG dispose service: kết nối thuộc về ScaleSession, dùng chung cả app.
+  // Người dùng chủ động ngắt bằng nút "Ngắt kết nối cân".
 
   @override
   Widget build(BuildContext context) {
+    final service = _service;
+    if (_initializing || service == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Cân StockLite')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     return AnimatedBuilder(
-      animation: _service,
+      animation: service,
       builder: (context, _) => Scaffold(
         appBar: AppBar(
           title: const Column(
@@ -59,42 +72,39 @@ class _ScaleScreenState extends State<ScaleScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: Center(
-                  child: _ConnectionBadge(connected: _service.isConnected)),
+                  child: _ConnectionBadge(connected: service.isConnected)),
             ),
           ],
         ),
         body: SafeArea(
-          child: _initializing
-              ? const Center(child: CircularProgressIndicator())
-              : ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
-                  children: [
-                    if (_service.errorMessage != null) ...[
-                      _ErrorBanner(
-                        message: _service.errorMessage!,
-                        onClose: _service.clearError,
-                        onSettings: _service.errorMessage!
-                                .toLowerCase()
-                                .contains('quyền')
-                            ? _service.openSettings
-                            : null,
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (_service.isConnected)
-                      _buildConnectedContent()
-                    else
-                      _buildDiscoveryContent(),
-                  ],
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+            children: [
+              if (service.errorMessage != null) ...[
+                _ErrorBanner(
+                  message: service.errorMessage!,
+                  onClose: service.clearError,
+                  onSettings:
+                      service.errorMessage!.toLowerCase().contains('quyền')
+                          ? service.openSettings
+                          : null,
                 ),
+                const SizedBox(height: 12),
+              ],
+              if (service.isConnected)
+                _buildConnectedContent(service)
+              else
+                _buildDiscoveryContent(service),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildDiscoveryContent() {
-    final bluetoothOn = _service.adapterState == BluetoothAdapterState.on;
+  Widget _buildDiscoveryContent(BleScaleService service) {
+    final bluetoothOn = service.adapterState == BluetoothAdapterState.on;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -122,10 +132,10 @@ class _ScaleScreenState extends State<ScaleScreen> {
                 ),
                 const SizedBox(height: 18),
                 FilledButton.icon(
-                  onPressed: _service.isScanning
-                      ? _service.stopScan
-                      : _service.startScan,
-                  icon: _service.isScanning
+                  onPressed: service.isScanning
+                      ? service.stopScan
+                      : service.startScan,
+                  icon: service.isScanning
                       ? const SizedBox.square(
                           dimension: 18,
                           child: CircularProgressIndicator(
@@ -135,7 +145,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
                         )
                       : const Icon(Icons.radar_rounded),
                   label: Text(
-                    _service.isScanning ? 'Dừng tìm kiếm' : 'Tìm cân',
+                    service.isScanning ? 'Dừng tìm kiếm' : 'Tìm cân',
                   ),
                 ),
               ],
@@ -144,11 +154,11 @@ class _ScaleScreenState extends State<ScaleScreen> {
         ),
         const SizedBox(height: 18),
         Text(
-          'Thiết bị tìm thấy (${_service.scanDevices.length})',
+          'Thiết bị tìm thấy (${service.scanDevices.length})',
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
         const SizedBox(height: 8),
-        if (_service.scanDevices.isEmpty)
+        if (service.scanDevices.isEmpty)
           const Card(
             child: Padding(
               padding: EdgeInsets.all(20),
@@ -159,7 +169,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
             ),
           )
         else
-          ..._service.scanDevices.map(
+          ...service.scanDevices.map(
             (device) => Card(
               child: ListTile(
                 leading: const CircleAvatar(child: Icon(Icons.scale_rounded)),
@@ -169,9 +179,9 @@ class _ScaleScreenState extends State<ScaleScreen> {
                 ),
                 subtitle: Text('RSSI ${device.rssi} dBm'),
                 trailing: FilledButton(
-                  onPressed: _service.status == ScaleConnectionStatus.connecting
+                  onPressed: service.status == ScaleConnectionStatus.connecting
                       ? null
-                      : () => _service.connect(device),
+                      : () => service.connect(device),
                   child: const Text('Kết nối'),
                 ),
               ),
@@ -181,8 +191,8 @@ class _ScaleScreenState extends State<ScaleScreen> {
     );
   }
 
-  Widget _buildConnectedContent() {
-    final reading = _service.reading;
+  Widget _buildConnectedContent(BleScaleService service) {
+    final reading = service.reading;
     final stable = reading?.isStable ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -257,7 +267,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
               ? () => Navigator.of(context).pop<WeightReading>(
                     // Kèm tên thiết bị để màn gọi ghi lại được nguồn số cân.
                     reading.copyWith(
-                      deviceName: _service.connectedDevice?.platformName,
+                      deviceName: service.connectedDevice?.platformName,
                     ),
                   )
               : null,
@@ -286,7 +296,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
         ),
         const SizedBox(height: 8),
         TextButton.icon(
-          onPressed: _service.disconnect,
+          onPressed: service.disconnect,
           icon: const Icon(Icons.link_off_rounded),
           label: const Text('Ngắt kết nối cân'),
         ),
@@ -296,7 +306,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
 
   Future<void> _sendCommand(String command) async {
     try {
-      await _service.sendCommand(command);
+      await _service?.sendCommand(command);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Đã gửi lệnh $command tới cân.')),

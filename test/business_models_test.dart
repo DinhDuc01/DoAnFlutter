@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/features/account/models/account_profile.dart';
-import 'package:stocklite/features/giao_hang/models/giao_hang_receipt.dart';
 import 'package:stocklite/features/kho/models/kho_check.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
 import 'package:stocklite/features/products/data/product_variant_api.dart';
@@ -33,27 +32,6 @@ void main() {
       expect(copied.darkModeEnabled, isTrue);
       expect(copied.name, profile.name);
       expect(copied.inventoryCount, profile.inventoryCount);
-    });
-  });
-
-  group('GiaoHangReceipt', () {
-    test('uses fallback customer name before a customer is selected', () {
-      expect(_deliveryReceipt().customerName, 'Chưa chọn khách hàng');
-    });
-
-    test('copyWith adds customer and preserves stock data', () {
-      const customer = GiaoHangCustomer(
-        id: 9,
-        code: 'KH-09',
-        name: 'Nhà máy A',
-      );
-
-      final copied = _deliveryReceipt().copyWith(customer: customer);
-
-      expect(copied.customer, same(customer));
-      expect(copied.customerName, 'Nhà máy A');
-      expect(copied.currentStock, 50);
-      expect(copied.productVariantId, 11);
     });
   });
 
@@ -280,22 +258,6 @@ void main() {
       expect(product.quantityAvailable, 7);
     });
   });
-}
-
-GiaoHangReceipt _deliveryReceipt() {
-  return const GiaoHangReceipt(
-    productVariantId: 11,
-    warehouseId: 1,
-    warehouseName: 'Kho A',
-    status: 'Sẵn sàng giao',
-    productName: 'Gạo',
-    sku: 'GAO',
-    currentStock: 50,
-    receiptCode: 'GH-01',
-    quantity: 1,
-    noteHint: '',
-    unitSalePrice: 12000,
-  );
 }
 
 AppNotification _notification(AppNotificationType type) {

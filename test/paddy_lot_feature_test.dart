@@ -129,6 +129,26 @@ void main() {
     expect(find.text('Chưa có lô hàng'), findsOneWidget);
   });
 
+  testWidgets('chọn kho trong dropdown thì gọi lại API kèm bộ lọc',
+      (tester) async {
+    final repository = _FakeRepository(
+      onLots: () async => [PaddyLotSummary.fromJson(_lotJson())],
+      warehouses: const [PaddyLotFilterOption(id: 3, name: 'Kho A')],
+      statuses: const [PaddyLotFilterOption(id: 9, name: 'Sẵn sàng')],
+    );
+    await tester.pumpWidget(
+        MaterialApp(home: PaddyLotListScreen(repository: repository)));
+    await tester.pumpAndSettle();
+
+    // Dropdown phải bật được — trước đây nó bị disable vì danh sách rỗng.
+    await tester.tap(find.text('Kho'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Kho A').last);
+    await tester.pumpAndSettle();
+
+    expect(repository.lastFilter?.warehouseId, 3);
+  });
+
   testWidgets('tap lot opens detail and detail opens traceability',
       (tester) async {
     final repository = _FakeRepository(
@@ -184,13 +204,40 @@ AuthSession _session() => const AuthSession(
     );
 
 class _FakeRepository implements PaddyLotRepository {
-  _FakeRepository({this.onLots, this.onDetail, this.onTrace});
+  _FakeRepository({
+    this.onLots,
+    this.onDetail,
+    this.onTrace,
+    this.warehouses = const [],
+    this.statuses = const [],
+  });
   final Future<List<PaddyLotSummary>> Function()? onLots;
   final Future<PaddyLotDetail> Function(int id)? onDetail;
   final Future<PaddyLotTraceability> Function(int id)? onTrace;
+  final List<PaddyLotFilterOption> warehouses;
+  final List<PaddyLotFilterOption> statuses;
+
+  PaddyLotFilter? lastFilter;
 
   @override
   Future<List<PaddyLotSummary>> getLots() => onLots?.call() ?? Future.value([]);
+
+  @override
+  Future<PaddyLotPage> searchLots({
+    PaddyLotFilter filter = const PaddyLotFilter(),
+    int start = 0,
+    int length = 100,
+  }) async {
+    lastFilter = filter;
+    final lots = await (onLots?.call() ?? Future.value(<PaddyLotSummary>[]));
+    return PaddyLotPage(lots: lots, totalRecords: lots.length);
+  }
+
+  @override
+  Future<List<PaddyLotFilterOption>> getWarehouseOptions() async => warehouses;
+
+  @override
+  Future<List<PaddyLotFilterOption>> getStatusOptions() async => statuses;
 
   @override
   Future<PaddyLotDetail> getLotDetail(int id) =>

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../models/thu_mua_receipt.dart';
-import '../widgets/thu_mua_bottom_bar.dart';
 
 /// Màn hình thông báo Nhập kho thành công (Inbound Success Screen).
 /// Hiển thị dấu checkmark động, số lượng sản phẩm đã nhập và thẻ thông tin chi tiết biên lai.
@@ -118,7 +117,6 @@ class _ThuMuaSuccessScreenState extends State<ThuMuaSuccessScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: const ThuMuaBottomBar(),
     );
   }
 }

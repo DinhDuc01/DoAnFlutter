@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/data/auth_session_store.dart';
-import '../../../home/presentation/screens/home_screen.dart';
-import '../../../home/presentation/widgets/main_bottom_navigation.dart';
 import '../../../products/data/product_variant_api.dart';
 import '../../data/api_thu_mua_repository.dart';
 import '../../data/paddy_variety_api.dart';
@@ -673,15 +671,6 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     return result == true;
   }
 
-  void _openMainTab(int index) {
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute<void>(
-        builder: (_) => HomeScreen(initialIndex: index),
-      ),
-      (route) => false,
-    );
-  }
-
   Widget _buildLoadingState(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -1088,10 +1077,6 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
             );
           },
         ),
-      ),
-      bottomNavigationBar: MainBottomNavigation(
-        currentIndex: 1,
-        onTap: _openMainTab,
       ),
     );
   }

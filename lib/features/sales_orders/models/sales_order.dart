@@ -30,6 +30,10 @@ String salesOrderStatusLabel(int statusId, [String? fallback]) {
   };
 }
 
+/// Trạng thái phiếu xuất được coi là đã kết thúc — không chặn tạo phiếu xuất mới
+/// cho cùng đơn bán (hủy → làm lại; giao thất bại → tồn kho đã hoàn trả, giao lại).
+const _closedOutboundStatusCodes = <String>{'CANCELLED', 'DELIVERY_FAILED'};
+
 /// Nhãn kênh bán: DIRECT (bán trực tiếp) / WHOLESALE (bán sỉ).
 String salesChannelLabel(String channel) =>
     channel.toUpperCase() == 'WHOLESALE' ? 'Bán sỉ' : 'Bán trực tiếp';
@@ -199,11 +203,14 @@ class SalesOrderDetail {
         SalesOrderStatusIds.preparing,
       ].contains(statusId);
 
-  /// Chỉ tạo được phiếu xuất từ RESERVED/PREPARING (khớp backend).
-  bool get canCreateOutbound => const [
+  /// Chỉ tạo được phiếu xuất từ RESERVED/PREPARING và khi đơn CHƯA có phiếu xuất
+  /// nào còn hiệu lực (khớp validate backend).
+  bool get canCreateOutbound =>
+      const [
         SalesOrderStatusIds.reserved,
         SalesOrderStatusIds.preparing,
-      ].contains(statusId);
+      ].contains(statusId) &&
+      activeOutbounds.isEmpty;
 
   /// Đơn cần xay xát và chưa kết thúc → hiện lối tắt sang màn xay xát.
   bool get needsMilling =>
@@ -219,9 +226,10 @@ class SalesOrderDetail {
     return null;
   }
 
-  /// Phiếu xuất còn đang xử lý (chưa hủy, chưa hoàn tất).
+  /// Phiếu xuất còn hiệu lực: bỏ qua phiếu đã HỦY và phiếu GIAO THẤT BẠI
+  /// (hai trạng thái kết thúc này cho phép tạo phiếu xuất khác cho đơn).
   List<SalesOrderOutboundSummary> get activeOutbounds => outboundOrders
-      .where((o) => o.statusCode.toUpperCase() != 'CANCELLED')
+      .where((o) => !_closedOutboundStatusCodes.contains(o.statusCode.toUpperCase()))
       .toList();
 
   factory SalesOrderDetail.fromJson(Map<String, dynamic> json) =>

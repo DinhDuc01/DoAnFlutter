@@ -5,9 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/core/routes/app_routes.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
-import 'package:stocklite/features/giao_hang/data/giao_hang_repository.dart';
-import 'package:stocklite/features/giao_hang/models/giao_hang_receipt.dart';
-import 'package:stocklite/features/giao_hang/presentation/screens/giao_hang_screen.dart';
 import 'package:stocklite/features/kho/data/kho_check_repository.dart';
 import 'package:stocklite/features/kho/models/kho_check.dart';
 import 'package:stocklite/features/kho/presentation/screens/kho_screen.dart';
@@ -364,99 +361,6 @@ void main() {
     });
   });
 
-  group('GiaoHangScreen', () {
-    phoneTestWidgets('shows loading and repository error states',
-        (tester) async {
-      final receiptCompleter = Completer<GiaoHangReceipt>();
-      final repository = _GiaoHangRepository(
-        receipt: receiptCompleter.future,
-        customers: Future.value(const []),
-      );
-      await tester.pumpWidget(
-        MaterialApp(home: GiaoHangScreen(repository: repository)),
-      );
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-
-      receiptCompleter.completeError('delivery failed');
-      await tester.pumpAndSettle();
-      expect(
-        find.textContaining('Không tải được màn bán hàng'),
-        findsOneWidget,
-      );
-    });
-
-    phoneTestWidgets('requires customer before confirmation', (tester) async {
-      final repository = _GiaoHangRepository(
-        receipt: Future.value(_deliveryReceipt()),
-        customers: Future.value(const []),
-      );
-      await tester.pumpWidget(
-        MaterialApp(home: GiaoHangScreen(repository: repository)),
-      );
-      await tester.pumpAndSettle();
-      final confirmButton = find.text('Tạo đơn chờ xác nhận');
-      await tester.scrollUntilVisible(
-        confirmButton,
-        300,
-        scrollable: find
-            .descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.tap(confirmButton);
-      await tester.pump();
-
-      expect(find.text('Vui lòng chọn khách hàng nhận hàng.'), findsOneWidget);
-      expect(repository.confirmCount, 0);
-    });
-
-    phoneTestWidgets('submits delivery and passes result to success route',
-        (tester) async {
-      final repository = _GiaoHangRepository(
-        receipt: Future.value(_deliveryReceipt()),
-        customers: Future.value(const [
-          GiaoHangCustomer(id: 1, code: 'KH-01', name: 'Khách A'),
-        ]),
-      );
-      Object? routeArguments;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: GiaoHangScreen(repository: repository),
-          onGenerateRoute: (settings) {
-            if (settings.name == AppRoutes.giaoHangSuccess) {
-              routeArguments = settings.arguments;
-              return MaterialPageRoute<void>(
-                builder: (_) => const Scaffold(body: Text('Delivery success')),
-              );
-            }
-            return null;
-          },
-        ),
-      );
-      await tester.pumpAndSettle();
-      final confirmButton = find.text('Tạo đơn chờ xác nhận');
-      await tester.scrollUntilVisible(
-        confirmButton,
-        300,
-        scrollable: find
-            .descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.tap(confirmButton);
-      await tester.pumpAndSettle();
-
-      expect(repository.confirmCount, 1);
-      expect(repository.lastQuantity, 1);
-      expect(routeArguments, isA<GiaoHangSuccessResult>());
-      expect(find.text('Delivery success'), findsOneWidget);
-    });
-  });
-
   group('KhoScreen', () {
     phoneTestWidgets('shows loading and repository error states',
         (tester) async {
@@ -629,41 +533,6 @@ class _ThuMuaRepository implements ThuMuaRepository {
   Future<void> confirmPurchaseOrder(int orderId) async {}
 }
 
-class _GiaoHangRepository implements GiaoHangRepository {
-  _GiaoHangRepository({required this.receipt, required this.customers});
-  final Future<GiaoHangReceipt> receipt;
-  final Future<List<GiaoHangCustomer>> customers;
-  int confirmCount = 0;
-  int? lastQuantity;
-
-  @override
-  Future<List<GiaoHangReceipt>> getAvailableReceipts() async => [await receipt];
-  @override
-  Future<GiaoHangReceipt> getDraftReceipt() => receipt;
-  @override
-  Future<List<GiaoHangCustomer>> getCustomers() => customers;
-  @override
-  Future<SalesOrderSubmission> confirmOutbound({
-    required GiaoHangReceipt receipt,
-    required int quantity,
-    required double unitSalePrice,
-    required DateTime? expectedDeliveryDate,
-    required String shippingAddress,
-    required String note,
-  }) async {
-    confirmCount++;
-    lastQuantity = quantity;
-    return const SalesOrderSubmission(
-      id: 20,
-      code: 'SO-20',
-      status: 'Chờ xác nhận',
-    );
-  }
-
-  @override
-  Future<void> confirmSalesOrder(int orderId) async {}
-}
-
 class _KhoRepository implements KhoCheckRepository {
   _KhoRepository(this.check);
   final Future<KhoCheck> check;
@@ -733,24 +602,6 @@ ThuMuaReceipt _editReceipt() {
     ),
     actualWeightKg: 25,
     moisturePercent: 14,
-  );
-}
-
-GiaoHangReceipt _deliveryReceipt() {
-  return GiaoHangReceipt(
-    productVariantId: 1,
-    warehouseId: 2,
-    warehouseName: 'Kho A',
-    status: 'Sẵn sàng giao',
-    productName: 'Gạo',
-    sku: 'GAO',
-    currentStock: 5,
-    receiptCode: 'GH-01',
-    quantity: 1,
-    noteHint: '',
-    unitSalePrice: 15000,
-    expectedDeliveryDate: DateTime(2026, 7, 30),
-    shippingAddress: 'Cần Thơ',
   );
 }
 

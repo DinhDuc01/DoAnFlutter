@@ -77,14 +77,13 @@ class HomeTodayTab extends StatelessWidget {
       _Shortcut(
           'Xuất kho / giao', Icons.local_shipping_outlined, AppColors.accentPink,
           tabIndex: 3),
-      _Shortcut('Bán nhanh', Icons.point_of_sale_outlined, AppColors.accentTeal,
-          route: AppRoutes.outbound),
       _Shortcut('Xay xát', Icons.grain_outlined, AppColors.warning,
           route: AppRoutes.milling),
       _Shortcut('Kiểm kê', Icons.assignment_outlined, AppColors.accentPurple,
           route: AppRoutes.stocktake),
-      _Shortcut('Cân', Icons.scale_outlined, AppColors.accentTeal,
-          route: AppRoutes.scale),
+      _Shortcut('Lô & truy vết', Icons.account_tree_outlined,
+          AppColors.accentTeal,
+          route: AppRoutes.paddyLots),
       _Shortcut(
           'Công nợ', Icons.account_balance_wallet_outlined, AppColors.warning,
           route: AppRoutes.debts),
