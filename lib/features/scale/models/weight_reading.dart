@@ -7,12 +7,25 @@ class WeightReading {
     required this.unit,
     required this.isStable,
     required this.receivedAt,
+    this.deviceName,
   });
 
   final double weight;
   final String unit;
   final bool isStable;
   final DateTime receivedAt;
+
+  /// Tên thiết bị cân đã đọc số này (gán khi màn cân trả kết quả về). Dùng để
+  /// ghi lại `scaleDevice` trên phiếu — payload BLE không chứa thông tin này.
+  final String? deviceName;
+
+  WeightReading copyWith({String? deviceName}) => WeightReading(
+        weight: weight,
+        unit: unit,
+        isStable: isStable,
+        receivedAt: receivedAt,
+        deviceName: deviceName ?? this.deviceName,
+      );
 
   factory WeightReading.fromBytes(List<int> bytes) {
     if (bytes.isEmpty) {

@@ -20,6 +20,8 @@ import '../../features/milling/presentation/screens/milling_preparation_screen.d
 import '../../features/scale/presentation/screens/inventory_weighing_screen.dart';
 import '../../features/paddy_lots/presentation/screens/paddy_lot_list_screen.dart';
 import '../../features/debts/presentation/screens/debt_screen.dart';
+import '../../features/sales_orders/presentation/screens/sales_order_list_screen.dart';
+import '../../features/outbound_orders/presentation/screens/outbound_order_list_screen.dart';
 
 /// Lớp định nghĩa tất cả các tuyến đường (routes) và điều hướng trong ứng dụng.
 class AppRoutes {
@@ -33,9 +35,12 @@ class AppRoutes {
       '/thu-mua/detail'; // Chi tiết lịch thu mua
   static const thuMuaSuccess =
       '/thu-mua/success'; // Màn hình Nhập kho thành công
-  static const outbound = '/giao-hang'; // Màn hình Xuất kho
+  static const outbound = '/giao-hang'; // Màn hình bán nhanh (tạo đơn tại chỗ)
   static const giaoHangSuccess =
-      '/giao-hang/success'; // Màn hình Xuất kho thành công
+      '/giao-hang/success'; // Màn hình bán nhanh thành công
+  static const salesOrders = '/sales-orders'; // Danh sách đơn bán
+  static const outboundOrders =
+      '/outbound-orders'; // Phiếu xuất kho & giao hàng
   static const stocktake = '/stocktake';
   @Deprecated('Use stocktake')
   static const inventory = stocktake;
@@ -84,6 +89,8 @@ class AppRoutes {
       scale: (_) => const InventoryWeighingScreen(),
       paddyLots: (_) => const PaddyLotListScreen(),
       debts: (_) => const DebtScreen(),
+      salesOrders: (_) => const SalesOrderListScreen(),
+      outboundOrders: (_) => const OutboundOrderListScreen(),
     };
   }
 }

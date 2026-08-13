@@ -254,7 +254,12 @@ class _ScaleScreenState extends State<ScaleScreen> {
         const SizedBox(height: 14),
         FilledButton.icon(
           onPressed: stable && reading!.weight > 0
-              ? () => Navigator.of(context).pop<WeightReading>(reading)
+              ? () => Navigator.of(context).pop<WeightReading>(
+                    // Kèm tên thiết bị để màn gọi ghi lại được nguồn số cân.
+                    reading.copyWith(
+                      deviceName: _service.connectedDevice?.platformName,
+                    ),
+                  )
               : null,
           icon: const Icon(Icons.add_task_rounded),
           label: const Text('Nhận số cân và thêm bao'),
