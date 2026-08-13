@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../data/api_thu_mua_repository.dart';
 import '../../models/thu_mua_receipt.dart';
 import '../widgets/thu_mua_bottom_bar.dart';
 
@@ -16,45 +15,7 @@ class ThuMuaSuccessScreen extends StatefulWidget {
 }
 
 class _ThuMuaSuccessScreenState extends State<ThuMuaSuccessScreen> {
-  final ApiThuMuaRepository _repository = ApiThuMuaRepository();
   ThuMuaSuccessResult? _result;
-  bool _confirming = false;
-
-  Future<void> _confirmOrder() async {
-    final result = _result;
-    if (result == null || result.orderId <= 0 || _confirming) return;
-    DateTime? dueDate;
-    if (result.debtAmount > 0) {
-      dueDate = await showDatePicker(
-        context: context,
-        initialDate: DateTime.now().add(const Duration(days: 30)),
-        firstDate: DateTime.now(),
-        lastDate: DateTime.now().add(const Duration(days: 3650)),
-        helpText: 'Chọn hạn thanh toán công nợ',
-      );
-      if (dueDate == null || !mounted) return;
-    }
-    setState(() => _confirming = true);
-    try {
-      await _repository.confirmPurchaseOrder(
-        result.orderId,
-        dueDate: dueDate,
-      );
-      if (!mounted) return;
-      setState(() => _result = result.copyWithStatus('Đã xác nhận'));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã xác nhận đơn mua trên server')),
-      );
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không xác nhận được đơn: $error')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _confirming = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -129,17 +90,12 @@ class _ThuMuaSuccessScreenState extends State<ThuMuaSuccessScreen> {
                     _SuccessInfoCard(result: result),
                     const Spacer(),
                     if (result.status == 'Phiếu nháp') ...[
-                      FilledButton.icon(
-                        onPressed: _confirming ? null : _confirmOrder,
-                        icon: _confirming
-                            ? const SizedBox.square(
-                                dimension: 18,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.verified_outlined),
-                        label: Text(
-                          _confirming ? 'Đang chốt...' : 'Chốt phiếu mua lúa',
+                      Text(
+                        'Phiếu đang chờ cập nhật hoặc xử lý tiếp trên hệ thống.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.textSecondaryFor(context),
+                          fontSize: 13,
                         ),
                       ),
                       const SizedBox(height: 10),

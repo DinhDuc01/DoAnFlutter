@@ -139,92 +139,96 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
                 children: [
                   IconButton(
                     tooltip: 'Tạo lệnh xay',
-                    constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                    constraints:
+                        const BoxConstraints.tightFor(width: 40, height: 40),
                     padding: EdgeInsets.zero,
                     onPressed: _openCreate,
-                    icon: const Icon(Icons.add_task_rounded, color: Colors.white),
+                    icon:
+                        const Icon(Icons.add_task_rounded, color: Colors.white),
                   ),
                   IconButton(
                     tooltip: 'Làm mới',
-                    constraints: const BoxConstraints.tightFor(width: 40, height: 40),
+                    constraints:
+                        const BoxConstraints.tightFor(width: 40, height: 40),
                     padding: EdgeInsets.zero,
                     onPressed: _reload,
-                    icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+                    icon:
+                        const Icon(Icons.refresh_rounded, color: Colors.white),
                   ),
                 ],
               ),
               padding: const EdgeInsets.fromLTRB(8, 8, 8, 14),
             ),
             Expanded(
-            child: FutureBuilder<MillingOrderPage>(
-              future: _pageFuture,
-              builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const _MillingLoadingState();
-          }
-          if (snapshot.hasError) {
-            return HErrorState(
-              message: 'Không thể tải lệnh xay: ${snapshot.error}',
-              onRetry: _reload,
-            );
-          }
-          final page = snapshot.data ??
-              const MillingOrderPage(
-                orders: [],
-                recordsTotal: 0,
-                recordsFiltered: 0,
-              );
-          _rememberFilterOptions(page.orders);
-                return RefreshIndicator(
-                  onRefresh: () async {
-                    _reload();
-                    await _pageFuture;
-                  },
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                    children: [
-                      _SearchAndFilters(
-                        controller: _searchController,
-                        statusLabel: _statusLabel(_statusId),
-                        warehouseLabel: _warehouseLabel(_warehouseId),
-                        selectedStatusId: _statusId,
-                        selectedWarehouseId: _warehouseId,
-                        onSearchChanged: _onSearchChanged,
-                        onOpenFilters: _openFilters,
-                        onClear: () {
-                          _searchController.clear();
-                          _search = '';
-                          _statusId = null;
-                          _warehouseId = null;
-                          _reload();
-                        },
-                      ),
-                      const SizedBox(height: 10),
-                      _ResultCountText(page: page),
-                      const SizedBox(height: 12),
-                      if (page.orders.isEmpty)
-                        HEmptyState(
-                          title: _search.isEmpty &&
-                                  _statusId == null &&
-                                  _warehouseId == null
-                              ? 'Chưa có lệnh xay'
-                              : 'Không tìm thấy lệnh phù hợp',
-                          description:
-                              'Thử đổi từ khóa hoặc bỏ bộ lọc rồi làm mới.',
-                        )
-                      else
-                        for (final order in page.orders) ...[
-                          _MillingOrderCard(
-                            order: order,
-                            onTap: () => _openDetail(order.id),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
-                    ],
-                  ),
-                );
-              },
-            ),
+              child: FutureBuilder<MillingOrderPage>(
+                future: _pageFuture,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const _MillingLoadingState();
+                  }
+                  if (snapshot.hasError) {
+                    return HErrorState(
+                      message: 'Không thể tải lệnh xay: ${snapshot.error}',
+                      onRetry: _reload,
+                    );
+                  }
+                  final page = snapshot.data ??
+                      const MillingOrderPage(
+                        orders: [],
+                        recordsTotal: 0,
+                        recordsFiltered: 0,
+                      );
+                  _rememberFilterOptions(page.orders);
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      _reload();
+                      await _pageFuture;
+                    },
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                      children: [
+                        _SearchAndFilters(
+                          controller: _searchController,
+                          statusLabel: _statusLabel(_statusId),
+                          warehouseLabel: _warehouseLabel(_warehouseId),
+                          selectedStatusId: _statusId,
+                          selectedWarehouseId: _warehouseId,
+                          onSearchChanged: _onSearchChanged,
+                          onOpenFilters: _openFilters,
+                          onClear: () {
+                            _searchController.clear();
+                            _search = '';
+                            _statusId = null;
+                            _warehouseId = null;
+                            _reload();
+                          },
+                        ),
+                        const SizedBox(height: 10),
+                        _ResultCountText(page: page),
+                        const SizedBox(height: 12),
+                        if (page.orders.isEmpty)
+                          HEmptyState(
+                            title: _search.isEmpty &&
+                                    _statusId == null &&
+                                    _warehouseId == null
+                                ? 'Chưa có lệnh xay'
+                                : 'Không tìm thấy lệnh phù hợp',
+                            description:
+                                'Thử đổi từ khóa hoặc bỏ bộ lọc rồi làm mới.',
+                          )
+                        else
+                          for (final order in page.orders) ...[
+                            _MillingOrderCard(
+                              order: order,
+                              onTap: () => _openDetail(order.id),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                      ],
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -456,29 +460,29 @@ class _MillingFilterSheetState extends State<_MillingFilterSheet> {
               width: double.infinity,
               child: Row(
                 children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _statusId = null;
-                        _warehouseId = null;
-                      });
-                    },
-                    child: const Text('Xóa lọc'),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(
-                      _MillingFilterSelection(
-                        statusId: _statusId,
-                        warehouseId: _warehouseId,
-                      ),
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          _statusId = null;
+                          _warehouseId = null;
+                        });
+                      },
+                      child: const Text('Xóa lọc'),
                     ),
-                    child: const Text('Áp dụng'),
                   ),
-                ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => Navigator.of(context).pop(
+                        _MillingFilterSelection(
+                          statusId: _statusId,
+                          warehouseId: _warehouseId,
+                        ),
+                      ),
+                      child: const Text('Áp dụng'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -718,6 +722,14 @@ class _MillingOrderCard extends StatelessWidget {
                   ),
                 ),
                 FilledButton.tonalIcon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 40),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   onPressed: onTap,
                   icon: Icon(
                     status.canContinueWeighing
@@ -937,7 +949,8 @@ class _DetailHeader extends StatelessWidget {
           const SizedBox(height: 8),
           _InfoPill(
             icon: Icons.grass_outlined,
-            text: 'Lô đầu vào: ${order.inputLotCode} · ${_kg(order.inputWeightKg)}',
+            text:
+                'Lô đầu vào: ${order.inputLotCode} · ${_kg(order.inputWeightKg)}',
           ),
           const SizedBox(height: 8),
           _InfoPill(

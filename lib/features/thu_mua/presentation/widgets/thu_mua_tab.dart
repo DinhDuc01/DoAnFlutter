@@ -15,6 +15,16 @@ import '../screens/thu_mua_screen.dart';
 
 enum _ThuMuaSection { schedules, receipts, drafts }
 
+AppTone _receiptTone(ThuMuaReceiptSummary receipt) {
+  final status = receipt.status.toLowerCase();
+  if (status.contains('hủy') || status.contains('huỷ')) return AppTone.danger;
+  if (status.contains('nhập kho')) return AppTone.success;
+  if (status.contains('cân')) return AppTone.info;
+  if (status.contains('kiểm định')) return AppTone.info;
+  if (status.contains('cần chốt')) return AppTone.warning;
+  return AppTone.neutral;
+}
+
 class ThuMuaTab extends StatefulWidget {
   const ThuMuaTab({super.key});
 
@@ -287,12 +297,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
           itemCount: _receipts.length,
           itemBuilder: (context, index) {
             final receipt = _receipts[index];
-            final cancelled = receipt.status.toLowerCase().contains('hủy');
-            final tone = cancelled
-                ? AppTone.danger
-                : receipt.isFullyStored
-                    ? AppTone.success
-                    : AppTone.warning;
+            final tone = _receiptTone(receipt);
             return AppCard(
               padding: const EdgeInsets.all(14),
               margin: const EdgeInsets.only(bottom: 10),
@@ -357,6 +362,16 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                         child: const Text('Tiếp tục chỉnh sửa'),
                       ),
                     ),
+                  ] else if (receipt.status == 'Chờ kiểm định') ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: OutlinedButton.icon(
+                        onPressed: null,
+                        icon: const Icon(Icons.admin_panel_settings_outlined),
+                        label: const Text('Chờ quản trị viên kiểm định'),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -414,12 +429,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
       children: [
         for (final receipt in _receipts) ...[
           Builder(builder: (context) {
-            final cancelled = receipt.status.toLowerCase().contains('hủy');
-            final tone = cancelled
-                ? AppTone.danger
-                : receipt.isFullyStored
-                    ? AppTone.success
-                    : AppTone.warning;
+            final tone = _receiptTone(receipt);
             return AppCard(
               padding: const EdgeInsets.all(14),
               margin: const EdgeInsets.only(bottom: 10),
@@ -597,7 +607,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                                                 ),
                                               ),
                                               const AppStatusChip(
-                                                label: 'Phiếu nháp',
+                                                label: 'Cần chốt phiếu',
                                                 tone: AppTone.warning,
                                                 dense: true,
                                               ),
@@ -689,13 +699,41 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   }
 }
 
-class _ScheduleList extends StatelessWidget {
+class _ScheduleList extends StatefulWidget {
   const _ScheduleList({required this.schedules});
 
   final List<PurchaseSchedule> schedules;
 
   @override
+  State<_ScheduleList> createState() => _ScheduleListState();
+}
+
+class _ScheduleListState extends State<_ScheduleList> {
+  final TextEditingController _searchController = TextEditingController();
+  String _filter = 'all';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final keyword = _searchController.text.trim().toLowerCase();
+    final schedules = widget.schedules.where((item) {
+      final matchesSearch = keyword.isEmpty ||
+          item.code.toLowerCase().contains(keyword) ||
+          item.farmerName.toLowerCase().contains(keyword) ||
+          item.riceVariety.toLowerCase().contains(keyword) ||
+          item.location.toLowerCase().contains(keyword);
+      final matchesFilter = switch (_filter) {
+        'active' => !item.isCancelled,
+        'cancelled' => item.isCancelled,
+        _ => true,
+      };
+      return matchesSearch && matchesFilter;
+    }).toList();
     final active = schedules.where((item) => !item.isCancelled).length;
     final totalKg = schedules
         .where((item) => !item.isCancelled)
@@ -704,6 +742,39 @@ class _ScheduleList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       children: [
+        TextField(
+          controller: _searchController,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(
+            labelText: 'Tìm mã lịch, người bán, giống hoặc địa điểm',
+            prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: _searchController.text.isEmpty
+                ? null
+                : IconButton(
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.clear_rounded),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          initialValue: _filter,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Lọc trạng thái',
+            prefixIcon: Icon(Icons.filter_list_rounded),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'all', child: Text('Tất cả lịch')),
+            DropdownMenuItem(value: 'active', child: Text('Còn hiệu lực')),
+            DropdownMenuItem(value: 'cancelled', child: Text('Đã hủy')),
+          ],
+          onChanged: (value) => setState(() => _filter = value ?? 'all'),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(child: _Metric(label: '${schedules.length} lịch')),
@@ -716,6 +787,13 @@ class _ScheduleList extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
+        if (schedules.isEmpty)
+          const HEmptyState(
+            title: 'Không tìm thấy lịch phù hợp',
+            description: 'Thử đổi từ khóa hoặc bộ lọc.',
+            icon: Icons.search_off_rounded,
+          )
+        else
         for (final item in schedules) ...[
           _ScheduleCard(schedule: item),
         ],

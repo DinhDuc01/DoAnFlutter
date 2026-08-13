@@ -13,6 +13,7 @@ class ThuMuaReceipt {
     required this.weightKg,
     required this.quantity,
     required this.noteHint,
+    this.note,
     required this.unitCostPrice,
     this.supplier,
     this.expectedDate,
@@ -22,6 +23,9 @@ class ThuMuaReceipt {
     this.moisturePercent,
     this.paidAmount = 0,
     this.bags = const [],
+    this.isConfirmed = false,
+    this.paddyLotId,
+    this.hasBagDetails = false,
   });
 
   final int? id;
@@ -58,6 +62,9 @@ class ThuMuaReceipt {
 
   /// Goi y ghi chu.
   final String noteHint;
+
+  /// Ghi chu da luu tren phieu, neu Backend tra ve.
+  final String? note;
   final double unitCostPrice;
   final ThuMuaSupplier? supplier;
   final DateTime? expectedDate;
@@ -67,6 +74,9 @@ class ThuMuaReceipt {
   final double? moisturePercent;
   final double paidAmount;
   final List<ThuMuaBag> bags;
+  final bool isConfirmed;
+  final int? paddyLotId;
+  final bool hasBagDetails;
 
   double get totalBagWeightKg =>
       bags.fold<double>(0, (sum, bag) => sum + bag.weightKg);
@@ -80,6 +90,7 @@ class ThuMuaReceipt {
     double? weightKg,
     int? quantity,
     String? noteHint,
+    String? note,
     String? status,
     ThuMuaSupplier? supplier,
     DateTime? expectedDate,
@@ -92,6 +103,9 @@ class ThuMuaReceipt {
     int? warehouseId,
     String? warehouseName,
     List<ThuMuaBag>? bags,
+    bool? isConfirmed,
+    int? paddyLotId,
+    bool? hasBagDetails,
   }) {
     return ThuMuaReceipt(
       id: id,
@@ -106,6 +120,7 @@ class ThuMuaReceipt {
       weightKg: weightKg ?? this.weightKg,
       quantity: quantity ?? this.quantity,
       noteHint: noteHint ?? this.noteHint,
+      note: note ?? this.note,
       unitCostPrice: unitCostPrice ?? this.unitCostPrice,
       supplier: supplier ?? this.supplier,
       expectedDate: expectedDate ?? this.expectedDate,
@@ -115,6 +130,9 @@ class ThuMuaReceipt {
       moisturePercent: moisturePercent ?? this.moisturePercent,
       paidAmount: paidAmount ?? this.paidAmount,
       bags: bags ?? this.bags,
+      isConfirmed: isConfirmed ?? this.isConfirmed,
+      paddyLotId: paddyLotId ?? this.paddyLotId,
+      hasBagDetails: hasBagDetails ?? this.hasBagDetails,
     );
   }
 }
