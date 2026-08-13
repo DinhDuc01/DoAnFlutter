@@ -629,6 +629,138 @@ void main() {
       ]);
     });
 
+    test('loads paged milling orders with search and filters', () async {
+      final client = FakeApiClient(
+        onPost: (_, __, ___) async => {
+          'resources': {
+            'recordsTotal': 3,
+            'recordsFiltered': 1,
+            'data': [
+              {
+                'id': 21,
+                'millingCode': 'MO-21',
+                'statusId': 3,
+                'statusName': 'Đang xay',
+                'warehouseId': 7,
+                'warehouseName': 'Kho xay',
+                'machineRef': 'MILL-01',
+                'yieldRateUsed': 0.65,
+                'totalRiceOutputKg': 650,
+                'computedPaddyKg': 1000,
+                'createdDate': '2026-08-01T08:30:00',
+              },
+            ],
+          },
+        },
+      );
+
+      final page =
+          await ApiMillingRepository(apiClient: client).getMillingOrderPage(
+        search: 'MO-21',
+        statusId: 3,
+        warehouseId: 7,
+        start: 20,
+        length: 20,
+      );
+
+      expect(page.recordsTotal, 3);
+      expect(page.recordsFiltered, 1);
+      expect(page.orders.single.millingCode, 'MO-21');
+      final call = client.calls.single;
+      expect(call.path, '/api/v1/milling-orders/paged-advanced');
+      expect(call.body?['start'], 20);
+      expect(call.body?['length'], 20);
+      expect((call.body?['search'] as Map)['value'], 'MO-21');
+      final columns = call.body?['columns'] as List<dynamic>;
+      expect(((columns[0] as Map)['search'] as Map)['value'], '3');
+      expect(((columns[1] as Map)['search'] as Map)['value'], '7');
+    });
+
+    test('loads milling detail with inputs, selected bags and outputs',
+        () async {
+      final client = FakeApiClient(
+        onGet: (_, __, ___) async => {
+          'resources': {
+            'id': 22,
+            'millingCode': 'MO-22',
+            'statusId': 5,
+            'statusName': 'Hoàn tất',
+            'statusCode': 'COMPLETED',
+            'warehouseId': 8,
+            'warehouseName': 'Kho thành phẩm',
+            'riceVarietyName': 'OM5451',
+            'yieldRateUsed': 0.7,
+            'totalRiceOutputKg': 700,
+            'computedPaddyKg': 1000,
+            'byproductKg': 120,
+            'lossKg': 30,
+            'inputs': [
+              {
+                'id': 1,
+                'paddyLotId': 9,
+                'lotCode': 'LOT-09',
+                'locationId': 4,
+                'locationCode': 'A-04',
+                'consumedWeightKg': 1000,
+                'reservedWeightKg': 1000,
+                'bags': [
+                  {
+                    'bagId': 30,
+                    'bagNo': 12,
+                    'weightKg': 50,
+                    'stackOrder': 1,
+                    'status': 'Allocated',
+                  },
+                ],
+              },
+            ],
+            'outputs': [
+              {
+                'id': 2,
+                'productVariantId': 11,
+                'sku': 'RICE-11',
+                'outputLotId': 44,
+                'outputType': 'RICE',
+                'outputWeightKg': 700,
+                'bagCount': 28,
+                'isByproduct': false,
+                'unitCost': 9000,
+              },
+            ],
+          },
+        },
+      );
+
+      final order = await ApiMillingRepository(apiClient: client)
+          .getMillingOrderDetail(22);
+
+      expect(client.calls.single.path, '/api/v1/milling-orders/22');
+      expect(order.statusCode, 'COMPLETED');
+      expect(order.inputs.single.lotCode, 'LOT-09');
+      expect(order.inputs.single.bags.single.weightKg, 50);
+      expect(order.outputs.single.sku, 'RICE-11');
+      expect(order.riceProductVariantId, 11);
+    });
+
+    test('parses nullable milling detail fields safely', () async {
+      final order = MillingOrder.fromJson(const {
+        'id': 7,
+        'millingCode': 'MO-NULL',
+        'inputs': [
+          {'id': 1, 'paddyLotId': 2, 'consumedWeightKg': null},
+        ],
+        'outputs': [
+          {'id': 3, 'productVariantId': null, 'outputWeightKg': null},
+        ],
+      });
+
+      expect(order.id, 7);
+      expect(order.inputWeightKg, 0);
+      expect(order.inputs.single.consumedWeightKg, 0);
+      expect(order.outputs.single.outputWeightKg, 0);
+      expect(order.outputs.single.isByproduct, isFalse);
+    });
+
     test('completes an order through the correct endpoint', () async {
       final client = FakeApiClient(
         onPost: (_, __, ___) async => {'isSucceeded': true},

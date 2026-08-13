@@ -17,31 +17,43 @@ void main() {
   tearDown(() => AuthSessionStore.current = null);
 
   group('ApiThuMuaRepository', () {
-    test('builds draft from selected product and API warehouse', () async {
-      final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': [
-            {'id': 8, 'name': 'Kho lúa'},
-          ],
-        },
-      );
+    test('builds draft from selected product without auto-selecting warehouse',
+        () async {
       final repository = ApiThuMuaRepository(
         productVariantApi: _FakeProductApi(
           products: [_product(1, 'Gạo', onHand: 5, available: 5)],
         ),
-        apiClient: client,
+        apiClient: FakeApiClient(),
       );
 
       final receipt = await repository.getDraftReceipt();
 
       expect(receipt.productVariantId, 1);
-      expect(receipt.warehouseId, 8);
-      expect(receipt.warehouseName, 'Kho lúa');
+      expect(receipt.warehouseId, 0);
+      expect(receipt.warehouseName, isEmpty);
       expect(receipt.currentStock, 5);
       expect(receipt.quantity, 1);
     });
 
-    test('uses default warehouse when warehouse API fails', () async {
+    test('loads warehouses from API without fallback', () async {
+      final client = FakeApiClient(
+        onGet: (_, __, ___) async => {
+          'resources': [
+            {'id': 8, 'code': 'WH-8', 'name': 'Kho lúa'},
+          ],
+        },
+      );
+      final repository = ApiThuMuaRepository(apiClient: client);
+
+      final warehouses = await repository.getWarehouses();
+
+      expect(warehouses.single.id, 8);
+      expect(warehouses.single.code, 'WH-8');
+      expect(warehouses.single.name, 'Kho lúa');
+      expect(client.calls.single.path, '/api/v1/warehouse');
+    });
+
+    test('warehouse API failure is surfaced without fallback', () async {
       final repository = ApiThuMuaRepository(
         productVariantApi: _FakeProductApi(
           products: [_product(1, 'Gạo', onHand: 5, available: 5)],
@@ -52,10 +64,10 @@ void main() {
         ),
       );
 
-      final receipt = await repository.getDraftReceipt();
-
-      expect(receipt.warehouseId, 1001);
-      expect(receipt.warehouseName, 'Kho mặc định');
+      expect(
+        repository.getWarehouses,
+        throwsA(isA<ApiException>()),
+      );
     });
 
     test('builds a draft for the product selected by the operator', () async {
@@ -144,7 +156,12 @@ void main() {
 
       final result =
           await ApiThuMuaRepository(apiClient: client).confirmInbound(
-        receipt: _inboundReceipt(),
+        receipt: _inboundReceipt().copyWith(
+          bags: const [
+            ThuMuaBag(sequenceNumber: 1, weightKg: 30),
+            ThuMuaBag(sequenceNumber: 2, weightKg: 45),
+          ],
+        ),
         quantity: 3,
         unitCostPrice: 10000,
         note: '   ',
@@ -154,13 +171,51 @@ void main() {
       expect(call.path, '/api/v1/paddy-purchase-receipts');
       expect(call.body?['farmerId'], 4);
       expect(call.body?['warehouseId'], 2);
-      expect(call.body?['bagCount'], 3);
+      expect(call.body?['bagCount'], 2);
       expect(call.body?['actualWeightKg'], 75);
+      expect(call.body?.containsKey('bags'), isFalse);
       expect(call.body?['agreedPrice'], 10000);
       expect(call.body?['priceAdjustReason'], isNull);
       expect(result.id, 21);
       expect(result.code, 'PPR-20260804-0001');
       expect(result.status, 'Phiếu nháp');
+    });
+
+    test('updates an existing draft paddy purchase receipt', () async {
+      final client = FakeApiClient(
+        onPut: (_, __, ___) async => {
+          'isSucceeded': true,
+          'resources': {'id': 55, 'receiptCode': 'PPR-55'},
+        },
+      );
+
+      final result =
+          await ApiThuMuaRepository(apiClient: client).confirmInbound(
+        receipt: _editReceipt().copyWith(
+          bags: const [
+            ThuMuaBag(sequenceNumber: 1, weightKg: 20),
+            ThuMuaBag(sequenceNumber: 2, weightKg: 20),
+            ThuMuaBag(sequenceNumber: 3, weightKg: 30),
+            ThuMuaBag(sequenceNumber: 4, weightKg: 30),
+          ],
+        ),
+        quantity: 4,
+        unitCostPrice: 12000,
+        note: '  cập nhật  ',
+      );
+
+      final call = client.calls.single;
+      expect(call.method, 'PUT');
+      expect(call.path, '/api/v1/paddy-purchase-receipts');
+      expect(call.body?['id'], 55);
+      expect(call.body?['warehouseId'], 2);
+      expect(call.body?['bagCount'], 4);
+      expect(call.body?['actualWeightKg'], 100);
+      expect(call.body?.containsKey('bags'), isFalse);
+      expect(call.body?['agreedPrice'], 12000);
+      expect(call.body?['priceAdjustReason'], 'cập nhật');
+      expect(result.id, 55);
+      expect(result.code, 'PPR-55');
     });
 
     test('uses trimmed note and backend failure message', () async {
@@ -631,6 +686,32 @@ ThuMuaReceipt _inboundReceipt() {
       name: 'Nhà cung cấp A',
     ),
     expectedDate: DateTime(2026, 7, 30),
+  );
+}
+
+ThuMuaReceipt _editReceipt() {
+  return ThuMuaReceipt(
+    id: 55,
+    productVariantId: 1,
+    warehouseId: 2,
+    warehouseName: 'Kho A',
+    status: 'Phiếu nháp',
+    productName: 'Gạo',
+    sku: 'GAO',
+    currentStock: 5,
+    receiptCode: 'PPR-55',
+    weightKg: 25,
+    quantity: 1,
+    noteHint: '',
+    unitCostPrice: 10000,
+    supplier: const ThuMuaSupplier(
+      id: 4,
+      code: 'SUP-04',
+      name: 'Nhà cung cấp A',
+    ),
+    expectedDate: DateTime(2026, 7, 30),
+    actualWeightKg: 100,
+    paidAmount: 1000,
   );
 }
 

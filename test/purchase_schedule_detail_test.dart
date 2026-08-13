@@ -47,6 +47,6 @@ void main() {
     expect(find.textContaining('0912 345 678'), findsOneWidget);
     expect(find.textContaining('IR50404 · dự kiến 5t'), findsOneWidget);
     expect(find.textContaining('6.200đ/kg'), findsOneWidget);
-    expect(find.text('Bắt đầu cân tại nhà'), findsOneWidget);
+    expect(find.text('Tạo phiếu mua từ lịch'), findsOneWidget);
   });
 }

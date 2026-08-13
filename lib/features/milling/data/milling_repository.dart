@@ -4,6 +4,51 @@ import '../models/milling_order.dart';
 abstract class MillingRepository {
   Future<List<MillingProductOption>> getOutputProducts() async => const [];
 
+  Future<List<MillingPaddyLotOption>> getPaddyLots() async => const [];
+
+  Future<int> createOrder({
+    required MillingPaddyLotOption lot,
+    required double inputWeightKg,
+    required double expectedYield,
+    String? reason,
+    double? moisturePercent,
+    double? millingCost,
+    double? incidentalCost,
+    DateTime? expectedCompletionDate,
+  }) async {
+    throw UnsupportedError('Milling repository chưa hỗ trợ tạo lệnh.');
+  }
+
+  Future<MillingOrderPage> getMillingOrderPage({
+    String search = '',
+    int? statusId,
+    int? warehouseId,
+    int start = 0,
+    int length = 20,
+  }) async {
+    final order = await getActiveOrder();
+    return MillingOrderPage(
+      orders: [order],
+      recordsTotal: 1,
+      recordsFiltered: 1,
+    );
+  }
+
+  Future<List<MillingOrder>> getMillingOrders({
+    String search = '',
+    int? statusId,
+    int? warehouseId,
+  }) async {
+    final page = await getMillingOrderPage(
+      search: search,
+      statusId: statusId,
+      warehouseId: warehouseId,
+    );
+    return page.orders;
+  }
+
+  Future<MillingOrder> getMillingOrderDetail(int id) => getActiveOrder();
+
   Future<MillingOrder> getActiveOrder();
 
   Future<void> saveRiceBags(MillingOrder order);
@@ -15,6 +60,64 @@ abstract class MillingRepository {
 
 /// Offline implementation used to exercise all screens before API wiring.
 class MockMillingRepository implements MillingRepository {
+  @override
+  Future<List<MillingPaddyLotOption>> getPaddyLots() async => const [];
+
+  @override
+  Future<int> createOrder({
+    required MillingPaddyLotOption lot,
+    required double inputWeightKg,
+    required double expectedYield,
+    String? reason,
+    double? moisturePercent,
+    double? millingCost,
+    double? incidentalCost,
+    DateTime? expectedCompletionDate,
+  }) async => 0;
+
+  @override
+  Future<MillingOrderPage> getMillingOrderPage({
+    String search = '',
+    int? statusId,
+    int? warehouseId,
+    int start = 0,
+    int length = 20,
+  }) async {
+    final order = await getActiveOrder();
+    final matchesSearch = search.trim().isEmpty ||
+        order.millingCode.toLowerCase().contains(search.toLowerCase()) ||
+        order.warehouseZone.toLowerCase().contains(search.toLowerCase()) ||
+        order.scaleCode.toLowerCase().contains(search.toLowerCase());
+    final matchesStatus = statusId == null || order.statusId == statusId;
+    final matchesWarehouse =
+        warehouseId == null || order.warehouseId == warehouseId;
+    final orders = matchesSearch && matchesStatus && matchesWarehouse
+        ? [order]
+        : const <MillingOrder>[];
+    return MillingOrderPage(
+      orders: orders,
+      recordsTotal: 1,
+      recordsFiltered: orders.length,
+    );
+  }
+
+  @override
+  Future<List<MillingOrder>> getMillingOrders({
+    String search = '',
+    int? statusId,
+    int? warehouseId,
+  }) async {
+    final page = await getMillingOrderPage(
+      search: search,
+      statusId: statusId,
+      warehouseId: warehouseId,
+    );
+    return page.orders;
+  }
+
+  @override
+  Future<MillingOrder> getMillingOrderDetail(int id) => getActiveOrder();
+
   @override
   Future<List<MillingProductOption>> getOutputProducts() async => const [
         MillingProductOption(
@@ -49,6 +152,16 @@ class MockMillingRepository implements MillingRepository {
       warehouseZone: 'Khu A',
       locationCode: 'Cột A03-A04',
       scaleCode: 'SCALE-03',
+      statusId: 3,
+      statusName: 'Đang xay',
+      statusCode: 'MILLING',
+      warehouseId: 1,
+      warehouseName: 'Khu A',
+      riceVarietyName: 'IR50404',
+      yieldRateUsed: 0.65,
+      totalRiceOutputKg: 3250,
+      computedPaddyKg: 5000,
+      createdDate: DateTime(2026, 8, 1),
       riceBags: List<MillingBag>.generate(
         10,
         (index) => MillingBag(index: index + 1, weightKg: 25),

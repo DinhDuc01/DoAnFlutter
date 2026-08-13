@@ -198,8 +198,9 @@ class BleScaleCaptureCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   manualMode
-                      ? 'Cân thường · nhập thủ công'
-                      : '$scaleCode · Cân IoT',
+                      ? 'Chế độ cân: Cân thủ công'
+                      : 'Chế độ cân: Cân IoT'
+                          '${scaleCode.trim().isEmpty ? '' : ' · Thiết bị: $scaleCode'}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 12,

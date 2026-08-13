@@ -15,6 +15,7 @@ class ApiMillingRepository implements MillingRepository {
   final ApiClient _apiClient;
   final ProductVariantApi _productVariantApi;
 
+  @override
   Future<List<MillingPaddyLotOption>> getPaddyLots() async {
     final json = await _apiClient.get(
       '/api/v1/paddy-lots',
@@ -36,6 +37,7 @@ class ApiMillingRepository implements MillingRepository {
             locationId: JsonReader.integer(item, 'locationId'),
             locationCode: JsonReader.string(item, 'locationCode'),
             riceVarietyId: JsonReader.integer(item, 'riceVarietyId'),
+            riceVarietyName: JsonReader.string(item, 'riceVarietyName'),
             remainingWeightKg:
                 JsonReader.decimal(item, 'remainingWeightKg') ?? 0,
           ),
@@ -43,39 +45,56 @@ class ApiMillingRepository implements MillingRepository {
       ..sort((a, b) => b.id.compareTo(a.id));
   }
 
+  @override
+  Future<int> createOrder({
+    required MillingPaddyLotOption lot,
+    required double inputWeightKg,
+    required double expectedYield,
+    String? reason,
+    double? moisturePercent,
+    double? millingCost,
+    double? incidentalCost,
+    DateTime? expectedCompletionDate,
+  }) async {
+    _validateCreateInput(lot, inputWeightKg, expectedYield);
+    final body = <String, dynamic>{
+      'warehouseId': lot.warehouseId,
+      'riceVarietyId': lot.riceVarietyId,
+      'reason': reason?.trim().isEmpty == true ? null : reason?.trim(),
+      'expectedYield': expectedYield,
+      'targetRiceKg': inputWeightKg * expectedYield,
+      if (moisturePercent != null) 'moisturePercent': moisturePercent,
+      if (millingCost != null) 'millingCost': millingCost,
+      if (incidentalCost != null) 'incidentalCost': incidentalCost,
+      if (expectedCompletionDate != null)
+        'expectedCompletionDate': expectedCompletionDate.toIso8601String(),
+    };
+    final response = await _apiClient.post(
+      '/api/v1/milling-orders',
+      token: _currentToken(),
+      body: body,
+    );
+    _ensureSucceeded(response, 'Không tạo được lệnh xay.');
+    final id = _resourceId(response);
+    if (id <= 0) {
+      throw const MillingApiException('Backend không trả về mã lệnh xay.');
+    }
+    return id;
+  }
+
   Future<int> createAndStartOrder({
     required MillingPaddyLotOption lot,
     required double inputWeightKg,
     required double expectedYield,
   }) async {
-    if (inputWeightKg <= 0 || inputWeightKg > lot.remainingWeightKg) {
-      throw MillingApiException(
-        'Khối lượng lúa phải lớn hơn 0 và không vượt quá '
-        '${lot.remainingWeightKg.toStringAsFixed(1)} kg.',
-      );
-    }
-    if (expectedYield <= 0 || expectedYield > 1) {
-      throw const MillingApiException(
-          'Tỷ lệ thu hồi phải trong khoảng 1-100%.');
-    }
-
+    _validateCreateInput(lot, inputWeightKg, expectedYield);
     final token = _currentToken();
-    final created = await _apiClient.post(
-      '/api/v1/milling-orders',
-      token: token,
-      body: {
-        'warehouseId': lot.warehouseId,
-        'riceVarietyId': lot.riceVarietyId,
-        'reason': 'Tạo lệnh xay từ ứng dụng mobile',
-        'expectedYield': expectedYield,
-        'targetRiceKg': inputWeightKg * expectedYield,
-      },
+    final id = await createOrder(
+      lot: lot,
+      inputWeightKg: inputWeightKg,
+      expectedYield: expectedYield,
+      reason: 'Tạo lệnh xay từ ứng dụng mobile',
     );
-    _ensureSucceeded(created, 'Không tạo được lệnh xay.');
-    final id = _resourceId(created);
-    if (id <= 0) {
-      throw const MillingApiException('Backend không trả về mã lệnh xay.');
-    }
 
     final reserved = await _apiClient.post(
       '/api/v1/milling-orders/$id/reserve',
@@ -103,6 +122,28 @@ class ApiMillingRepository implements MillingRepository {
     return id;
   }
 
+  static void _validateCreateInput(
+    MillingPaddyLotOption lot,
+    double inputWeightKg,
+    double expectedYield,
+  ) {
+    if (!inputWeightKg.isFinite ||
+        inputWeightKg <= 0 ||
+        inputWeightKg > lot.remainingWeightKg) {
+      throw MillingApiException(
+        'Khối lượng lúa phải lớn hơn 0 và không vượt quá '
+        '${lot.remainingWeightKg.toStringAsFixed(1)} kg.',
+      );
+    }
+    if (!expectedYield.isFinite || expectedYield <= 0 || expectedYield > 1) {
+      throw const MillingApiException(
+          'Tỷ lệ thu hồi phải trong khoảng 1-100%.');
+    }
+    if (lot.riceVarietyId == null || lot.riceVarietyId! <= 0) {
+      throw const MillingApiException('Lô chưa có giống lúa hợp lệ.');
+    }
+  }
+
   @override
   Future<List<MillingProductOption>> getOutputProducts() async {
     final products = await _productVariantApi.activeVariantsWithStock();
@@ -115,6 +156,102 @@ class ApiMillingRepository implements MillingRepository {
           outputType: _outputType(product.name),
         ),
     ];
+  }
+
+  @override
+  Future<MillingOrderPage> getMillingOrderPage({
+    String search = '',
+    int? statusId,
+    int? warehouseId,
+    int start = 0,
+    int length = 20,
+  }) async {
+    final body = {
+      'draw': 1,
+      'start': start < 0 ? 0 : start,
+      'length': length <= 0 ? 20 : length,
+      'columns': [
+        {
+          'data': 'statusId',
+          'name': '',
+          'searchable': true,
+          'orderable': true,
+          'search': {
+            'value': statusId == null ? '' : '$statusId',
+            'regex': false,
+          },
+        },
+        {
+          'data': 'warehouseId',
+          'name': '',
+          'searchable': true,
+          'orderable': true,
+          'search': {
+            'value': warehouseId == null ? '' : '$warehouseId',
+            'regex': false,
+          },
+        },
+        {
+          'data': 'createdDate',
+          'name': '',
+          'searchable': false,
+          'orderable': true,
+          'search': {'value': '', 'regex': false},
+        },
+      ],
+      'order': [
+        {'column': 2, 'dir': 'desc'},
+      ],
+      'search': {'value': search.trim(), 'regex': false},
+    };
+    final json = await _apiClient.post(
+      '/api/v1/milling-orders/paged-advanced',
+      token: _currentToken(),
+      body: body,
+    );
+    final resources = JsonReader.map(json, 'resources') ?? json;
+    final rows = JsonReader.list(resources, 'data') ??
+        JsonReader.list(json, 'data') ??
+        const [];
+    return MillingOrderPage(
+      orders: [
+        for (final item in rows)
+          if (item is Map<String, dynamic>) MillingOrder.fromJson(item),
+      ],
+      recordsTotal: JsonReader.integer(resources, 'recordsTotal') ??
+          JsonReader.integer(json, 'recordsTotal') ??
+          rows.length,
+      recordsFiltered: JsonReader.integer(resources, 'recordsFiltered') ??
+          JsonReader.integer(json, 'recordsFiltered') ??
+          rows.length,
+    );
+  }
+
+  @override
+  Future<List<MillingOrder>> getMillingOrders({
+    String search = '',
+    int? statusId,
+    int? warehouseId,
+  }) async {
+    final page = await getMillingOrderPage(
+      search: search,
+      statusId: statusId,
+      warehouseId: warehouseId,
+    );
+    return page.orders;
+  }
+
+  @override
+  Future<MillingOrder> getMillingOrderDetail(int id) async {
+    if (id <= 0) {
+      throw const MillingApiException('Mã lệnh xay không hợp lệ.');
+    }
+    final json = await _apiClient.get(
+      '/api/v1/milling-orders/$id',
+      token: _currentToken(),
+    );
+    final detail = JsonReader.map(json, 'resources') ?? json;
+    return MillingOrder.fromJson(detail);
   }
 
   @override
@@ -134,31 +271,7 @@ class ApiMillingRepository implements MillingRepository {
       token: token,
     );
     final detail = JsonReader.map(detailJson, 'resources') ?? rawOrder;
-    final inputs = JsonReader.list(detail, 'inputs') ?? const [];
-    final outputs = JsonReader.list(detail, 'outputs') ?? const [];
-    final firstInput =
-        inputs.cast<Object?>().whereType<Map<String, dynamic>>().firstOrNull;
-    return MillingOrder(
-      id: id,
-      millingCode: JsonReader.string(detail, 'millingCode') ?? 'MO-$id',
-      inputLotCode: firstInput == null
-          ? 'Lô chưa xác định'
-          : JsonReader.string(firstInput, 'lotCode') ?? 'Lô chưa xác định',
-      inputWeightKg: JsonReader.decimal(detail, 'computedPaddyKg') ?? 0,
-      warehouseZone:
-          JsonReader.string(detail, 'warehouseName') ?? 'Kho chưa xác định',
-      locationCode: firstInput == null
-          ? 'Chưa có vị trí'
-          : '${JsonReader.integer(firstInput, 'locationId') ?? 'N/A'}',
-      scaleCode: JsonReader.string(detail, 'machineRef') ?? 'Cân thủ công',
-      // The backend returns output totals, not individual BLE readings.
-      // Do not invent bag records; each bag is captured from the scale.
-      riceBags: const [],
-      branBags: const [],
-      riceProductVariantId: _outputVariantId(outputs, 'RICE'),
-      branProductVariantId: _outputVariantId(outputs, 'BRAN'),
-      brokenProductVariantId: _outputVariantId(outputs, 'BROKEN'),
-    );
+    return MillingOrder.fromJson(detail);
   }
 
   @override
@@ -215,15 +328,6 @@ class ApiMillingRepository implements MillingRepository {
         JsonReader.string(json, 'message') ?? 'Không hoàn thành được lệnh xay',
       );
     }
-  }
-
-  static int _outputVariantId(List<dynamic> outputs, String type) {
-    for (final item in outputs.whereType<Map<String, dynamic>>()) {
-      if ((JsonReader.string(item, 'outputType') ?? '').toUpperCase() == type) {
-        return JsonReader.integer(item, 'productVariantId') ?? 0;
-      }
-    }
-    return 0;
   }
 
   static int _resourceId(Map<String, dynamic> json) {

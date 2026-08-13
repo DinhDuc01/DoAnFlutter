@@ -6,8 +6,6 @@ import '../../../auth/data/auth_session_store.dart';
 import '../../../home/presentation/screens/home_screen.dart';
 import '../../../home/presentation/widgets/main_bottom_navigation.dart';
 import '../../../products/data/product_variant_api.dart';
-import '../../../scale/models/weight_reading.dart';
-import '../../../scale/presentation/screens/scale_screen.dart';
 import '../../data/api_thu_mua_repository.dart';
 import '../../data/paddy_variety_api.dart';
 import '../../data/thu_mua_repository.dart';
@@ -16,7 +14,6 @@ import '../../models/purchase_schedule.dart';
 import '../widgets/thu_mua_header.dart';
 import '../widgets/thu_mua_note_field.dart';
 import '../widgets/thu_mua_product_card.dart';
-import '../widgets/thu_mua_quantity_stepper.dart';
 import '../widgets/thu_mua_receipt_fields.dart';
 
 class ThuMuaScreen extends StatefulWidget {
@@ -34,38 +31,50 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   late final ThuMuaRepository _repository;
   final TextEditingController _noteController = TextEditingController();
   final TextEditingController _unitCostController = TextEditingController();
-  final TextEditingController _actualWeightController = TextEditingController();
   final TextEditingController _moistureController = TextEditingController();
   final TextEditingController _paidAmountController = TextEditingController();
+  final List<TextEditingController> _bagWeightControllers = [];
+  List<String?> _bagWeightErrors = [];
 
   final PaddyVarietyApi _varietyApi = PaddyVarietyApi();
   late final Future<ThuMuaReceipt> _receiptFuture;
   late final Future<List<ProductVariantStock>> _productsFuture;
   late final Future<List<ThuMuaSupplier>> _suppliersFuture;
+  late Future<List<ThuMuaWarehouse>> _warehousesFuture;
   late final Future<List<RiceVarietyOption>> _varietiesFuture;
   List<ProductVariantStock> _products = const [];
+  List<ThuMuaWarehouse> _warehouses = const [];
   List<RiceVarietyOption> _varieties = const [];
   // variantId -> riceVarietyId (để lọc sản phẩm theo giống đã chọn)
   Map<int, int?> _variantVarietyMap = const {};
   int? _riceVarietyId;
+
   /// Ngưỡng khối lượng trung bình tối đa cho mỗi bao lúa (kg). Vượt ngưỡng này
   /// coi là nhập sai (ví dụ nhầm tổng khối lượng với số bao).
   static const int _maxKgPerBag = 200;
 
   ThuMuaReceipt? _receipt;
-  int _quantity = 0;
   bool _quantityInitialized = false;
   bool _isSubmitting = false;
   bool _isChangingProduct = false;
-  bool _useIotScale = true;
 
-  double get _enteredWeight =>
-      double.tryParse(_actualWeightController.text.trim()) ?? 0;
+  double get _enteredWeight => _bagWeightControllers.fold<double>(
+        0,
+        (sum, controller) =>
+            sum +
+            (double.tryParse(controller.text.trim().replaceAll(',', '.')) ?? 0),
+      );
 
   double get _enteredUnitPrice =>
       double.tryParse(_unitCostController.text.trim()) ?? 0;
 
   double get _totalPurchaseAmount => _enteredWeight * _enteredUnitPrice;
+
+  String get _submitLabel =>
+      widget.draft != null ? 'Cập nhật phiếu mua' : 'Lưu phiếu mua';
+
+  String get _headerTitle =>
+      widget.draft != null ? 'Chỉnh sửa phiếu mua lúa' : 'Tạo phiếu mua lúa';
 
   @override
   void initState() {
@@ -74,6 +83,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     _receiptFuture = _loadReceipt();
     _productsFuture = _loadProducts();
     _suppliersFuture = _loadSuppliers();
+    _warehousesFuture = _loadWarehouses();
     _varietiesFuture = _loadVarieties();
   }
 
@@ -101,34 +111,54 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   /// Sản phẩm hiện chọn đã khớp giống đã chọn chưa (khi có dữ liệu giống).
   bool _productMatchesVariety(int productVariantId) {
     if (_riceVarietyId == null) return true;
-    if (_variantVarietyMap.isEmpty) return true; // không có dữ liệu → không chặn
+    if (_variantVarietyMap.isEmpty) {
+      return true; // không có dữ liệu → không chặn
+    }
     return _varietyOf(productVariantId) == _riceVarietyId;
   }
 
   Future<ThuMuaReceipt> _loadReceipt() async {
     if (widget.draft != null) return widget.draft!;
-    final receipt = await _repository.getDraftReceipt();
     final schedule = widget.schedule;
-    if (schedule == null) return receipt;
+    if (schedule != null) {
+      return _receiptFromSchedule(schedule);
+    }
+    return _repository.getDraftReceipt();
+  }
 
-    return receipt.copyWith(
+  ThuMuaReceipt _receiptFromSchedule(PurchaseSchedule schedule) {
+    return ThuMuaReceipt(
+      productVariantId: 0,
+      warehouseId: schedule.warehouseId ?? 0,
+      warehouseName: schedule.warehouseName ?? '',
+      status: 'Phiếu nháp',
+      productName: '',
+      sku: '',
+      currentStock: 0,
+      receiptCode: 'Tự động sau khi lưu',
+      weightKg: 0,
+      quantity: 0,
+      noteHint: 'Nhập ghi chú nếu có...',
+      unitCostPrice: schedule.expectedPrice ?? 0,
       supplier: ThuMuaSupplier(
         id: schedule.farmerId,
         code: '',
         name: schedule.farmerName,
       ),
+      expectedDate: schedule.scheduledAt,
       scheduleId: schedule.id,
       riceVarietyId: schedule.riceVarietyId,
-      actualWeightKg: schedule.estimatedWeightKg,
-      expectedDate: schedule.scheduledAt,
-      unitCostPrice: schedule.expectedPrice,
-      warehouseId: schedule.warehouseId ?? 0,
-      warehouseName: schedule.warehouseName ?? '',
     );
   }
 
   Future<List<ThuMuaSupplier>> _loadSuppliers() async {
     return _repository.getSuppliers();
+  }
+
+  Future<List<ThuMuaWarehouse>> _loadWarehouses() async {
+    final warehouses = await _repository.getWarehouses();
+    _warehouses = warehouses;
+    return warehouses;
   }
 
   Future<List<ProductVariantStock>> _loadProducts() async {
@@ -137,13 +167,36 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     return products;
   }
 
+  List<ThuMuaWarehouse> _warehouseOptions(
+    ThuMuaReceipt receipt,
+    List<ThuMuaWarehouse>? loaded,
+  ) {
+    final rows = <ThuMuaWarehouse>[
+      ...?loaded,
+    ];
+    if (receipt.warehouseId > 0 &&
+        receipt.warehouseName.trim().isNotEmpty &&
+        !rows.any((item) => item.id == receipt.warehouseId)) {
+      rows.insert(
+        0,
+        ThuMuaWarehouse(
+          id: receipt.warehouseId,
+          name: receipt.warehouseName,
+        ),
+      );
+    }
+    return rows;
+  }
+
   @override
   void dispose() {
     _noteController.dispose();
     _unitCostController.dispose();
-    _actualWeightController.dispose();
     _moistureController.dispose();
     _paidAmountController.dispose();
+    for (final controller in _bagWeightControllers) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -151,22 +204,130 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     if (_quantityInitialized) return;
     _receipt = receipt;
     _riceVarietyId ??= receipt.riceVarietyId;
-    _quantity = receipt.quantity;
     if (_unitCostController.text.isEmpty && receipt.unitCostPrice > 0) {
       _unitCostController.text = receipt.unitCostPrice.toStringAsFixed(0);
     }
-    if (_actualWeightController.text.isEmpty && receipt.actualWeightKg > 0) {
-      _actualWeightController.text = receipt.actualWeightKg.toStringAsFixed(1);
-    }
+    _initializeBagControllers(receipt);
     if (_moistureController.text.isEmpty && receipt.moisturePercent != null) {
       _moistureController.text = receipt.moisturePercent!.toStringAsFixed(1);
     }
     _quantityInitialized = true;
   }
 
-  void _changeQuantity(int value) {
+  void _initializeBagControllers(ThuMuaReceipt receipt) {
+    if (_bagWeightControllers.isNotEmpty) return;
+    final weights = receipt.bags.isNotEmpty
+        ? receipt.bags.map((bag) => bag.weightKg).toList()
+        : receipt.actualWeightKg > 0
+            ? [receipt.actualWeightKg]
+            : <double>[];
+    for (final weight in weights) {
+      _bagWeightControllers.add(
+        TextEditingController(
+          text: weight > 0 ? weight.toStringAsFixed(1) : '',
+        ),
+      );
+    }
+    if (_bagWeightControllers.isEmpty) {
+      _bagWeightControllers.add(TextEditingController());
+    }
+    _bagWeightErrors = List<String?>.filled(_bagWeightControllers.length, null);
+  }
+
+  void _addBag() {
     if (_isSubmitting) return;
-    setState(() => _quantity = value);
+    setState(() {
+      _bagWeightControllers.add(TextEditingController());
+      _bagWeightErrors =
+          List<String?>.filled(_bagWeightControllers.length, null);
+    });
+  }
+
+  void _removeBag(int index) {
+    if (_isSubmitting || index < 0 || index >= _bagWeightControllers.length) {
+      return;
+    }
+    setState(() {
+      final controller = _bagWeightControllers.removeAt(index);
+      controller.dispose();
+      if (_bagWeightControllers.isEmpty) {
+        _bagWeightControllers.add(TextEditingController());
+      }
+      _bagWeightErrors =
+          List<String?>.filled(_bagWeightControllers.length, null);
+    });
+  }
+
+  List<ThuMuaBag>? _validatedBags() {
+    final bags = <ThuMuaBag>[];
+    final errors = List<String?>.filled(_bagWeightControllers.length, null);
+    for (var i = 0; i < _bagWeightControllers.length; i++) {
+      final raw = _bagWeightControllers[i].text.trim().replaceAll(',', '.');
+      final value = double.tryParse(raw);
+      if (raw.isEmpty) {
+        errors[i] = 'Khối lượng bao ${i + 1} là bắt buộc';
+      } else if (value == null) {
+        errors[i] = 'Khối lượng bao ${i + 1} không hợp lệ';
+      } else if (value <= 0) {
+        errors[i] = 'Khối lượng phải lớn hơn 0';
+      } else {
+        bags.add(ThuMuaBag(sequenceNumber: i + 1, weightKg: value));
+      }
+    }
+    if (bags.isEmpty && errors.every((item) => item == null)) {
+      errors[0] = 'Vui lòng thêm ít nhất một bao';
+    }
+    if (errors.any((item) => item != null)) {
+      setState(() => _bagWeightErrors = errors);
+      return null;
+    }
+    setState(() => _bagWeightErrors = errors);
+    return bags;
+  }
+
+  void _retryWarehouses() {
+    if (_isSubmitting) return;
+    setState(() {
+      _warehousesFuture = _loadWarehouses();
+    });
+  }
+
+  void _changeWarehouse(int? warehouseId) {
+    if (warehouseId == null || _isSubmitting) return;
+    final warehouse =
+        _warehouses.where((item) => item.id == warehouseId).firstOrNull;
+    final receipt = _receipt;
+    if (warehouse == null || receipt == null) return;
+    setState(() {
+      _receipt = receipt.copyWith(
+        warehouseId: warehouse.id,
+        warehouseName: warehouse.name,
+      );
+    });
+  }
+
+  void _changeRiceVariety(int? id) {
+    if (_isSubmitting || _isChangingProduct) return;
+    final receipt = _receipt;
+    setState(() {
+      _riceVarietyId = id;
+      if (receipt != null &&
+          receipt.productVariantId > 0 &&
+          id != null &&
+          _variantVarietyMap.isNotEmpty &&
+          _varietyOf(receipt.productVariantId) != id) {
+        _receipt = receipt.copyWith(
+          productVariantId: 0,
+          productName: '',
+          sku: '',
+          currentStock: 0,
+          weightKg: 0,
+          riceVarietyId: id,
+        );
+      } else if (receipt != null) {
+        _receipt = receipt.copyWith(riceVarietyId: id);
+      }
+    });
   }
 
   Future<void> _changeProduct(int? productVariantId) async {
@@ -182,22 +343,27 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
 
     setState(() => _isChangingProduct = true);
     try {
-      final receipt = await _repository.getDraftReceiptForProduct(product);
-      if (!mounted) return;
+      final current = _receipt;
+      if (current == null) return;
       final varietyId =
-          _varietyOf(product.id) ?? _riceVarietyId ?? receipt.riceVarietyId;
+          _varietyOf(product.id) ?? _riceVarietyId ?? current.riceVarietyId;
       setState(() {
         _riceVarietyId = varietyId;
-        _receipt = receipt.copyWith(riceVarietyId: varietyId);
-        _quantity = receipt.quantity;
+        _receipt = current.copyWith(
+          productVariantId: product.id,
+          productName: product.name,
+          sku: product.sku,
+          currentStock: product.quantityOnHand,
+          weightKg: product.weightKg,
+          riceVarietyId: varietyId,
+          unitCostPrice: _unitCostController.text.trim().isEmpty
+              ? product.costPrice
+              : current.unitCostPrice,
+        );
         _quantityInitialized = true;
-        _noteController.clear();
-        _unitCostController.text = receipt.unitCostPrice > 0
-            ? receipt.unitCostPrice.toStringAsFixed(0)
-            : '';
-        _actualWeightController.clear();
-        _moistureController.clear();
-        _paidAmountController.clear();
+        if (_unitCostController.text.trim().isEmpty && product.costPrice > 0) {
+          _unitCostController.text = product.costPrice.toStringAsFixed(0);
+        }
       });
     } catch (error) {
       if (!mounted) return;
@@ -297,12 +463,11 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     final receipt = _receipt;
     if (receipt == null || _isSubmitting) return;
 
-    if (_quantity <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Số lượng nhập phải lớn hơn 0')),
-      );
-      return;
-    }
+    final bags = _validatedBags();
+    if (bags == null) return;
+    final bagCount = bags.length;
+    final actualWeightKg =
+        bags.fold<double>(0, (sum, bag) => sum + bag.weightKg);
     // Bắt buộc chọn giống lúa trước, rồi sản phẩm thuộc giống đó (đồng bộ web).
     if (_varieties.isNotEmpty && _riceVarietyId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -330,8 +495,6 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       return;
     }
     final unitCostPrice = double.tryParse(_unitCostController.text.trim()) ?? 0;
-    final actualWeightKg =
-        double.tryParse(_actualWeightController.text.trim()) ?? 0;
     final moisturePercent = double.tryParse(_moistureController.text.trim());
     final paidAmount = double.tryParse(_paidAmountController.text.trim()) ?? 0;
     if (receipt.supplier == null) {
@@ -342,19 +505,13 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     }
     if (unitCostPrice <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đơn giá nhập phải lớn hơn 0')),
-      );
-      return;
-    }
-    if (actualWeightKg <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Khối lượng thực tế phải lớn hơn 0')),
+        const SnackBar(content: Text('Giá mua phải lớn hơn 0')),
       );
       return;
     }
     // Ràng buộc tỉ lệ khối lượng/số bao: chặn giá trị vô lý
     // (ví dụ 500000 kg cho 2 bao). Bao lúa thực tế hiếm khi vượt _maxKgPerBag.
-    final avgKgPerBag = actualWeightKg / _quantity;
+    final avgKgPerBag = actualWeightKg / bagCount;
     if (avgKgPerBag > _maxKgPerBag) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -396,8 +553,9 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           moisturePercent: moisturePercent,
           paidAmount: paidAmount,
           riceVarietyId: _riceVarietyId ?? receipt.riceVarietyId,
+          bags: bags,
         ),
-        quantity: _quantity,
+        quantity: bagCount,
         unitCostPrice: unitCostPrice,
         note: _noteController.text,
       );
@@ -415,7 +573,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       final user = AuthSessionStore.current?.user;
       final result = ThuMuaSuccessResult(
         receiptCode: submission.code,
-        quantity: _quantity,
+        quantity: bagCount,
         productName: receipt.productName,
         sku: receipt.sku,
         warehouseName: receipt.warehouseName,
@@ -444,7 +602,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           content: Text(
             receipt.id != null
                 ? 'Không lưu được phiếu nháp: $error'
-                : 'Không tạo được phiếu nhập: $error',
+                : 'Không lưu được phiếu mua lúa: $error',
           ),
         ),
       );
@@ -474,16 +632,6 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       ),
     );
     return result == true;
-  }
-
-  Future<void> _readIotWeight() async {
-    final reading = await Navigator.of(context).push<WeightReading>(
-      MaterialPageRoute(builder: (_) => const ScaleScreen()),
-    );
-    if (!mounted || reading == null) return;
-    setState(() {
-      _actualWeightController.text = reading.weight.toStringAsFixed(3);
-    });
   }
 
   void _openMainTab(int index) {
@@ -540,7 +688,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   Widget _buildErrorState(BuildContext context, Object? error) {
     final message = error is ProductVariantApiException
         ? error.message
-        : 'Không tải được phiếu nhập kho';
+        : 'Không tải được phiếu mua lúa';
 
     return Center(
       child: Padding(
@@ -559,11 +707,63 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
 
   Widget _buildReceiptForm(ThuMuaReceipt receipt) {
     _setInitialQuantity(receipt);
+    final schedule = widget.schedule;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (schedule != null) ...[
+            _PurchaseSourceCard(schedule: schedule),
+            const SizedBox(height: 12),
+          ],
+          FutureBuilder<List<ThuMuaWarehouse>>(
+            future: _warehousesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const LinearProgressIndicator();
+              }
+              if (snapshot.hasError) {
+                return _WarehouseErrorField(
+                  error: snapshot.error,
+                  onRetry: _retryWarehouses,
+                );
+              }
+              final warehouses = _warehouseOptions(receipt, snapshot.data);
+              if (warehouses.isEmpty) {
+                return _WarehouseErrorField(
+                  error: 'Không có kho nhập khả dụng.',
+                  onRetry: _retryWarehouses,
+                );
+              }
+              final selected =
+                  warehouses.any((item) => item.id == receipt.warehouseId)
+                      ? receipt.warehouseId
+                      : null;
+              return DropdownButtonFormField<int>(
+                key: const ValueKey('thu_mua_warehouse'),
+                initialValue: selected,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Kho nhập *',
+                  prefixIcon: Icon(Icons.warehouse_outlined),
+                ),
+                items: [
+                  for (final warehouse in warehouses)
+                    DropdownMenuItem(
+                      value: warehouse.id,
+                      child: Text(
+                        warehouse.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: _isSubmitting ? null : _changeWarehouse,
+              );
+            },
+          ),
+          const SizedBox(height: 12),
           // 1) Chọn GIỐNG LÚA trước (đồng bộ web).
           FutureBuilder<List<RiceVarietyOption>>(
             future: _varietiesFuture,
@@ -573,15 +773,14 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
               }
               final varieties = _varieties;
               if (varieties.isEmpty) return const SizedBox.shrink();
-              final value =
-                  varieties.any((v) => v.id == _riceVarietyId)
-                      ? _riceVarietyId
-                      : null;
+              final value = varieties.any((v) => v.id == _riceVarietyId)
+                  ? _riceVarietyId
+                  : null;
               return DropdownButtonFormField<int>(
                 initialValue: value,
                 isExpanded: true,
                 decoration: const InputDecoration(
-                  labelText: 'Giống lúa',
+                  labelText: 'Giống lúa *',
                   prefixIcon: Icon(Icons.grass_outlined),
                 ),
                 items: [
@@ -597,7 +796,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                 ],
                 onChanged: _isSubmitting || _isChangingProduct
                     ? null
-                    : (id) => setState(() => _riceVarietyId = id),
+                    : _changeRiceVariety,
               );
             },
           ),
@@ -610,21 +809,20 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const LinearProgressIndicator();
               }
-              if (products.isEmpty) return const SizedBox.shrink();
+              if (products.isEmpty) {
+                return const _MissingProductField();
+              }
               final hasVarietyData = _varieties.isNotEmpty;
               final varietyChosen = _riceVarietyId != null || !hasVarietyData;
               final matches = _productMatchesVariety(receipt.productVariantId);
               final showProduct = receipt.productVariantId > 0 && matches;
               return InkWell(
-                key: ValueKey(
-                  'inbound_product_${receipt.productVariantId}_$_riceVarietyId',
-                ),
+                key: ValueKey('inbound_product_${receipt.productVariantId}'),
                 borderRadius: BorderRadius.circular(12),
-                onTap:
-                    varietyChosen ? () => _showProductPicker(receipt) : null,
+                onTap: varietyChosen ? () => _showProductPicker(receipt) : null,
                 child: InputDecorator(
                   decoration: InputDecoration(
-                    labelText: 'Chọn sản phẩm thu mua',
+                    labelText: 'Sản phẩm *',
                     prefixIcon: const Icon(Icons.inventory_2_outlined),
                     helperText:
                         varietyChosen ? null : 'Vui lòng chọn giống lúa trước',
@@ -641,7 +839,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                   child: Text(
                     showProduct
                         ? '${receipt.productName} · ${receipt.sku}'
-                        : 'Chọn sản phẩm thu mua',
+                        : 'Chưa xác định sản phẩm',
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
@@ -694,6 +892,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           ),
           const SizedBox(height: 12),
           TextFormField(
+            key: const ValueKey('thu_mua_unit_price'),
             controller: _unitCostController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
@@ -704,47 +903,14 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(
-                value: true,
-                icon: Icon(Icons.bluetooth),
-                label: Text('Cân IoT'),
-              ),
-              ButtonSegment(
-                value: false,
-                icon: Icon(Icons.edit_outlined),
-                label: Text('Cân thường'),
-              ),
-            ],
-            selected: {_useIotScale},
-            onSelectionChanged: (values) {
-              setState(() => _useIotScale = values.first);
-            },
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            key: const ValueKey('thu_mua_actual_weight'),
-            controller: _actualWeightController,
-            readOnly: _useIotScale,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              labelText: 'Khối lượng thực tế',
-              suffixText: 'kg',
-              prefixIcon: const Icon(Icons.scale_outlined),
-              helperText: _useIotScale
-                  ? 'Mở cân IoT để nhận khối lượng ổn định'
-                  : 'Nhập khối lượng khi dùng cân thường',
-              suffixIcon: _useIotScale
-                  ? IconButton(
-                      tooltip: 'Mở cân IoT',
-                      onPressed: _readIotWeight,
-                      icon: const Icon(Icons.bluetooth_searching),
-                    )
-                  : null,
-            ),
-            onTap: _useIotScale ? _readIotWeight : null,
-            onChanged: (_) => setState(() {}),
+          _BagWeightsSection(
+            controllers: _bagWeightControllers,
+            errors: _bagWeightErrors,
+            totalWeightKg: _enteredWeight,
+            onAdd: _addBag,
+            onRemove: _removeBag,
+            onChanged: () => setState(() {}),
+            isEnabled: !_isSubmitting,
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -759,6 +925,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           ),
           const SizedBox(height: 12),
           TextFormField(
+            key: const ValueKey('thu_mua_paid_amount'),
             controller: _paidAmountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
@@ -783,7 +950,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
               side: BorderSide(color: AppColors.borderFor(context)),
             ),
             leading: const Icon(Icons.event_outlined),
-            title: const Text('Ngày dự kiến nhập kho'),
+            title: const Text('Ngày mua thực tế'),
             subtitle: Text(_formatDate(receipt.expectedDate)),
             trailing: const Icon(Icons.chevron_right),
             onTap: () async {
@@ -801,17 +968,14 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
             },
           ),
           const SizedBox(height: 12),
-          ThuMuaProductCard(receipt: receipt),
-          const SizedBox(height: 12),
+          if (receipt.productVariantId > 0) ...[
+            ThuMuaProductCard(receipt: receipt),
+            const SizedBox(height: 12),
+          ],
           ThuMuaReceiptFields(receipt: receipt),
           const SizedBox(height: 12),
-          ThuMuaQuantityStepper(
-            quantity: _quantity,
-            onChanged: _changeQuantity,
-          ),
-          const SizedBox(height: 8),
           _QuantityWeightHint(
-            quantity: _quantity,
+            quantity: _bagWeightControllers.length,
             actualWeightKg: _enteredWeight,
             maxKgPerBag: _maxKgPerBag,
           ),
@@ -839,11 +1003,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : Text(
-                    receipt.id != null
-                        ? 'Lưu thay đổi phiếu nháp'
-                        : 'Tạo phiếu chờ xác nhận',
-                  ),
+                : Text(_submitLabel),
           ),
         ],
       ),
@@ -863,7 +1023,13 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
 
             return Column(
               children: [
-                ThuMuaHeader(status: receipt?.status ?? 'Chờ xác nhận'),
+                ThuMuaHeader(
+                  title: _headerTitle,
+                  status: receipt?.status ?? 'Phiếu nháp',
+                  subtitle: widget.schedule == null
+                      ? null
+                      : 'Từ lịch ${widget.schedule!.code}',
+                ),
                 Expanded(
                   child: switch (snapshot.connectionState) {
                     ConnectionState.done when snapshot.hasData =>
@@ -883,6 +1049,166 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       bottomNavigationBar: MainBottomNavigation(
         currentIndex: 1,
         onTap: _openMainTab,
+      ),
+    );
+  }
+}
+
+class _WarehouseErrorField extends StatelessWidget {
+  const _WarehouseErrorField({
+    required this.error,
+    required this.onRetry,
+  });
+
+  final Object? error;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const ValueKey('thu_mua_warehouse_error'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.dangerTint,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.warehouse_outlined, color: AppColors.danger),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'Không tải được danh sách kho nhập: $error',
+              style: const TextStyle(
+                color: AppColors.danger,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Thử lại'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MissingProductField extends StatelessWidget {
+  const _MissingProductField();
+
+  @override
+  Widget build(BuildContext context) {
+    return const InputDecorator(
+      decoration: InputDecoration(
+        labelText: 'Sản phẩm *',
+        prefixIcon: Icon(Icons.inventory_2_outlined),
+        helperText: 'Chưa có sản phẩm phù hợp từ dữ liệu hiện tại',
+      ),
+      child: Text(
+        'Chưa xác định sản phẩm',
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.textTertiary,
+        ),
+      ),
+    );
+  }
+}
+
+class _PurchaseSourceCard extends StatelessWidget {
+  const _PurchaseSourceCard({required this.schedule});
+
+  final PurchaseSchedule schedule;
+
+  @override
+  Widget build(BuildContext context) {
+    final expectedWeight = schedule.estimatedWeightKg <= 0
+        ? 'Chưa có'
+        : '${schedule.estimatedWeightKg.toStringAsFixed(0)} kg';
+    final expectedPrice = schedule.expectedPrice == null
+        ? 'Chưa có'
+        : '${schedule.expectedPrice!.toStringAsFixed(0)} đ/kg';
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceFor(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderFor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Nguồn phiếu',
+            style: TextStyle(
+              color: AppColors.textSecondaryFor(context),
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            schedule.code,
+            style: TextStyle(
+              color: AppColors.textPrimaryFor(context),
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            schedule.farmerName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: AppColors.textSecondaryFor(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 6,
+            children: [
+              _SourcePill(label: 'Dự kiến theo lịch', value: expectedWeight),
+              _SourcePill(
+                  label: 'Ngày hẹn', value: _formatDate(schedule.scheduledAt)),
+              _SourcePill(label: 'Giá dự kiến', value: expectedPrice),
+              _SourcePill(label: 'Giống', value: schedule.riceVariety),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourcePill extends StatelessWidget {
+  const _SourcePill({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: AppColors.brandTint,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(
+          color: AppColors.primaryDark,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -940,6 +1266,116 @@ class _PurchaseAmountSummary extends StatelessWidget {
               fontSize: 11,
               fontStyle: FontStyle.italic,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BagWeightsSection extends StatelessWidget {
+  const _BagWeightsSection({
+    required this.controllers,
+    required this.errors,
+    required this.totalWeightKg,
+    required this.onAdd,
+    required this.onRemove,
+    required this.onChanged,
+    required this.isEnabled,
+  });
+
+  final List<TextEditingController> controllers;
+  final List<String?> errors;
+  final double totalWeightKg;
+  final VoidCallback onAdd;
+  final ValueChanged<int> onRemove;
+  final VoidCallback onChanged;
+  final bool isEnabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceFor(context),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.borderFor(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Danh sách bao *',
+                  style: TextStyle(
+                    color: AppColors.textPrimaryFor(context),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                '${controllers.length} bao · ${totalWeightKg.toStringAsFixed(1)} kg',
+                style: const TextStyle(
+                  color: AppColors.primaryDark,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (var index = 0; index < controllers.length; index++) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundFor(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.borderFor(context)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Bao ${index + 1}',
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Xóa bao',
+                        onPressed: isEnabled && controllers.length > 1
+                            ? () => onRemove(index)
+                            : null,
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
+                  ),
+                  TextFormField(
+                    key: ValueKey('thu_mua_bag_weight_$index'),
+                    controller: controllers[index],
+                    enabled: isEnabled,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: 'Khối lượng (kg) *',
+                      suffixText: 'kg',
+                      prefixIcon: const Icon(Icons.scale_outlined),
+                      errorText: index < errors.length ? errors[index] : null,
+                    ),
+                    onChanged: (_) => onChanged(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          OutlinedButton.icon(
+            onPressed: isEnabled ? onAdd : null,
+            icon: const Icon(Icons.add),
+            label: const Text('Thêm bao'),
           ),
         ],
       ),

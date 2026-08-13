@@ -44,6 +44,33 @@ class ApiThuMuaRepository implements ThuMuaRepository {
     ].where((item) => item.id > 0).toList();
   }
 
+  @override
+  Future<List<ThuMuaWarehouse>> getWarehouses() async {
+    final json = await _apiClient.get(
+      '/api/v1/warehouse',
+      token: _currentToken(),
+    );
+    final resources = JsonReader.value(json, 'resources');
+    final rows = switch (resources) {
+      List<dynamic> list => list,
+      Map<String, dynamic> map => [map],
+      _ => const <dynamic>[],
+    };
+    return [
+      for (final item in rows)
+        if (item is Map<String, dynamic>)
+          ThuMuaWarehouse(
+            id: JsonReader.integer(item, 'id') ?? 0,
+            code: JsonReader.string(item, 'code') ??
+                JsonReader.string(item, 'warehouseCode') ??
+                '',
+            name: JsonReader.string(item, 'name') ??
+                JsonReader.string(item, 'warehouseName') ??
+                '',
+          ),
+    ].where((item) => item.id > 0 && item.name.trim().isNotEmpty).toList();
+  }
+
   Future<List<ThuMuaDraftSummary>> getDraftReceipts() async {
     debugPrint('[ThuMua] getDraftReceipts start');
     final token = _currentToken();
@@ -126,18 +153,13 @@ class ApiThuMuaRepository implements ThuMuaRepository {
     return drafts;
   }
 
-  /// Returns all receipt states. Drafts are intentionally not mixed into the
-  /// history list so the UI can offer a separate "continue submit" action.
-  Future<List<ThuMuaReceiptSummary>> getReceiptSummaries() async {
+  Future<List<ThuMuaReceiptSummary>> getReceiptSummaries({
+    String search = '',
+  }) async {
     final token = _currentToken();
     List<dynamic> resources;
-    try {
-      final json = await _apiClient.get(
-        '/api/v1/paddy-purchase-receipts',
-        token: token,
-      );
-      resources = _receiptRows(json);
-    } on ApiException {
+    final keyword = search.trim();
+    if (keyword.isNotEmpty) {
       final json = await _apiClient.post(
         '/api/v1/paddy-purchase-receipts/paged-advanced',
         token: token,
@@ -147,10 +169,32 @@ class ApiThuMuaRepository implements ThuMuaRepository {
           'length': 1000,
           'columns': const [],
           'order': const [],
-          'search': {'value': '', 'regex': false},
+          'search': {'value': keyword, 'regex': false},
         },
       );
       resources = _receiptRows(json);
+    } else {
+      try {
+        final json = await _apiClient.get(
+          '/api/v1/paddy-purchase-receipts',
+          token: token,
+        );
+        resources = _receiptRows(json);
+      } on ApiException {
+        final json = await _apiClient.post(
+          '/api/v1/paddy-purchase-receipts/paged-advanced',
+          token: token,
+          body: {
+            'draw': 1,
+            'start': 0,
+            'length': 1000,
+            'columns': const [],
+            'order': const [],
+            'search': {'value': '', 'regex': false},
+          },
+        );
+        resources = _receiptRows(json);
+      }
     }
 
     final rows = [
@@ -201,6 +245,12 @@ class ApiThuMuaRepository implements ThuMuaRepository {
           ) ??
           DateTime.fromMillisecondsSinceEpoch(0),
       scheduleId: JsonReader.integer(item, 'scheduleId'),
+      unitPrice: JsonReader.decimal(item, 'agreedPrice') ??
+          JsonReader.decimal(item, 'unitCostPrice') ??
+          0,
+      totalAmount: JsonReader.decimal(item, 'totalAmount') ?? 0,
+      paidAmount: JsonReader.decimal(item, 'paidAmount') ?? 0,
+      debtAmount: JsonReader.decimal(item, 'debtAmount') ?? 0,
     );
   }
 
@@ -250,13 +300,11 @@ class ApiThuMuaRepository implements ThuMuaRepository {
   Future<ThuMuaReceipt> getDraftReceiptForProduct(
     ProductVariantStock product,
   ) async {
-    final warehouse = await _loadDefaultWarehouse();
-
     return ThuMuaReceipt(
       productVariantId: product.id,
-      warehouseId: warehouse.id,
-      warehouseName: warehouse.name,
-      status: 'Chờ xác nhận',
+      warehouseId: 0,
+      warehouseName: '',
+      status: 'Phiếu nháp',
       productName: product.name,
       sku: product.sku,
       currentStock: product.quantityOnHand,
@@ -341,35 +389,31 @@ class ApiThuMuaRepository implements ThuMuaRepository {
       throw const InboundApiException('Đơn giá nhập phải lớn hơn 0.');
     }
 
+    final actualWeightKg = receipt.bags.isNotEmpty
+        ? receipt.totalBagWeightKg
+        : receipt.actualWeightKg;
+    final bagCount = receipt.bags.isNotEmpty ? receipt.bags.length : quantity;
+    final totalAmount = actualWeightKg * unitCostPrice;
     final body = {
       if (receipt.id != null) 'id': receipt.id,
-        'scheduleId': receipt.scheduleId,
-        'farmerId': supplier.id,
-        'riceVarietyId': receipt.riceVarietyId,
-        'warehouseId': receipt.warehouseId,
-        'actualWeightKg': receipt.actualWeightKg > 0
-            ? receipt.actualWeightKg
-            : receipt.weightKg * quantity,
-        'bagCount': quantity,
-        'agreedPrice': unitCostPrice,
-        'totalAmount': (receipt.actualWeightKg > 0
-                ? receipt.actualWeightKg
-                : receipt.weightKg * quantity) *
-            unitCostPrice,
-        'paidAmount': receipt.paidAmount,
-        'debtAmount': ((receipt.actualWeightKg > 0
-                        ? receipt.actualWeightKg
-                        : receipt.weightKg * quantity) *
-                    unitCostPrice -
-                receipt.paidAmount)
-            .clamp(0, double.infinity),
-        'qualityJson': receipt.moisturePercent == null
-            ? null
-            : jsonEncode({'moisturePercent': receipt.moisturePercent}),
-        'priceAdjustReason': note.trim().isEmpty ? null : note.trim(),
-        'receiptDate': receipt.expectedDate?.toIso8601String() ??
-            DateTime.now().toIso8601String(),
-      };
+      'scheduleId': receipt.scheduleId,
+      'farmerId': supplier.id,
+      'riceVarietyId': receipt.riceVarietyId,
+      'warehouseId': receipt.warehouseId,
+      'actualWeightKg': actualWeightKg,
+      'bagCount': bagCount,
+      'agreedPrice': unitCostPrice,
+      'totalAmount': totalAmount,
+      'paidAmount': receipt.paidAmount,
+      'debtAmount':
+          (totalAmount - receipt.paidAmount).clamp(0, double.infinity),
+      'qualityJson': receipt.moisturePercent == null
+          ? null
+          : jsonEncode({'moisturePercent': receipt.moisturePercent}),
+      'priceAdjustReason': note.trim().isEmpty ? null : note.trim(),
+      'receiptDate': receipt.expectedDate?.toIso8601String() ??
+          DateTime.now().toIso8601String(),
+    };
     final json = receipt.id != null
         ? await _apiClient.put(
             '/api/v1/paddy-purchase-receipts',
@@ -438,37 +482,6 @@ class ApiThuMuaRepository implements ThuMuaRepository {
     }
   }
 
-  Future<_InboundWarehouse> _loadDefaultWarehouse() async {
-    final token = _currentToken();
-    try {
-      final json = await _apiClient.get('/api/v1/warehouse', token: token);
-      final resources = JsonReader.value(json, 'resources');
-      final first = switch (resources) {
-        List<dynamic> list when list.isNotEmpty => list.first,
-        Map<String, dynamic> map => map,
-        _ => null,
-      };
-
-      if (first is Map<String, dynamic>) {
-        final id = JsonReader.integer(first, 'id') ?? 0;
-        if (id > 0) {
-          return _InboundWarehouse(
-            id: id,
-            name: JsonReader.string(first, 'name') ??
-                JsonReader.string(first, 'warehouseName') ??
-                'Kho $id',
-          );
-        }
-      }
-    } on ApiException {
-      // Fallback de app van co the nhap kho khi API warehouse bi chan quyen.
-    }
-
-    throw const InboundApiException(
-      'Chưa xác định kho nhập. Vui lòng chọn kho trước khi lưu phiếu.',
-    );
-  }
-
   String _currentToken() {
     final token = AuthSessionStore.current?.accessToken;
     if (token == null || token.isEmpty) {
@@ -476,16 +489,6 @@ class ApiThuMuaRepository implements ThuMuaRepository {
     }
     return token;
   }
-}
-
-class _InboundWarehouse {
-  const _InboundWarehouse({
-    required this.id,
-    required this.name,
-  });
-
-  final int id;
-  final String name;
 }
 
 class InboundApiException implements Exception {
