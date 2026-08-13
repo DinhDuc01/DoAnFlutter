@@ -165,6 +165,7 @@ class BleScaleCaptureCard extends StatelessWidget {
     required this.onCapture,
     this.latestWeightKg,
     this.manualMode = false,
+    this.onModeChanged,
     this.color = millingGreen,
     super.key,
   });
@@ -174,6 +175,7 @@ class BleScaleCaptureCard extends StatelessWidget {
   final VoidCallback onCapture;
   final double? latestWeightKg;
   final bool manualMode;
+  final ValueChanged<bool>? onModeChanged;
   final Color color;
 
   @override
@@ -198,7 +200,7 @@ class BleScaleCaptureCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   manualMode
-                      ? 'Chế độ cân: Cân thủ công'
+                      ? 'Chế độ cân: Nhập tay'
                       : 'Chế độ cân: Cân IoT'
                           '${scaleCode.trim().isEmpty ? '' : ' · Thiết bị: $scaleCode'}',
                   style: const TextStyle(
@@ -211,6 +213,27 @@ class BleScaleCaptureCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          if (onModeChanged != null) ...[
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('Nhập tay'),
+                  icon: Icon(Icons.edit_outlined),
+                ),
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('Cân IoT'),
+                  icon: Icon(Icons.bluetooth_rounded),
+                ),
+              ],
+              selected: {manualMode},
+              onSelectionChanged: (selected) {
+                if (selected.isNotEmpty) onModeChanged!(selected.first);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
           Text(
             latestWeightKg == null
                 ? 'Chưa nhận số cân mới'

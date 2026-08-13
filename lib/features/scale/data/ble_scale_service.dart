@@ -50,6 +50,7 @@ class BleScaleService extends ChangeNotifier {
   ScaleConnectionStatus _status = ScaleConnectionStatus.idle;
   BluetoothAdapterState _adapterState = BluetoothAdapterState.unknown;
   bool _disposed = false;
+  bool _initialized = false;
 
   ScaleConnectionStatus get status => _status;
   BluetoothAdapterState get adapterState => _adapterState;
@@ -66,6 +67,8 @@ class BleScaleService extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
+    if (_initialized || _disposed) return;
+    _initialized = true;
     FlutterBluePlus.setLogLevel(LogLevel.warning, color: false);
     _adapterState = FlutterBluePlus.adapterStateNow;
     _appSubscriptions.add(
@@ -160,7 +163,8 @@ class BleScaleService extends ChangeNotifier {
       final name = advertisedName.isNotEmpty
           ? advertisedName
           : (platformName.isNotEmpty ? platformName : 'StockLite Scale');
-      final correctName = name.startsWith(advertisedNamePrefix);
+      final correctName = name == 'StockLite SCALE-01' ||
+          name.startsWith(advertisedNamePrefix);
       final correctService = result.advertisementData.serviceUuids
           .any((uuid) => uuid == Guid(serviceUuid));
       if (!correctName && !correctService) continue;

@@ -29,18 +29,23 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
   bool _isSaving = false;
   late List<MillingBag> _bags;
   double? _latestWeightKg;
+  late MillingScaleMode _scaleMode;
 
   @override
   void initState() {
     super.initState();
     _bags = List<MillingBag>.of(widget.order.branBags);
+    _scaleMode = widget.order.scaleMode;
   }
 
-  MillingOrder get _currentOrder => widget.order.copyWith(branBags: _bags);
+  MillingOrder get _currentOrder => widget.order.copyWith(
+        branBags: _bags,
+        scaleMode: _scaleMode,
+      );
 
   Future<void> _captureWeight() async {
     final double? weight;
-    if (widget.order.scaleMode == MillingScaleMode.iot) {
+    if (_scaleMode == MillingScaleMode.iot) {
       final reading = await Navigator.of(context).push<WeightReading>(
         MaterialPageRoute(builder: (_) => const ScaleScreen()),
       );
@@ -48,7 +53,7 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
     } else {
       weight = await showManualWeightDialog(context, productLabel: 'cám');
     }
-    if (!mounted || weight == null) return;
+    if (!mounted || weight == null || !weight.isFinite || weight <= 0) return;
     final capturedWeight = weight;
     setState(() {
       _latestWeightKg = capturedWeight;
@@ -95,7 +100,10 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
             instruction: 'Đặt bao cám lên cân rồi nhận số ổn định.',
             onCapture: _captureWeight,
             color: millingOrange,
-            manualMode: widget.order.scaleMode == MillingScaleMode.manual,
+            manualMode: _scaleMode == MillingScaleMode.manual,
+            onModeChanged: (manual) => setState(() {
+              _scaleMode = manual ? MillingScaleMode.manual : MillingScaleMode.iot;
+            }),
           ),
           const SizedBox(height: 10),
           WeighingSummary(

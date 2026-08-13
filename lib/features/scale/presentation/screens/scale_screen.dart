@@ -183,7 +183,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
 
   Widget _buildConnectedContent() {
     final reading = _service.reading;
-    final stable = reading?.isStable ?? false;
+    final stable = reading?.isStable == true && (reading?.isFresh() ?? false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -253,7 +253,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
         ),
         const SizedBox(height: 14),
         FilledButton.icon(
-          onPressed: stable && reading!.weight > 0
+          onPressed: stable
               ? () => Navigator.of(context).pop<WeightReading>(reading)
               : null,
           icon: const Icon(Icons.add_task_rounded),
@@ -272,7 +272,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _sendCommand('RESET'),
+                onPressed: _confirmReset,
                 icon: const Icon(Icons.restart_alt_rounded),
                 label: const Text('Khởi động lại'),
               ),
@@ -287,6 +287,27 @@ class _ScaleScreenState extends State<ScaleScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _confirmReset() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Khởi động lại cân?'),
+        content: const Text('Cân sẽ ngắt kết nối trong lúc khởi động lại.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Khởi động lại'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _sendCommand('RESET');
   }
 
   Future<void> _sendCommand(String command) async {
