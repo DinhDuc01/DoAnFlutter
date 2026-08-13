@@ -144,9 +144,10 @@ void main() {
           .getNotifications();
 
       expect(notifications, hasLength(5));
-      expect(notifications.first.id, '1');
-      expect(notifications.first.type, AppNotificationType.alert);
-      expect(notifications.first.timeAgo, '10 phút trước');
+      expect(notifications.first.id, '4');
+      expect(notifications[1].id, '1');
+      expect(notifications[1].type, AppNotificationType.alert);
+      expect(notifications[1].timeAgo, '10 phút trước');
       final success = notifications.singleWhere((item) => item.id == '2');
       expect(success.type, AppNotificationType.success);
       expect(success.timeAgo, '2 giờ trước');
@@ -179,6 +180,36 @@ void main() {
         await ApiNotificationsRepository(apiClient: client).getNotifications(),
         isEmpty,
       );
+    });
+
+    test('fetch sends page parameters and reads the filtered total', () async {
+      final client = FakeApiClient(
+        onPost: (_, __, ___) async => {
+          'resources': {
+            'dataSource': [
+              {
+                'id': 21,
+                'title': 'Trang hai',
+                'createdDate': '2026-08-13T09:00:00Z',
+              },
+            ],
+            'total': 37,
+            'totalFiltered': 23,
+          },
+        },
+      );
+
+      final page = await ApiNotificationsRepository(apiClient: client).fetch(
+        pageIndex: 2,
+        pageSize: 10,
+      );
+
+      expect(page.items.single.id, '21');
+      expect(page.total, 23);
+      expect(client.calls.single.body, const {
+        'pageIndex': 2,
+        'pageSize': 10,
+      });
     });
   });
 
@@ -791,6 +822,76 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('loads physical bags from source suggestions and sends Columns/BagIds',
+        () async {
+      final client = FakeApiClient(
+        onGet: (path, _, __) async {
+          if (path == '/api/v1/milling-orders/21/source-suggestions') {
+            return {
+              'resources': {
+                'requiredWeightKg': 100,
+                'columns': [
+                  {
+                    'locationId': 4,
+                    'locationCode': 'A-04',
+                    'bagIds': [30, 31]
+                  },
+                ],
+                'inputs': [
+                  {
+                    'locationId': 4,
+                    'paddyLotId': 9,
+                    'bagIds': [30, 31]
+                  },
+                ],
+              },
+            };
+          }
+          return {
+            'resources': {
+              'bags': [
+                {'id': 30, 'bagNo': 1, 'weightKg': 50, 'status': 'STORED'},
+                {'id': 31, 'bagNo': 2, 'weightKg': 50, 'status': 'STORED'},
+              ],
+            },
+          };
+        },
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/milling-orders/21/reserve');
+          expect(body?['columns'], [
+            {
+              'locationId': 4,
+              'bagIds': [30, 31]
+            },
+          ]);
+          expect(token, 'token');
+          return {'isSucceeded': true};
+        },
+      );
+      final repository = ApiMillingRepository(apiClient: client);
+      final suggestion = await repository.getSourceSuggestion(21);
+
+      expect(suggestion.requiredWeightKg, 100);
+      expect(
+          suggestion.columns.single.bags.map((bag) => bag.weightKg), [50, 50]);
+      expect(suggestion.columns.single.selectedBagIds, [30, 31]);
+
+      await repository.reserveOrder(21, suggestion.columns);
+    });
+
+    test('starts a reserved order with a separate request', () async {
+      final client = FakeApiClient(
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/milling-orders/21/start');
+          expect(body, isEmpty);
+          expect(token, 'token');
+          return {'isSucceeded': true};
+        },
+      );
+
+      await ApiMillingRepository(apiClient: client).startOrder(21);
     });
   });
 }

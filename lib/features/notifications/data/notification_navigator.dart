@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import '../../../core/app_keys.dart';
 import '../../../core/routes/app_routes.dart';
 
@@ -56,6 +58,9 @@ class NotificationNavigator {
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return;
     final route = routeFor(directionId);
-    navigator.pushNamed(route ?? AppRoutes.notifications);
+    final currentRoute = ModalRoute.of(navigator.context)?.settings.name;
+    final target = route ?? AppRoutes.notifications;
+    if (currentRoute == target) return;
+    navigator.pushNamed(target);
   }
 }

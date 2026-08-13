@@ -160,13 +160,10 @@ class FcmService {
             ],
           ),
           duration: const Duration(seconds: 4),
-          action: NotificationNavigator.hasScreen(directionId)
-              ? SnackBarAction(
-                  label: 'Xem',
-                  onPressed: () =>
-                      NotificationNavigator.openFromPush(directionId),
-                )
-              : null,
+          action: SnackBarAction(
+            label: 'Xem',
+            onPressed: () => NotificationNavigator.openFromPush(directionId),
+          ),
         ),
       );
   }

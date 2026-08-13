@@ -2,9 +2,27 @@ import '../models/milling_order.dart';
 
 /// Data boundary for the mobile milling completion workflow.
 abstract class MillingRepository {
+  Future<List<MillingFilterOption>> getMillingStatuses() async => const [];
+
+  Future<List<MillingFilterOption>> getWarehouses() async => const [];
+
   Future<List<MillingProductOption>> getOutputProducts() async => const [];
 
   Future<List<MillingPaddyLotOption>> getPaddyLots() async => const [];
+
+  Future<MillingSourceSuggestion> getSourceSuggestion(int orderId) async =>
+      const MillingSourceSuggestion(requiredWeightKg: 0, columns: []);
+
+  Future<void> reserveOrder(
+    int orderId,
+    List<MillingSourceColumn> columns,
+  ) async {
+    throw UnsupportedError('Milling repository chưa hỗ trợ giữ lúa.');
+  }
+
+  Future<void> startOrder(int orderId) async {
+    throw UnsupportedError('Milling repository chưa hỗ trợ bắt đầu xay.');
+  }
 
   Future<int> createOrder({
     required MillingPaddyLotOption lot,
@@ -61,6 +79,28 @@ abstract class MillingRepository {
 /// Offline implementation used to exercise all screens before API wiring.
 class MockMillingRepository implements MillingRepository {
   @override
+  Future<List<MillingFilterOption>> getMillingStatuses() async => const [
+        MillingFilterOption(id: 1, name: 'Nháp', code: 'DRAFT'),
+        MillingFilterOption(id: 2, name: 'Đang xay', code: 'IN_PROGRESS'),
+      ];
+
+  @override
+  Future<List<MillingFilterOption>> getWarehouses() async => const [
+        MillingFilterOption(id: 1, name: 'Kho chứa 1', code: 'KHO-1'),
+      ];
+
+  @override
+  Future<MillingSourceSuggestion> getSourceSuggestion(int orderId) async =>
+      const MillingSourceSuggestion(requiredWeightKg: 0, columns: []);
+
+  @override
+  Future<void> reserveOrder(
+      int orderId, List<MillingSourceColumn> columns) async {}
+
+  @override
+  Future<void> startOrder(int orderId) async {}
+
+  @override
   Future<List<MillingPaddyLotOption>> getPaddyLots() async => const [];
 
   @override
@@ -73,7 +113,8 @@ class MockMillingRepository implements MillingRepository {
     double? millingCost,
     double? incidentalCost,
     DateTime? expectedCompletionDate,
-  }) async => 0;
+  }) async =>
+      0;
 
   @override
   Future<MillingOrderPage> getMillingOrderPage({

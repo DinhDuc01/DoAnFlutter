@@ -16,6 +16,149 @@ class ApiMillingRepository implements MillingRepository {
   final ProductVariantApi _productVariantApi;
 
   @override
+  Future<List<MillingFilterOption>> getMillingStatuses() async {
+    final json = await _apiClient.get(
+      '/api/v1/milling-order-status',
+      token: _currentToken(),
+    );
+    final resources = JsonReader.list(json, 'resources') ?? const [];
+    return [
+      for (final item in resources.whereType<Map<String, dynamic>>())
+        if ((JsonReader.integer(item, 'id') ?? 0) > 0)
+          MillingFilterOption(
+            id: JsonReader.integer(item, 'id')!,
+            name: JsonReader.string(item, 'name') ?? 'Trạng thái',
+            code: JsonReader.string(item, 'code'),
+            color: JsonReader.string(item, 'color'),
+          ),
+    ];
+  }
+
+  @override
+  Future<List<MillingFilterOption>> getWarehouses() async {
+    final json = await _apiClient.get(
+      '/api/v1/warehouse',
+      token: _currentToken(),
+    );
+    final resources = JsonReader.list(json, 'resources') ?? const [];
+    return [
+      for (final item in resources.whereType<Map<String, dynamic>>())
+        if ((JsonReader.integer(item, 'id') ?? 0) > 0 &&
+            (JsonReader.boolean(item, 'isActive') ?? true))
+          MillingFilterOption(
+            id: JsonReader.integer(item, 'id')!,
+            name: JsonReader.string(item, 'name') ?? 'Kho',
+            code: JsonReader.string(item, 'code'),
+          ),
+    ];
+  }
+
+  @override
+  Future<MillingSourceSuggestion> getSourceSuggestion(int orderId) async {
+    final json = await _apiClient.get(
+      '/api/v1/milling-orders/$orderId/source-suggestions',
+      token: _currentToken(),
+    );
+    final resources = JsonReader.map(json, 'resources');
+    if (resources == null) {
+      throw const MillingApiException('Backend không trả về nguồn lúa.');
+    }
+    final required = JsonReader.decimal(resources, 'requiredWeightKg') ?? 0;
+    final rawColumns = JsonReader.list(resources, 'columns') ?? const [];
+    final rawInputs = JsonReader.list(resources, 'inputs') ?? const [];
+    final bagDetailsById = <int, MillingSourceBag>{};
+    for (final input in rawInputs.whereType<Map<String, dynamic>>()) {
+      final lotId = JsonReader.integer(input, 'paddyLotId') ?? 0;
+      if (lotId <= 0) continue;
+      final lotJson = await _apiClient.get(
+        '/api/v1/paddy-lots/$lotId',
+        token: _currentToken(),
+      );
+      final lot = JsonReader.map(lotJson, 'resources');
+      for (final rawBag
+          in (JsonReader.list(lot ?? const {}, 'bags') ?? const [])) {
+        if (rawBag is! Map<String, dynamic>) continue;
+        final bagId = JsonReader.integer(rawBag, 'id') ?? 0;
+        if (bagId <= 0) continue;
+        bagDetailsById[bagId] = MillingSourceBag(
+          id: bagId,
+          bagNo: JsonReader.integer(rawBag, 'bagNo') ?? 0,
+          weightKg: JsonReader.decimal(rawBag, 'weightKg') ?? 0,
+          status: JsonReader.string(rawBag, 'status') ?? '',
+        );
+      }
+    }
+    final columns = <MillingSourceColumn>[];
+    for (final raw in rawColumns.whereType<Map<String, dynamic>>()) {
+      final locationId = JsonReader.integer(raw, 'locationId') ?? 0;
+      final bagIds = (JsonReader.list(raw, 'bagIds') ?? const [])
+          .map((id) => id is num ? id.toInt() : int.tryParse('$id') ?? 0)
+          .where((id) => id > 0)
+          .toList();
+      final input = rawInputs.whereType<Map<String, dynamic>>().firstWhere(
+            (item) => JsonReader.integer(item, 'locationId') == locationId,
+            orElse: () => <String, dynamic>{},
+          );
+      final inputBagIds = (JsonReader.list(input, 'bagIds') ?? const [])
+          .map((id) => id is num ? id.toInt() : int.tryParse('$id') ?? 0)
+          .where((id) => id > 0)
+          .toSet();
+      columns.add(
+        MillingSourceColumn(
+          locationId: locationId,
+          locationCode: JsonReader.string(raw, 'locationCode'),
+          bags: [
+            for (final id in bagIds)
+              MillingSourceBag(
+                id: id,
+                bagNo: bagDetailsById[id]?.bagNo ?? id,
+                weightKg: bagDetailsById[id]?.weightKg ?? 0,
+                status: bagDetailsById[id]?.status ?? 'UNKNOWN',
+                selected: inputBagIds.contains(id),
+              ),
+          ],
+        ),
+      );
+    }
+    return MillingSourceSuggestion(
+      requiredWeightKg: required,
+      columns: columns,
+    );
+  }
+
+  @override
+  Future<void> reserveOrder(
+    int orderId,
+    List<MillingSourceColumn> columns,
+  ) async {
+    final response = await _apiClient.post(
+      '/api/v1/milling-orders/$orderId/reserve',
+      token: _currentToken(),
+      body: {
+        'columns': [
+          for (final column in columns)
+            if (column.selectedBagIds.isNotEmpty)
+              {
+                'locationId': column.locationId,
+                'bagIds': column.selectedBagIds,
+              },
+        ],
+      },
+    );
+    _ensureSucceeded(response, 'Không giữ được bao lúa.');
+  }
+
+  @override
+  Future<void> startOrder(int orderId) async {
+    final response = await _apiClient.post(
+      '/api/v1/milling-orders/$orderId/start',
+      token: _currentToken(),
+      body: const {},
+    );
+    _ensureSucceeded(response, 'Không bắt đầu được lệnh xay.');
+  }
+
+  @override
   Future<List<MillingPaddyLotOption>> getPaddyLots() async {
     final json = await _apiClient.get(
       '/api/v1/paddy-lots',

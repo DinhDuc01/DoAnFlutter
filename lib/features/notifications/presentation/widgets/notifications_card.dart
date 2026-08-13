@@ -94,6 +94,8 @@ class NotificationsCard extends StatelessWidget {
                 // Hiển thị đầy đủ nội dung, không cắt dòng để tránh ẩn thông tin.
                 Text(
                   notification.message,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: colorScheme.onSurfaceVariant,
                     fontSize: 12,

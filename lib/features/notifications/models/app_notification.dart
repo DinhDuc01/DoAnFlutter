@@ -37,6 +37,7 @@ class AppNotification {
     required this.message,
     required this.timeAgo,
     required this.isRead,
+    this.createdAt,
     this.directionId,
   });
 
@@ -61,6 +62,9 @@ class AppNotification {
 
   /// Khoảng thời gian đã trôi qua kể từ khi tạo thông báo (VD: 5 phút trước).
   final String timeAgo;
+
+  /// Exact creation time returned by the backend, used for sorting.
+  final DateTime? createdAt;
 
   /// Trạng thái đã đọc hay chưa.
   final bool isRead;
@@ -88,6 +92,7 @@ class AppNotification {
       message: message,
       timeAgo: timeAgo,
       isRead: isRead ?? this.isRead,
+      createdAt: createdAt,
       directionId: directionId,
     );
   }

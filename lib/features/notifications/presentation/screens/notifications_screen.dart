@@ -33,6 +33,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   int _page = 1;
   int _total = 0;
+  bool _openingNotification = false;
 
   StreamSubscription<void>? _refreshSub;
 
@@ -75,15 +76,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       List<AppNotification> items;
       int total;
       if (api != null) {
-        final page = await api.fetch(
-          pageIndex: _page,
-          pageSize: _pageSize,
-          isRead: _serverIsReadFilter,
-        );
-        items = page.items;
-        total = page.total;
+        if (_filter == NotificationFilter.alerts) {
+          // The API has no alert-type filter. Fetch all server pages first so
+          // local alert filtering does not make the pager report wrong pages.
+          final all = await _fetchAllPages(api);
+          final alerts = all.where((item) => item.isAlert).toList();
+          total = alerts.length;
+          final start = (_page - 1) * _pageSize;
+          items = start >= alerts.length
+              ? const []
+              : alerts.skip(start).take(_pageSize).toList();
+        } else {
+          final page = await api.fetch(
+            pageIndex: _page,
+            pageSize: _pageSize,
+            isRead: _serverIsReadFilter,
+          );
+          items = page.items;
+          total = page.total;
+        }
       } else {
-        items = await _repository.getNotifications();
+        items = [...await _repository.getNotifications()];
+        items.sort(_newestFirst);
         total = items.length;
       }
       if (!mounted || generation != _loadGeneration) return;
@@ -100,6 +114,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         _error = error.toString();
       });
     }
+  }
+
+  Future<List<AppNotification>> _fetchAllPages(
+    ApiNotificationsRepository api,
+  ) async {
+    final first = await api.fetch(pageIndex: 1, pageSize: _pageSize);
+    final items = [...first.items];
+    final pages = (first.total + _pageSize - 1) ~/ _pageSize;
+    for (var page = 2; page <= pages; page++) {
+      final next = await api.fetch(pageIndex: page, pageSize: _pageSize);
+      items.addAll(next.items);
+    }
+    return items;
   }
 
   void _replaceItem(AppNotification updated) {
@@ -123,6 +150,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   /// Bấm vào thông báo: chỉ đánh dấu đã đọc, giữ nguyên danh sách thông báo.
   Future<void> _onTapNotification(AppNotification notification) async {
+    if (_openingNotification) return;
+    _openingNotification = true;
     if (!notification.isRead) {
       _replaceItem(notification.copyWith(isRead: true));
       final api = _api;
@@ -135,6 +164,57 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         }
       }
     }
+    if (!mounted) return;
+    await _showNotificationDetail(notification.copyWith(isRead: true));
+    if (mounted) _openingNotification = false;
+  }
+
+  Future<void> _showNotificationDetail(AppNotification notification) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  notification.title,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 12),
+                Text(notification.message),
+                const SizedBox(height: 12),
+                Text('Thời gian: ${notification.timeAgo}'),
+                Text('Loại: ${notification.type.name}'),
+                Text(
+                  'Trạng thái: ${notification.isRead ? 'Đã đọc' : 'Chưa đọc'}',
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Đóng'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  int _newestFirst(AppNotification a, AppNotification b) {
+    final aTime = a.createdAt;
+    final bTime = b.createdAt;
+    if (aTime == null && bTime == null) return 0;
+    if (aTime == null) return 1;
+    if (bTime == null) return -1;
+    return bTime.compareTo(aTime);
   }
 
   Future<void> _dismissNotification(AppNotification notification) async {

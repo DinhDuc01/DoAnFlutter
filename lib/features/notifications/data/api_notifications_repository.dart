@@ -61,11 +61,7 @@ class ApiNotificationsRepository implements NotificationsRepository {
       for (final item in data)
         if (item is Map<String, dynamic>) _fromJson(item),
     ];
-    items.sort((a, b) {
-      if (a.isLowStock != b.isLowStock) return a.isLowStock ? -1 : 1;
-      if (a.isRead != b.isRead) return a.isRead ? 1 : -1;
-      return 0;
-    });
+    items.sort(_newestFirst);
     return NotificationPage(items: items, total: total);
   }
 
@@ -173,11 +169,21 @@ class ApiNotificationsRepository implements NotificationsRepository {
       title: title,
       message: JsonReader.string(json, 'content') ?? '',
       timeAgo: _formatTimeAgo(createdAt),
+      createdAt: createdAt,
       isRead: JsonReader.boolean(json, 'isRead') ?? false,
       directionId: (direction != null && direction.trim().isNotEmpty)
           ? direction.trim()
           : null,
     );
+  }
+
+  int _newestFirst(AppNotification a, AppNotification b) {
+    final aTime = a.createdAt;
+    final bTime = b.createdAt;
+    if (aTime == null && bTime == null) return 0;
+    if (aTime == null) return 1;
+    if (bTime == null) return -1;
+    return bTime.compareTo(aTime);
   }
 
   String _formatTimeAgo(DateTime? value) {

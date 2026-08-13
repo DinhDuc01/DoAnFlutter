@@ -1,5 +1,19 @@
 import '../../../core/api/json_reader.dart';
 
+class MillingFilterOption {
+  const MillingFilterOption({
+    required this.id,
+    required this.name,
+    this.code,
+    this.color,
+  });
+
+  final int id;
+  final String name;
+  final String? code;
+  final String? color;
+}
+
 /// A single recorded bag produced by a milling order.
 class MillingBag {
   const MillingBag({
@@ -169,6 +183,68 @@ class MillingOrderPage {
   final List<MillingOrder> orders;
   final int recordsTotal;
   final int recordsFiltered;
+}
+
+class MillingSourceColumn {
+  const MillingSourceColumn({
+    required this.locationId,
+    this.locationCode,
+    required this.bags,
+  });
+
+  final int locationId;
+  final String? locationCode;
+  final List<MillingSourceBag> bags;
+
+  double get totalWeightKg => bags
+      .where((bag) => bag.selected)
+      .fold<double>(0, (sum, bag) => sum + bag.weightKg);
+
+  List<int> get selectedBagIds => bags
+      .where((bag) => bag.selected)
+      .map((bag) => bag.id)
+      .toList(growable: false);
+}
+
+class MillingSourceBag {
+  const MillingSourceBag({
+    required this.id,
+    required this.bagNo,
+    required this.weightKg,
+    required this.status,
+    this.selected = false,
+  });
+
+  final int id;
+  final int bagNo;
+  final double weightKg;
+  final String status;
+  final bool selected;
+
+  bool get selectable => status.trim().toUpperCase() == 'STORED';
+
+  MillingSourceBag copyWith({bool? selected}) => MillingSourceBag(
+        id: id,
+        bagNo: bagNo,
+        weightKg: weightKg,
+        status: status,
+        selected: selected ?? this.selected,
+      );
+}
+
+class MillingSourceSuggestion {
+  const MillingSourceSuggestion({
+    required this.requiredWeightKg,
+    required this.columns,
+  });
+
+  final double requiredWeightKg;
+  final List<MillingSourceColumn> columns;
+
+  double get selectedWeightKg => columns.fold<double>(
+        0,
+        (sum, column) => sum + column.totalWeightKg,
+      );
 }
 
 /// Mobile-facing data required to finish and pack a milling order.
