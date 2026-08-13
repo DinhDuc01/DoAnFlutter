@@ -5,7 +5,6 @@ import '../../data/api_kho_check_repository.dart';
 import '../../data/kho_check_repository.dart';
 import '../../models/kho_check.dart';
 import '../widgets/kho_bottom_action.dart';
-import '../../../home/presentation/widgets/main_bottom_navigation.dart';
 import '../widgets/kho_check_header.dart';
 import '../widgets/kho_check_hint.dart';
 import '../widgets/kho_check_item_card.dart';
@@ -275,16 +274,6 @@ class _KhoScreenState extends State<KhoScreen> {
             );
           },
         ),
-      ),
-      bottomNavigationBar: MainBottomNavigation(
-        currentIndex: 2,
-        onTap: (index) {
-          Navigator.of(context).pushNamedAndRemoveUntil(
-            '/home',
-            (route) => false,
-            arguments: index,
-          );
-        },
       ),
     );
   }

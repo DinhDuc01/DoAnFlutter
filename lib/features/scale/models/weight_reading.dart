@@ -7,6 +7,7 @@ class WeightReading {
     required this.unit,
     required this.isStable,
     required this.receivedAt,
+    this.deviceName,
   });
 
   final double weight;
@@ -14,11 +15,23 @@ class WeightReading {
   final bool isStable;
   final DateTime receivedAt;
 
+  /// Tên thiết bị cân đã đọc số này (gán khi màn cân trả kết quả về). Dùng để
+  /// ghi lại `scaleDevice` trên phiếu — payload BLE không chứa thông tin này.
+  final String? deviceName;
+
   bool isFresh({DateTime? now, Duration maxAge = const Duration(seconds: 5)}) {
     final reference = now ?? DateTime.now();
     final age = reference.difference(receivedAt);
     return !age.isNegative && age <= maxAge;
   }
+
+  WeightReading copyWith({String? deviceName}) => WeightReading(
+        weight: weight,
+        unit: unit,
+        isStable: isStable,
+        receivedAt: receivedAt,
+        deviceName: deviceName ?? this.deviceName,
+      );
 
   factory WeightReading.fromBytes(List<int> bytes) {
     if (bytes.isEmpty) {
@@ -38,21 +51,10 @@ class WeightReading {
     if (rawWeight is! num || rawStable is! bool) {
       throw const FormatException('Payload thiếu trường w hoặc s hợp lệ.');
     }
-    final weight = rawWeight.toDouble();
-    if (!weight.isFinite || weight <= 0) {
-      throw const FormatException('Trọng lượng phải là số hữu hạn lớn hơn 0.');
-    }
-
-    final unit = decoded['u'] is String
-        ? (decoded['u'] as String).trim().toLowerCase()
-        : 'kg';
-    if (unit != 'kg') {
-      throw FormatException('Đơn vị cân không được hỗ trợ: $unit.');
-    }
 
     return WeightReading(
-      weight: weight,
-      unit: unit,
+      weight: rawWeight.toDouble(),
+      unit: decoded['u'] is String ? decoded['u'] as String : 'kg',
       isStable: rawStable,
       receivedAt: DateTime.now(),
     );

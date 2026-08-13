@@ -61,7 +61,7 @@ class MainBottomNavigation extends StatelessWidget {
             BottomNavigationBarItem(
               icon: Icon(Icons.local_shipping_outlined),
               activeIcon: Icon(Icons.local_shipping_rounded),
-              label: 'Bán',
+              label: 'Xuất kho',
             ),
             BottomNavigationBarItem(
               icon: NotificationBellIcon(icon: Icons.notifications_outlined),

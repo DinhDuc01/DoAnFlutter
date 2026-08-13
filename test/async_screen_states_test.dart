@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stocklite/core/widgets/state_widgets.dart';
 import 'package:stocklite/features/notifications/data/notifications_repository.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
-import 'package:stocklite/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:stocklite/features/notifications/presentation/widgets/notifications_tab.dart';
 import 'package:stocklite/features/quality_inspection/data/quality_inspection_repository.dart';
 import 'package:stocklite/features/quality_inspection/models/quality_inspection.dart';
 import 'package:stocklite/features/quality_inspection/presentation/screens/quality_inspection_screen.dart';
@@ -57,34 +58,33 @@ void main() {
     });
   });
 
-  group('NotificationsScreen states and actions', () {
+  group('NotificationsTab states and actions', () {
+    // Màn NotificationsScreen đứng riêng đã bị xoá vì trùng với tab này; toàn
+    // bộ hành vi (lọc, đọc tất cả, xoá) nay nằm ở NotificationsTab.
+    Widget host(NotificationsRepository repository) => MaterialApp(
+          home: Scaffold(body: NotificationsTab(repository: repository)),
+        );
+
     testWidgets('shows loading while notifications are pending',
         (tester) async {
       final completer = Completer<List<AppNotification>>();
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationsScreen(
-            repository: _NotificationRepository([completer.future]),
-          ),
-        ),
+        host(_NotificationRepository([completer.future])),
       );
+      await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(ListSkeleton), findsOneWidget);
     });
 
     testWidgets('shows empty state when there are no notifications',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationsScreen(
-            repository: _NotificationRepository([Future.value(const [])]),
-          ),
-        ),
+        host(_NotificationRepository([Future.value(const [])])),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Không có thông báo phù hợp'), findsOneWidget);
+      expect(find.text('Không có thông báo mới'), findsOneWidget);
     });
 
     testWidgets('shows error and retries notification loading', (tester) async {
@@ -93,13 +93,12 @@ void main() {
         firstLoad.future,
         Future.value([_notification('1', 'Đã tải lại')]),
       ]);
-      await tester.pumpWidget(
-        MaterialApp(home: NotificationsScreen(repository: repository)),
-      );
+      await tester.pumpWidget(host(repository));
       firstLoad.completeError('network failed');
       await tester.pumpAndSettle();
 
-      expect(find.text('Không tải được thông báo'), findsOneWidget);
+      // HErrorState thay message chi tiết bằng nhãn chung.
+      expect(find.text('Đã xảy ra lỗi'), findsOneWidget);
       await tester.tap(find.text('Thử lại'));
       await tester.pumpAndSettle();
 
@@ -115,13 +114,7 @@ void main() {
         _notification('3', 'Đã đọc', isRead: true),
       ];
       await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationsScreen(
-            repository: _NotificationRepository([
-              Future.value(notifications),
-            ]),
-          ),
-        ),
+        host(_NotificationRepository([Future.value(notifications)])),
       );
       await tester.pumpAndSettle();
 
@@ -133,18 +126,14 @@ void main() {
 
       await tester.tap(find.text('Đọc tất cả'));
       await tester.pump();
-      expect(find.text('0 thông báo chưa đọc'), findsOneWidget);
+      expect(find.text('Đã đọc hết thông báo'), findsOneWidget);
     });
 
     testWidgets('dismisses a notification card', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationsScreen(
-            repository: _NotificationRepository([
-              Future.value([_notification('1', 'Có thể đóng')]),
-            ]),
-          ),
-        ),
+        host(_NotificationRepository([
+          Future.value([_notification('1', 'Có thể đóng')]),
+        ])),
       );
       await tester.pumpAndSettle();
 
@@ -152,7 +141,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Có thể đóng'), findsNothing);
-      expect(find.text('Không có thông báo phù hợp'), findsOneWidget);
+      expect(find.text('Không có thông báo mới'), findsOneWidget);
     });
 
     testWidgets('tap only shows notification detail and does not navigate',

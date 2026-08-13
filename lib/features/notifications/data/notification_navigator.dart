@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 import '../../../core/app_keys.dart';
 import '../../../core/routes/app_routes.dart';
 
@@ -18,9 +16,9 @@ class NotificationNavigator {
     '/admin/inbound-orders': AppRoutes.inbound,
     '/admin/rice-purchase': AppRoutes.inbound,
     '/admin/purchase-orders': AppRoutes.inbound,
-    // Luồng bán/giao hàng -> màn Giao hàng.
-    '/admin/outbound-orders': AppRoutes.outbound,
-    '/admin/sales-orders': AppRoutes.outbound,
+    // Luồng bán/giao hàng -> phiếu xuất kho và đơn bán.
+    '/admin/outbound-orders': AppRoutes.outboundOrders,
+    '/admin/sales-orders': AppRoutes.salesOrders,
     // Kiểm kê kho.
     '/admin/stock-takes': AppRoutes.stocktake,
     // Kiểm định & cách ly.
@@ -51,16 +49,25 @@ class NotificationNavigator {
   /// Có màn hình liên quan cho [directionId] hay không.
   static bool hasScreen(String? directionId) => routeFor(directionId) != null;
 
+  /// Vị trí tab Thông báo trong [AppRoutes.home].
+  static const int notificationsTabIndex = 4;
+
   /// Điều hướng tới màn liên quan (nếu có). Dùng cho thông báo đẩy FCM khi
-  /// người dùng bấm vào (app ở nền hoặc đã tắt). Nếu không có màn cụ thể thì
-  /// mở màn danh sách thông báo để người dùng xem chi tiết.
+  /// người dùng bấm vào (app ở nền hoặc đã tắt). Không có màn cụ thể thì mở
+  /// tab Thông báo trong màn chính — màn danh sách thông báo đứng riêng đã bị
+  /// xoá vì trùng lặp với tab này.
   static void openFromPush(String? directionId) {
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return;
     final route = routeFor(directionId);
-    final currentRoute = ModalRoute.of(navigator.context)?.settings.name;
-    final target = route ?? AppRoutes.notifications;
-    if (currentRoute == target) return;
-    navigator.pushNamed(target);
+    if (route != null) {
+      navigator.pushNamed(route);
+      return;
+    }
+    navigator.pushNamedAndRemoveUntil(
+      AppRoutes.home,
+      (route) => false,
+      arguments: notificationsTabIndex,
+    );
   }
 }

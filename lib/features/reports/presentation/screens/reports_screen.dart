@@ -4,7 +4,6 @@ import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/warehouse_report_repository.dart';
 import '../../models/warehouse_report.dart';
-import '../widgets/report_bottom_bar.dart';
 import '../widgets/report_header.dart';
 import '../widgets/report_summary_cards.dart';
 import '../widgets/top_inbound_products_card.dart';
@@ -83,8 +82,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
           },
         ),
       ),
-      bottomNavigationBar:
-          const ReportBottomBar(), // Thanh Bottom Nav của màn Báo cáo
     );
   }
 }

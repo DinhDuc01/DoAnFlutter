@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../../../core/api/api_client.dart';
@@ -8,7 +9,6 @@ import '../../data/qr_repository.dart';
 import '../../models/resolved_qr.dart';
 import '../../models/scan_result_info.dart';
 import '../widgets/scan_action_panel.dart';
-import '../widgets/scan_bottom_bar.dart';
 import '../widgets/scan_camera_preview.dart';
 import '../widgets/scan_header.dart';
 
@@ -20,6 +20,8 @@ class ScanQrScreen extends StatefulWidget {
     this.operation = 'LOOKUP',
     this.referenceId,
     this.warehouseId,
+    this.autoOpenLot = false,
+    this.imagePicker,
     super.key,
   });
 
@@ -27,6 +29,13 @@ class ScanQrScreen extends StatefulWidget {
   final String operation;
   final int? referenceId;
   final int? warehouseId;
+
+  /// true khi mở từ màn "Lô & truy vết": quét ra lô là đi thẳng vào chi tiết
+  /// lô, không bắt người dùng bấm thêm một nút nữa.
+  final bool autoOpenLot;
+
+  /// Cho phép test tiêm picker giả.
+  final ImagePicker? imagePicker;
 
   @override
   State<ScanQrScreen> createState() => _ScanQrScreenState();
@@ -37,15 +46,18 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
   late final QrRepository _repository;
+  late final ImagePicker _imagePicker;
   ScanState _state = ScanState.scanning;
   ScanResultInfo? _lastScan;
   ResolvedQr? _resolved;
   String? _errorMessage;
+  bool _pickingImage = false;
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiQrRepository();
+    _imagePicker = widget.imagePicker ?? ImagePicker();
   }
 
   @override
@@ -60,7 +72,52 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
     if (barcode == null) return;
     final scan = ScanResultInfo.fromBarcode(barcode);
     if (scan.rawValue.isEmpty || scan.rawValue == _lastScan?.rawValue) return;
+    await _resolveScan(scan);
+  }
 
+  /// Quét mã QR từ một ảnh có sẵn trong máy.
+  ///
+  /// Thực tế trong kho: bao đã xếp chồng, người ta chụp lại tem lô rồi tra cứu
+  /// sau; hoặc mã được gửi qua Zalo. Khi đó không thể chĩa camera vào tem nữa.
+  Future<void> _pickImageAndScan() async {
+    if (_pickingImage) return;
+    setState(() => _pickingImage = true);
+    try {
+      final file = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 100,
+      );
+      if (file == null || !mounted) return;
+
+      final capture = await _controller.analyzeImage(file.path);
+      final barcode = capture?.barcodes.firstOrNull;
+      if (!mounted) return;
+
+      if (barcode == null || (barcode.rawValue ?? '').isEmpty) {
+        setState(() {
+          _errorMessage = 'Không tìm thấy mã QR trong ảnh. Hãy chọn ảnh rõ nét '
+              'và thấy trọn khung mã.';
+          _state = ScanState.invalid;
+        });
+        return;
+      }
+      // Ảnh cũ có thể trùng mã vừa quét — bỏ chốt chống trùng để vẫn tra lại.
+      _lastScan = null;
+      await _resolveScan(ScanResultInfo.fromBarcode(barcode));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Không đọc được ảnh đã chọn: $error';
+        _state = ScanState.invalid;
+      });
+    } finally {
+      if (mounted) setState(() => _pickingImage = false);
+    }
+  }
+
+  /// Gọi API resolve và chuyển trạng thái màn hình. Dùng chung cho cả hai
+  /// nguồn mã: camera và ảnh trong máy.
+  Future<void> _resolveScan(ScanResultInfo scan) async {
     setState(() {
       _lastScan = scan;
       _state = ScanState.resolving;
@@ -79,6 +136,9 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
         _resolved = result;
         _state = ScanState.success;
       });
+      if (widget.autoOpenLot && result.isPaddyLot && result.entityId > 0) {
+        await _openLot(result.entityId);
+      }
     } on ApiException catch (error) {
       if (!mounted) return;
       setState(() {
@@ -92,6 +152,16 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
         _state = ScanState.invalid;
       });
     }
+  }
+
+  /// Mở chi tiết lô rồi quay lại trạng thái quét để tra mã kế tiếp.
+  Future<void> _openLot(int lotId) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => PaddyLotDetailScreen(lotId: lotId),
+      ),
+    );
+    if (mounted) await _resumeScanning();
   }
 
   Future<void> _resumeScanning() async {
@@ -120,6 +190,8 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
               result: _lastScan,
               onScanAgain: _resumeScanning,
               onSwitchCamera: _controller.switchCamera,
+              onPickImage: _pickImageAndScan,
+              pickingImage: _pickingImage,
             ),
           ],
         );
@@ -132,7 +204,11 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
           loading: true,
         );
       case ScanState.success:
-        return _SuccessState(result: _resolved!, onScanAgain: _resumeScanning);
+        return _SuccessState(
+          result: _resolved!,
+          onScanAgain: _resumeScanning,
+          onOpenLot: _openLot,
+        );
       case ScanState.invalid:
         return _MessageState(
           icon: Icons.error_outline,
@@ -166,16 +242,20 @@ class _ScanQrScreenState extends State<ScanQrScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: const ScanBottomBar(),
     );
   }
 }
 
 class _SuccessState extends StatelessWidget {
-  const _SuccessState({required this.result, required this.onScanAgain});
+  const _SuccessState({
+    required this.result,
+    required this.onScanAgain,
+    required this.onOpenLot,
+  });
 
   final ResolvedQr result;
   final VoidCallback onScanAgain;
+  final Future<void> Function(int lotId) onOpenLot;
 
   @override
   Widget build(BuildContext context) {
@@ -229,11 +309,7 @@ class _SuccessState extends StatelessWidget {
           if (result.isPaddyLot && result.entityId > 0) ...[
             FilledButton.icon(
               key: const ValueKey('open_paddy_lot_detail'),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => PaddyLotDetailScreen(lotId: result.entityId),
-                ),
-              ),
+              onPressed: () => onOpenLot(result.entityId),
               icon: const Icon(Icons.account_tree_outlined),
               label: const Text('Xem chi tiết lô'),
               style: FilledButton.styleFrom(

@@ -106,8 +106,9 @@ class ProductVariantApi {
     return products.first;
   }
 
-  /// Màn xuất kho chỉ chọn sản phẩm còn tồn khả dụng.
-  Future<ProductVariantStock> firstVariantForGiaoHang() async {
+  /// Sản phẩm còn tồn khả dụng nhiều nhất — dùng khi cần gợi ý mặc định
+  /// một mặt hàng để xuất.
+  Future<ProductVariantStock> firstVariantWithAvailableStock() async {
     final products = await activeVariantsWithStock();
     final availableProducts = products
         .where((product) => product.quantityAvailable > 0)

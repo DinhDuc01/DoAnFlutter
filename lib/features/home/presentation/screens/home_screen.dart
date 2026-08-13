@@ -4,13 +4,13 @@ import '../../../../core/theme/app_colors.dart';
 import '../widgets/home_today_tab.dart';
 import '../../../thu_mua/presentation/widgets/thu_mua_tab.dart';
 import '../../../kho/presentation/widgets/kho_tab.dart';
-import '../../../giao_hang/presentation/widgets/giao_hang_tab.dart';
+import '../../../outbound_orders/presentation/screens/outbound_order_list_screen.dart';
 import '../../../notifications/presentation/widgets/notifications_tab.dart';
 import '../../../account/presentation/widgets/account_tab.dart';
 import '../widgets/main_bottom_navigation.dart';
 
 /// HomeScreen represents the unified 6-tab layout container for:
-/// Trang chủ, Thu mua, Kho, Giao hàng, Thông báo, Tôi.
+/// Trang chủ, Thu mua, Kho, Xuất kho & giao hàng, Thông báo, Tôi.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({this.initialIndex = 0, super.key})
       : assert(initialIndex >= 0 && initialIndex < 6);
@@ -42,7 +42,8 @@ class _HomeScreenState extends State<HomeScreen> {
       ), // Index 0: Trang chủ
       ThuMuaTab(key: _thuMuaKey), // Index 1: Thu mua
       const KhoTab(), // Index 2: Kho
-      const GiaoHangTab(), // Index 3: Giao
+      // Index 3: Xuất kho & giao hàng (phiếu xuất từ đơn bán)
+      const OutboundOrderListScreen(embedded: true),
       const NotificationsTab(), // Index 4: Thông báo
       const AccountTab(), // Index 5: Tôi
     ];
