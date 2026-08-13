@@ -173,12 +173,52 @@ void main() {
       expect(call.body?['warehouseId'], 2);
       expect(call.body?['bagCount'], 2);
       expect(call.body?['actualWeightKg'], 75);
-      expect(call.body?.containsKey('bags'), isFalse);
+      expect(call.body?['bags'], [
+        {'bagNo': 1, 'weightKg': 30.0},
+        {'bagNo': 2, 'weightKg': 45.0},
+      ]);
       expect(call.body?['agreedPrice'], 10000);
       expect(call.body?['priceAdjustReason'], isNull);
       expect(result.id, 21);
       expect(result.code, 'PPR-20260804-0001');
       expect(result.status, 'Phiếu nháp');
+    });
+
+    test('reloads each stored bag instead of collapsing to total weight',
+        () async {
+      final client = FakeApiClient(
+        onGet: (_, __, ___) async => {
+          'resources': {
+            'id': 55,
+            'receiptCode': 'PPR-55',
+            'farmerId': 4,
+            'warehouseId': 2,
+            'productVariantId': 22,
+            'productVariantName': 'Lúa OM5451',
+            'productVariantSku': 'PADDY-OM5451',
+            'priceAdjustReason': 'Ghi chú draft',
+            'actualWeightKg': 75,
+            'bagCount': 2,
+            'bags': [
+              {'bagNo': 1, 'weightKg': 30},
+              {'bagNo': 2, 'weightKg': 45},
+            ],
+            'isConfirmed': false,
+          },
+        },
+      );
+
+      final receipt = await ApiThuMuaRepository(apiClient: client)
+          .getDraftReceiptDetail(55);
+
+      expect(receipt.bags.map((bag) => bag.weightKg), [30, 45]);
+      expect(receipt.totalBagWeightKg, 75);
+      expect(receipt.quantity, 2);
+      expect(receipt.status, 'Cần chốt phiếu');
+      expect(receipt.productVariantId, 22);
+      expect(receipt.productName, 'Lúa OM5451');
+      expect(receipt.sku, 'PADDY-OM5451');
+      expect(receipt.note, 'Ghi chú draft');
     });
 
     test('updates an existing draft paddy purchase receipt', () async {
@@ -211,7 +251,12 @@ void main() {
       expect(call.body?['warehouseId'], 2);
       expect(call.body?['bagCount'], 4);
       expect(call.body?['actualWeightKg'], 100);
-      expect(call.body?.containsKey('bags'), isFalse);
+      expect(call.body?['bags'], [
+        {'bagNo': 1, 'weightKg': 20.0},
+        {'bagNo': 2, 'weightKg': 20.0},
+        {'bagNo': 3, 'weightKg': 30.0},
+        {'bagNo': 4, 'weightKg': 30.0},
+      ]);
       expect(call.body?['agreedPrice'], 12000);
       expect(call.body?['priceAdjustReason'], 'cập nhật');
       expect(result.id, 55);

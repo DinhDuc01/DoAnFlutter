@@ -148,10 +148,6 @@ void main() {
 
       expect(find.text('Lúa thơm'), findsWidgets);
       await _enterBagWeights(tester, const ['50', '50']);
-      await tester.enterText(
-        find.byKey(const ValueKey('thu_mua_moisture')),
-        '14',
-      );
       final noteField = find.byWidgetPredicate(
         (widget) =>
             widget is TextField && widget.decoration?.labelText == 'Ghi chú',
@@ -215,10 +211,6 @@ void main() {
       await tester.enterText(
         find.byKey(const ValueKey('thu_mua_bag_weight_0')),
         '120',
-      );
-      await tester.enterText(
-        find.byKey(const ValueKey('thu_mua_moisture')),
-        '14',
       );
       await tester.ensureVisible(find.text('Lưu phiếu mua'));
       await tester.tap(find.text('Lưu phiếu mua'));
@@ -314,10 +306,6 @@ void main() {
       );
       await _enterBagWeights(tester, const ['20', '20', '20', '20']);
       await tester.enterText(
-        find.byKey(const ValueKey('thu_mua_moisture')),
-        '13',
-      );
-      await tester.enterText(
         find.byKey(const ValueKey('thu_mua_paid_amount')),
         '1000',
       );
@@ -359,6 +347,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Chỉnh sửa phiếu mua lúa'), findsOneWidget);
+      final noteField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == 'Ghi chú',
+      );
+      expect(tester.widget<TextField>(noteField).controller?.text,
+          'Ghi chú draft');
       await tester.ensureVisible(find.text('Cập nhật phiếu mua'));
       await tester.tap(find.text('Cập nhật phiếu mua'));
       await tester.pumpAndSettle();
@@ -730,6 +724,7 @@ ThuMuaReceipt _editReceipt() {
     weightKg: 25,
     quantity: 1,
     noteHint: '',
+    note: 'Ghi chú draft',
     unitCostPrice: 10000,
     supplier: ThuMuaSupplier(
       id: 1,

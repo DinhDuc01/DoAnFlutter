@@ -45,6 +45,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   List<ProductVariantStock> _products = const [];
   List<ThuMuaWarehouse> _warehouses = const [];
   List<RiceVarietyOption> _varieties = const [];
+  Map<int, PaddyVariantOption> _paddyVariantOptions = const {};
   // variantId -> riceVarietyId (để lọc sản phẩm theo giống đã chọn)
   Map<int, int?> _variantVarietyMap = const {};
   int? _riceVarietyId;
@@ -94,6 +95,9 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       final varieties = await _varietyApi.getRiceVarieties();
       final variants = await _varietyApi.getProductVariants();
       _varieties = varieties;
+      _paddyVariantOptions = {
+        for (final variant in variants) variant.id: variant,
+      };
       _variantVarietyMap = {
         for (final v in variants) v.id: v.riceVarietyId,
       };
@@ -101,6 +105,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     } catch (_) {
       // Không chặn form nếu API giống lúa lỗi — vẫn cho chọn sản phẩm như cũ.
       _varieties = const [];
+      _paddyVariantOptions = const {};
       _variantVarietyMap = const {};
       return const [];
     }
@@ -167,6 +172,31 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     return products;
   }
 
+  ThuMuaReceipt _receiptForDisplay(ThuMuaReceipt receipt) {
+    if (receipt.productVariantId <= 0) return receipt;
+    final product = _products
+        .where((item) => item.id == receipt.productVariantId)
+        .firstOrNull;
+    final paddyProduct = _paddyVariantOptions[receipt.productVariantId];
+    if (product == null && paddyProduct == null) return receipt;
+
+    final missingName = receipt.productName.trim().isEmpty ||
+        receipt.productName.trim().toLowerCase() == 'lúa';
+    final missingSku = receipt.sku.trim().isEmpty;
+    if (!missingName && !missingSku) return receipt;
+
+    return receipt.copyWith(
+      productName: missingName
+          ? paddyProduct?.name ?? product?.name ?? receipt.productName
+          : receipt.productName,
+      sku: missingSku
+          ? paddyProduct?.sku ?? product?.sku ?? receipt.sku
+          : receipt.sku,
+      currentStock: product?.quantityOnHand ?? receipt.currentStock,
+      weightKg: product?.weightKg ?? receipt.weightKg,
+    );
+  }
+
   List<ThuMuaWarehouse> _warehouseOptions(
     ThuMuaReceipt receipt,
     List<ThuMuaWarehouse>? loaded,
@@ -207,6 +237,9 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     if (_unitCostController.text.isEmpty && receipt.unitCostPrice > 0) {
       _unitCostController.text = receipt.unitCostPrice.toStringAsFixed(0);
     }
+    if (_noteController.text.isEmpty && receipt.note?.trim().isNotEmpty == true) {
+      _noteController.text = receipt.note!.trim();
+    }
     _initializeBagControllers(receipt);
     if (_moistureController.text.isEmpty && receipt.moisturePercent != null) {
       _moistureController.text = receipt.moisturePercent!.toStringAsFixed(1);
@@ -218,9 +251,11 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     if (_bagWeightControllers.isNotEmpty) return;
     final weights = receipt.bags.isNotEmpty
         ? receipt.bags.map((bag) => bag.weightKg).toList()
-        : receipt.actualWeightKg > 0
-            ? [receipt.actualWeightKg]
-            : <double>[];
+        : receipt.hasBagDetails && receipt.id != null && receipt.quantity > 0
+            ? List<double>.filled(receipt.quantity, 0)
+            : receipt.actualWeightKg > 0
+                ? [receipt.actualWeightKg]
+                : <double>[];
     for (final weight in weights) {
       _bagWeightControllers.add(
         TextEditingController(
@@ -463,6 +498,17 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     final receipt = _receipt;
     if (receipt == null || _isSubmitting) return;
 
+    if (receipt.isConfirmed || (receipt.paddyLotId ?? 0) > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Phiếu đã chốt và đang chờ kiểm định; không chỉnh sửa từ màn Thu mua.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final bags = _validatedBags();
     if (bags == null) return;
     final bagCount = bags.length;
@@ -495,7 +541,8 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       return;
     }
     final unitCostPrice = double.tryParse(_unitCostController.text.trim()) ?? 0;
-    final moisturePercent = double.tryParse(_moistureController.text.trim());
+    // Độ ẩm không nhập trên mobile ở luồng Thu mua; kiểm định sẽ xử lý sau.
+    const double? moisturePercent = null;
     final paidAmount = double.tryParse(_paidAmountController.text.trim()) ?? 0;
     if (receipt.supplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -520,14 +567,6 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
             '(tối đa $_maxKgPerBag kg/bao). Kiểm tra lại số bao hoặc khối lượng.',
           ),
         ),
-      );
-      return;
-    }
-    if (moisturePercent == null ||
-        moisturePercent < 0 ||
-        moisturePercent > 100) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Độ ẩm phải nằm trong khoảng 0-100%')),
       );
       return;
     }
@@ -809,13 +848,28 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
               if (snapshot.connectionState != ConnectionState.done) {
                 return const LinearProgressIndicator();
               }
-              if (products.isEmpty) {
+              if (products.isEmpty && receipt.productVariantId <= 0) {
                 return const _MissingProductField();
               }
               final hasVarietyData = _varieties.isNotEmpty;
               final varietyChosen = _riceVarietyId != null || !hasVarietyData;
               final matches = _productMatchesVariety(receipt.productVariantId);
-              final showProduct = receipt.productVariantId > 0 && matches;
+              final selectedProduct = products
+                  .where((item) => item.id == receipt.productVariantId)
+                  .firstOrNull;
+              final paddyProduct =
+                  _paddyVariantOptions[receipt.productVariantId];
+              final displayName = paddyProduct?.name ??
+                  selectedProduct?.name ??
+                  receipt.productName;
+              final displaySku = paddyProduct?.sku ??
+                  selectedProduct?.sku ??
+                  receipt.sku;
+              // Khi mo lai draft, productVariantId/productName tu detail la
+              // du lieu da luu. Lookup co the khong tra lai san pham da ngung
+              // ban, nhung khong duoc lam mat san pham tren phieu.
+              final showProduct = receipt.productVariantId > 0 &&
+                  (matches || receipt.productName.trim().isNotEmpty);
               return InkWell(
                 key: ValueKey('inbound_product_${receipt.productVariantId}'),
                 borderRadius: BorderRadius.circular(12),
@@ -838,7 +892,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                   ),
                   child: Text(
                     showProduct
-                        ? '${receipt.productName} · ${receipt.sku}'
+                        ? '$displayName · $displaySku'
                         : 'Chưa xác định sản phẩm',
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -914,17 +968,6 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           ),
           const SizedBox(height: 12),
           TextFormField(
-            key: const ValueKey('thu_mua_moisture'),
-            controller: _moistureController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(
-              labelText: 'Độ ẩm',
-              suffixText: '%',
-              prefixIcon: Icon(Icons.water_drop_outlined),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
             key: const ValueKey('thu_mua_paid_amount'),
             controller: _paidAmountController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -969,7 +1012,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           ),
           const SizedBox(height: 12),
           if (receipt.productVariantId > 0) ...[
-            ThuMuaProductCard(receipt: receipt),
+            ThuMuaProductCard(receipt: _receiptForDisplay(receipt)),
             const SizedBox(height: 12),
           ],
           ThuMuaReceiptFields(receipt: receipt),

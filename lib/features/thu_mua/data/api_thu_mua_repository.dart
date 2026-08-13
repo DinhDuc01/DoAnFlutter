@@ -217,17 +217,21 @@ class ApiThuMuaRepository implements ThuMuaRepository {
         statusToken.contains('hủy') ||
         statusToken.contains('huỷ');
     final isDraft = !isCancelled && !confirmed && (lotId == null || lotId <= 0);
-    final status = explicitStatus?.trim().isNotEmpty == true
-        ? explicitStatus!
-        : isCancelled
-            ? 'Đã hủy'
-            : isDraft
-                ? 'Phiếu nháp'
-                : fullyStored
-                    ? 'Đã nhập kho'
-                    : lotId != null && lotId > 0
-                        ? 'Đã chốt - chờ nhập kho'
-                        : 'Đã tạo';
+    final explicitToken = (explicitStatus ?? '').toLowerCase();
+    final isWaitingWeighing = explicitToken.contains('cân') ||
+        explicitToken.contains('can') ||
+        explicitToken.contains('weigh');
+    final status = isCancelled
+        ? 'Đã hủy'
+        : fullyStored
+            ? 'Đã nhập kho'
+            : confirmed || (lotId != null && lotId > 0)
+                ? isWaitingWeighing
+                    ? 'Đang chờ cân'
+                    : 'Chờ kiểm định'
+                : isDraft
+                    ? 'Cần chốt phiếu'
+                    : _normalizeReceiptStatus(explicitStatus);
     return ThuMuaReceiptSummary(
       id: JsonReader.integer(item, 'id') ?? 0,
       code: JsonReader.string(item, 'receiptCode') ?? 'PPR',
@@ -252,6 +256,23 @@ class ApiThuMuaRepository implements ThuMuaRepository {
       paidAmount: JsonReader.decimal(item, 'paidAmount') ?? 0,
       debtAmount: JsonReader.decimal(item, 'debtAmount') ?? 0,
     );
+  }
+
+  String _normalizeReceiptStatus(String? raw) {
+    final value = (raw ?? '').trim().toLowerCase();
+    if (value.contains('hủy') || value.contains('huỷ') || value.contains('cancel')) {
+      return 'Đã hủy';
+    }
+    if (value.contains('kiểm định') || value.contains('inspection')) {
+      return 'Chờ kiểm định';
+    }
+    if (value.contains('nhập kho') || value.contains('stored')) {
+      return 'Đã nhập kho';
+    }
+    if (value.isEmpty || value.contains('nháp') || value.contains('draft')) {
+      return 'Cần chốt phiếu';
+    }
+    return 'Cần chốt phiếu';
   }
 
   bool _asBool(Object? value) {
@@ -340,19 +361,41 @@ class ApiThuMuaRepository implements ThuMuaRepository {
       }
     }
     final farmerId = JsonReader.integer(data, 'farmerId') ?? 0;
+    final isConfirmed = _asBool(JsonReader.value(data, 'isConfirmed'));
+    final paddyLotId = JsonReader.integer(data, 'paddyLotId');
+    final rawBags = JsonReader.list(data, 'bags');
+    final bags = [
+      for (final item in rawBags ?? const [])
+        if (item is Map<String, dynamic>)
+          ThuMuaBag(
+            id: JsonReader.integer(item, 'id'),
+            sequenceNumber: JsonReader.integer(item, 'bagNo') ??
+                JsonReader.integer(item, 'sequenceNumber') ??
+                0,
+            weightKg: JsonReader.decimal(item, 'weightKg') ?? 0,
+            code: JsonReader.string(item, 'code') ??
+                JsonReader.string(item, 'qrCode'),
+          ),
+    ];
+    final workflowStatus = isConfirmed || (paddyLotId ?? 0) > 0
+        ? 'Chờ kiểm định'
+        : 'Cần chốt phiếu';
     return ThuMuaReceipt(
       id: JsonReader.integer(data, 'id') ?? id,
-      productVariantId: 0,
+      productVariantId: JsonReader.integer(data, 'productVariantId') ?? 0,
       warehouseId: JsonReader.integer(data, 'warehouseId') ?? 0,
       warehouseName: JsonReader.string(data, 'warehouseName') ?? '',
-      status: 'Phiếu nháp',
-      productName: JsonReader.string(data, 'riceVarietyName') ?? 'Lúa',
-      sku: '',
+      status: workflowStatus,
+      productName: JsonReader.string(data, 'productVariantName') ??
+          JsonReader.string(data, 'riceVarietyName') ??
+          'Lúa',
+      sku: JsonReader.string(data, 'productVariantSku') ?? '',
       currentStock: 0,
       receiptCode: JsonReader.string(data, 'receiptCode') ?? 'PPR-$id',
       weightKg: 0,
       quantity: JsonReader.integer(data, 'bagCount') ?? 0,
       noteHint: 'Nhập ghi chú nếu có...',
+      note: JsonReader.string(data, 'priceAdjustReason'),
       unitCostPrice: JsonReader.decimal(data, 'agreedPrice') ?? 0,
       supplier: farmerId > 0
           ? ThuMuaSupplier(
@@ -371,6 +414,10 @@ class ApiThuMuaRepository implements ThuMuaRepository {
           ? null
           : JsonReader.decimal(quality, 'moisturePercent'),
       paidAmount: JsonReader.decimal(data, 'paidAmount') ?? 0,
+      bags: bags,
+      isConfirmed: isConfirmed,
+      paddyLotId: paddyLotId,
+      hasBagDetails: rawBags != null,
     );
   }
 
@@ -402,6 +449,14 @@ class ApiThuMuaRepository implements ThuMuaRepository {
       'warehouseId': receipt.warehouseId,
       'actualWeightKg': actualWeightKg,
       'bagCount': bagCount,
+      if (receipt.bags.isNotEmpty)
+        'bags': [
+          for (final bag in receipt.bags)
+            {
+              'bagNo': bag.sequenceNumber,
+              'weightKg': bag.weightKg,
+            },
+        ],
       'agreedPrice': unitCostPrice,
       'totalAmount': totalAmount,
       'paidAmount': receipt.paidAmount,
