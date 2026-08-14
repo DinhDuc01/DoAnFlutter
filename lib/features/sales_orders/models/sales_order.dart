@@ -58,6 +58,7 @@ class SalesOrderSummary {
     this.riceVarietyDisplayName,
     this.riceVarietyCount = 0,
     this.hasUnconfiguredRiceVariety = false,
+    this.riceVarietyId,
     this.totalRiceRequiredKg = 0,
     this.allocatedMillingRiceKg = 0,
     this.remainingMillingRiceKg = 0,
@@ -83,10 +84,11 @@ class SalesOrderSummary {
   final String? riceVarietyDisplayName;
   final int riceVarietyCount;
   final bool hasUnconfiguredRiceVariety;
+  final int? riceVarietyId;
 
   /// Tổng gạo đơn cần (kg) — dùng cho đơn phải xay.
   final double totalRiceRequiredKg;
-
+  
   /// Gạo đã được các lệnh xay phân bổ cho đơn này (kg).
   final double allocatedMillingRiceKg;
 
@@ -128,6 +130,7 @@ class SalesOrderSummary {
         riceVarietyCount: JsonReader.integer(json, 'riceVarietyCount') ?? 0,
         hasUnconfiguredRiceVariety:
             JsonReader.boolean(json, 'hasUnconfiguredRiceVariety') ?? false,
+        riceVarietyId: JsonReader.integer(json, 'riceVarietyId'),
         totalRiceRequiredKg: JsonReader.decimal(json, 'totalRiceRequiredKg') ?? 0,
         allocatedMillingRiceKg:
             JsonReader.decimal(json, 'allocatedMillingRiceKg') ?? 0,

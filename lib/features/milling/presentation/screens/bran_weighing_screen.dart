@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
+import '../../models/milling_output_form.dart';
 import '../../../scale/models/weight_reading.dart';
 import '../../../scale/presentation/screens/scale_screen.dart';
 import '../widgets/milling_widgets.dart';
@@ -14,12 +15,14 @@ class BranWeighingScreen extends StatefulWidget {
     required this.order,
     required this.repository,
     this.includeBroken = false,
+    this.initialOutputForms = const [],
     super.key,
   });
 
   final MillingOrder order;
   final MillingRepository repository;
   final bool includeBroken;
+  final List<MillingOutputFormValue> initialOutputForms;
 
   @override
   State<BranWeighingScreen> createState() => _BranWeighingScreenState();
@@ -30,12 +33,14 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
   late List<MillingBag> _bags;
   double? _latestWeightKg;
   late MillingScaleMode _scaleMode;
+  late List<MillingOutputFormValue> _outputForms;
 
   @override
   void initState() {
     super.initState();
     _bags = List<MillingBag>.of(widget.order.branBags);
     _scaleMode = widget.order.scaleMode;
+    _outputForms = List.unmodifiable(widget.initialOutputForms);
   }
 
   MillingOrder get _currentOrder => widget.order.copyWith(
@@ -65,23 +70,35 @@ class _BranWeighingScreenState extends State<BranWeighingScreen> {
   }
 
   Future<void> _confirm() async {
+    if (_isSaving) return;
     setState(() => _isSaving = true);
-    await widget.repository.saveBranBags(_currentOrder);
-    if (!mounted) return;
-    setState(() => _isSaving = false);
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => widget.includeBroken
             ? BrokenWeighingScreen(
                 order: _currentOrder,
                 repository: widget.repository,
+                initialOutputForms: _nextOutputForms(),
               )
             : MillingResultConfirmationScreen(
                 order: _currentOrder,
                 repository: widget.repository,
+                initialOutputForms: _nextOutputForms(),
               ),
       ),
     );
+    if (mounted) setState(() => _isSaving = false);
+  }
+
+  List<MillingOutputFormValue> _nextOutputForms() {
+    final adapted = adaptLegacyMillingOutputs([
+      LegacyMillingOutputInput(
+        type: MillingOutputType.bran,
+        productVariantId: _currentOrder.branProductVariantId,
+        bagWeightsKg: _bags.map((bag) => bag.weightKg).toList(),
+      ),
+    ]);
+    return adapted.isEmpty ? _outputForms : upsertMillingOutput(_outputForms, adapted.single);
   }
 
   @override

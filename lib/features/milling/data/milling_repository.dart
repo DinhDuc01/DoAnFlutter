@@ -1,4 +1,6 @@
 import '../models/milling_order.dart';
+import '../models/milling_location.dart';
+import '../models/milling_output_form.dart';
 
 /// Data boundary for the mobile milling completion workflow.
 abstract class MillingRepository {
@@ -9,6 +11,14 @@ abstract class MillingRepository {
   Future<List<MillingProductOption>> getOutputProducts() async => const [];
 
   Future<List<MillingPaddyLotOption>> getPaddyLots() async => const [];
+
+  Future<List<MillingLocation>> getLocations() async => const [];
+
+  Future<List<MillingPutawaySuggestion>> getPutawaySuggestions({
+    required int warehouseId,
+    required int productVariantId,
+    required double requiredWeightKg,
+  }) async => const [];
 
   Future<MillingSourceSuggestion> getSourceSuggestion(int orderId) async =>
       const MillingSourceSuggestion(requiredWeightKg: 0, columns: []);
@@ -25,9 +35,13 @@ abstract class MillingRepository {
   }
 
   Future<int> createOrder({
-    required MillingPaddyLotOption lot,
-    required double inputWeightKg,
+    required int warehouseId,
+    int? riceVarietyId,
     required double expectedYield,
+    required double targetRiceKg,
+    int? salesOrderId,
+    MillingPaddyLotOption? lot,
+    double? inputWeightKg,
     String? reason,
     double? moisturePercent,
     double? millingCost,
@@ -35,6 +49,22 @@ abstract class MillingRepository {
     DateTime? expectedCompletionDate,
   }) async {
     throw UnsupportedError('Milling repository chưa hỗ trợ tạo lệnh.');
+  }
+
+  Future<void> updateOrder({
+    required int id,
+    required int warehouseId,
+    int? riceVarietyId,
+    required double expectedYield,
+    required double targetRiceKg,
+    int? salesOrderId,
+    double? moisturePercent,
+    double? millingCost,
+    double? incidentalCost,
+    DateTime? expectedCompletionDate,
+    String? reason,
+  }) async {
+    throw UnsupportedError('Milling repository chưa hỗ trợ sửa lệnh.');
   }
 
   Future<MillingOrderPage> getMillingOrderPage({
@@ -73,7 +103,12 @@ abstract class MillingRepository {
 
   Future<void> saveBranBags(MillingOrder order);
 
-  Future<void> completeOrder(MillingOrder order);
+  Future<void> completeOrder(
+    MillingOrder order, {
+    Map<String, int> outputLocationIds = const {},
+    String? note,
+    List<MillingOutputFormValue>? outputForms,
+  });
 }
 
 /// Offline implementation used to exercise all screens before API wiring.
@@ -104,10 +139,24 @@ class MockMillingRepository implements MillingRepository {
   Future<List<MillingPaddyLotOption>> getPaddyLots() async => const [];
 
   @override
+  Future<List<MillingLocation>> getLocations() async => const [];
+
+  @override
+  Future<List<MillingPutawaySuggestion>> getPutawaySuggestions({
+    required int warehouseId,
+    required int productVariantId,
+    required double requiredWeightKg,
+  }) async => const [];
+
+  @override
   Future<int> createOrder({
-    required MillingPaddyLotOption lot,
-    required double inputWeightKg,
+    required int warehouseId,
+    int? riceVarietyId,
     required double expectedYield,
+    required double targetRiceKg,
+    int? salesOrderId,
+    MillingPaddyLotOption? lot,
+    double? inputWeightKg,
     String? reason,
     double? moisturePercent,
     double? millingCost,
@@ -115,6 +164,21 @@ class MockMillingRepository implements MillingRepository {
     DateTime? expectedCompletionDate,
   }) async =>
       0;
+
+  @override
+  Future<void> updateOrder({
+    required int id,
+    required int warehouseId,
+    int? riceVarietyId,
+    required double expectedYield,
+    required double targetRiceKg,
+    int? salesOrderId,
+    double? moisturePercent,
+    double? millingCost,
+    double? incidentalCost,
+    DateTime? expectedCompletionDate,
+    String? reason,
+  }) async {}
 
   @override
   Future<MillingOrderPage> getMillingOrderPage({
@@ -231,7 +295,12 @@ class MockMillingRepository implements MillingRepository {
   }
 
   @override
-  Future<void> completeOrder(MillingOrder order) async {
+  Future<void> completeOrder(
+    MillingOrder order, {
+    Map<String, int> outputLocationIds = const {},
+    String? note,
+    List<MillingOutputFormValue>? outputForms,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 700));
   }
 }

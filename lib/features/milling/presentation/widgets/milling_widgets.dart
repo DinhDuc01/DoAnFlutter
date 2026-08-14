@@ -10,39 +10,62 @@ Future<double?> showManualWeightDialog(
   BuildContext context, {
   required String productLabel,
 }) async {
-  final controller = TextEditingController();
-  final value = await showDialog<double>(
+  return showDialog<double>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text('Nhập cân $productLabel'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(
-          labelText: 'Khối lượng mỗi bao',
-          suffixText: 'kg',
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Hủy'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final weight = double.tryParse(controller.text.trim());
-            if (weight != null && weight > 0) {
-              Navigator.of(dialogContext).pop(weight);
-            }
-          },
-          child: const Text('Thêm bao'),
-        ),
-      ],
-    ),
+    builder: (_) => _ManualWeightDialog(productLabel: productLabel),
   );
-  controller.dispose();
-  return value;
+}
+
+class _ManualWeightDialog extends StatefulWidget {
+  const _ManualWeightDialog({required this.productLabel});
+
+  final String productLabel;
+
+  @override
+  State<_ManualWeightDialog> createState() => _ManualWeightDialogState();
+}
+
+class _ManualWeightDialogState extends State<_ManualWeightDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final weight = double.tryParse(
+      _controller.text.trim().replaceAll(',', '.'),
+    );
+    if (weight == null || !weight.isFinite || weight <= 0) return;
+    Navigator.of(context).pop(weight);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text('Nhập cân ${widget.productLabel}'),
+        content: TextField(
+          controller: _controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Khối lượng mỗi bao',
+            suffixText: 'kg',
+          ),
+          onSubmitted: (_) => _submit(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: _submit,
+            child: const Text('Thêm bao'),
+          ),
+        ],
+      );
 }
 
 /// Shared compact app bar for every milling step.

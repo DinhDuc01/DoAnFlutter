@@ -27,6 +27,13 @@ class NotificationsTab extends StatefulWidget {
   State<NotificationsTab> createState() => _NotificationsTabState();
 }
 
+/// Compatibility wrapper for callers/tests that still construct the old
+/// standalone notification screen. The app itself uses [NotificationsTab].
+@Deprecated('Use NotificationsTab')
+class NotificationsScreen extends NotificationsTab {
+  const NotificationsScreen({super.repository, super.key});
+}
+
 class _NotificationsTabState extends State<NotificationsTab> {
   static const int _pageSize = 10;
   late final NotificationsRepository _repository;
@@ -43,7 +50,7 @@ class _NotificationsTabState extends State<NotificationsTab> {
 
   ApiNotificationsRepository? get _api =>
       _repository is ApiNotificationsRepository
-          ? _repository as ApiNotificationsRepository
+          ? _repository
           : null;
 
   @override
@@ -251,9 +258,11 @@ class _NotificationsTabState extends State<NotificationsTab> {
   @override
   Widget build(BuildContext context) {
     final unread = _unreadCount;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    return Material(
+      color: Colors.transparent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         AppGradientHeader(
           title: 'Thông báo',
           subtitle: unread == 0
@@ -278,7 +287,8 @@ class _NotificationsTabState extends State<NotificationsTab> {
         ),
         const SizedBox(height: 8),
         Expanded(child: _body(unread)),
-      ],
+        ],
+      ),
     );
   }
 

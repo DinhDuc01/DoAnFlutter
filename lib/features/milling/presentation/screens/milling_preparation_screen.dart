@@ -4,12 +4,16 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../data/api_milling_repository.dart';
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
+import '../../models/milling_plan_args.dart';
 import '../widgets/milling_widgets.dart';
+import '../widgets/milling_weighing_panel.dart';
 import 'milling_create_order_screen.dart';
 import 'milling_source_selection_screen.dart';
+import 'milling_result_confirmation_screen.dart';
 import 'rice_weighing_screen.dart';
 
 class MillingPreparationScreen extends StatefulWidget {
@@ -88,10 +92,29 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
     );
   }
 
-  Future<void> _openCreate() async {
+  bool _argsProcessed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsProcessed) {
+      _argsProcessed = true;
+      final routeArgs = ModalRoute.of(context)?.settings.arguments;
+      if (routeArgs is MillingPlanArgs) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _openCreate(routeArgs);
+        });
+      }
+    }
+  }
+
+  Future<void> _openCreate([MillingPlanArgs? args]) async {
     final createdId = await Navigator.of(context).push<int>(
       MaterialPageRoute<int>(
-        builder: (_) => MillingCreateOrderScreen(repository: _repository),
+        builder: (_) => MillingCreateOrderScreen(
+          repository: _repository,
+          args: args,
+        ),
       ),
     );
     if (!mounted || createdId == null) return;
@@ -648,6 +671,7 @@ class _MillingOrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
@@ -659,22 +683,15 @@ class _MillingOrderCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                FilledButton.tonalIcon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 40),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 38),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   onPressed: onTap,
-                  icon: Icon(
-                    status.canContinueWeighing
-                        ? Icons.play_arrow_rounded
-                        : Icons.visibility_outlined,
-                  ),
-                  label: Text(status.actionLabel),
+                  icon: const Icon(Icons.visibility_outlined, size: 17),
+                  label: const Text('Xem chi tiết lệnh'),
                 ),
               ],
             ),
@@ -702,6 +719,9 @@ class _MillingOrderDetailScreen extends StatefulWidget {
 class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
   late Future<MillingOrder> _future;
   bool _actionBusy = false;
+  double? _pendingRiceWeighing;
+  double? _confirmedRiceWeighing;
+  int _inlineRiceBagCount = 0;
 
   @override
   void initState() {
@@ -713,6 +733,50 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
     setState(() {
       _future = widget.repository.getMillingOrderDetail(widget.orderId);
     });
+  }
+
+  Future<void> _openInlineResult(MillingOrder order) async {
+    final weight = _confirmedRiceWeighing;
+    if (weight == null || weight <= 0) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MillingResultConfirmationScreen(
+          order: order.copyWith(
+            riceBags: [MillingBag(index: 1, weightKg: weight)],
+          ),
+          repository: widget.repository,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _chooseWeighing(MillingOrder order) async {
+    final mode = await showModalBottomSheet<MillingScaleMode>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Chọn cân'),
+              subtitle: Text('Chọn chế độ cân cho bước tiếp theo'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Nhập cân thủ công'),
+              onTap: () => Navigator.pop(context, MillingScaleMode.manual),
+            ),
+            ListTile(
+              leading: const Icon(Icons.bluetooth_rounded),
+              title: const Text('Dùng cân IoT đã kết nối'),
+              onTap: () => Navigator.pop(context, MillingScaleMode.iot),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || mode == null) return;
+    _continueWeighing(order.copyWith(scaleMode: mode));
   }
 
   void _continueWeighing(MillingOrder order) {
@@ -729,6 +793,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
 
   Future<void> _reserve(MillingOrder order) async {
     if (_actionBusy) return;
+    if ((order.statusCode ?? '').trim().toUpperCase() != 'DRAFT') return;
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => MillingSourceSelectionScreen(
@@ -742,6 +807,15 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
 
   Future<void> _start(MillingOrder order) async {
     if (_actionBusy) return;
+    final statusCode = (order.statusCode ?? '').trim().toUpperCase();
+    if (statusCode != 'RESERVED') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chỉ được bắt đầu lệnh khi lệnh đã giữ lúa.'),
+        ),
+      );
+      return;
+    }
     setState(() => _actionBusy = true);
     try {
       await widget.repository.startOrder(order.id);
@@ -761,41 +835,78 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
     }
   }
 
+  Future<void> _editDraft(MillingOrder order) async {
+    final updated = await Navigator.of(context).push<dynamic>(
+      MaterialPageRoute<dynamic>(
+        builder: (_) => MillingCreateOrderScreen(
+          repository: widget.repository,
+          order: order,
+        ),
+      ),
+    );
+    if (updated == true && mounted) {
+      _reload();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: millingBackground,
-      appBar: MillingAppBar(
-        title: 'Chi tiết lệnh xay',
-        actions: [
-          IconButton(
-            tooltip: 'Làm mới',
-            onPressed: _reload,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-      body: FutureBuilder<MillingOrder>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const FormSkeleton();
-          }
-          if (snapshot.hasError) {
-            return HErrorState(
+    return FutureBuilder<MillingOrder>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            backgroundColor: millingBackground,
+            appBar: MillingAppBar(title: 'Chi tiết lệnh xay'),
+            body: FormSkeleton(),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            backgroundColor: millingBackground,
+            appBar: const MillingAppBar(title: 'Chi tiết lệnh xay'),
+            body: HErrorState(
               message: 'Không thể tải chi tiết lệnh xay: ${snapshot.error}',
               onRetry: _reload,
-            );
-          }
-          final order = snapshot.data;
-          if (order == null) {
-            return HErrorState(
+            ),
+          );
+        }
+        final order = snapshot.data;
+        if (order == null) {
+          return Scaffold(
+            backgroundColor: millingBackground,
+            appBar: const MillingAppBar(title: 'Chi tiết lệnh xay'),
+            body: HErrorState(
               message: 'Backend không trả về dữ liệu lệnh xay.',
               onRetry: _reload,
-            );
-          }
-          final status = MillingStatusView.fromOrder(order);
-          return Column(
+            ),
+          );
+        }
+        final status = MillingStatusView.fromOrder(order);
+        final confirmedRice = _confirmedRiceWeighing ?? order.outputsRiceKg;
+        final isDirtyRice = _pendingRiceWeighing != null &&
+            _pendingRiceWeighing != _confirmedRiceWeighing;
+        final isDraft = (order.statusCode ?? '').trim().toUpperCase() == 'DRAFT';
+
+        return Scaffold(
+          backgroundColor: millingBackground,
+          appBar: MillingAppBar(
+            title: 'Chi tiết lệnh xay',
+            actions: [
+              IconButton(
+                tooltip: 'Làm mới',
+                onPressed: _reload,
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+              if (isDraft)
+                IconButton(
+                  tooltip: 'Sửa lệnh',
+                  onPressed: () => _editDraft(order),
+                  icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                ),
+            ],
+          ),
+          body: Column(
             children: [
               Expanded(
                 child: RefreshIndicator(
@@ -804,7 +915,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
                     await _future;
                   },
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
                     children: [
                       _DetailHeader(order: order, status: status),
                       const SizedBox(height: 12),
@@ -833,7 +944,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
                           Expanded(
                             child: _MetricTile(
                               label: 'Gạo thực tế',
-                              value: _kg(order.outputsRiceKg),
+                              value: _kg(confirmedRice),
                               icon: Icons.inventory_2_outlined,
                             ),
                           ),
@@ -849,16 +960,45 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      _InputsSection(inputs: order.inputs),
-                      const SizedBox(height: 12),
-                      _OutputsSection(outputs: order.outputs),
+                      if (!status.canContinueWeighing) ...[
+                        _InputsSection(inputs: order.inputs),
+                        const SizedBox(height: 12),
+                        _OutputsSection(outputs: order.outputs),
+                      ],
+                      if (status.canContinueWeighing) ...[
+                        const SizedBox(height: 12),
+                        _MillingOutputEntryHint(order: order),
+                      ],
                       const SizedBox(height: 12),
                       _MetadataCard(order: order),
                     ],
                   ),
                 ),
               ),
-              if (status.canReserve)
+              if (isDraft)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _actionBusy ? null : () => _editDraft(order),
+                          icon: const Icon(Icons.edit_rounded),
+                          label: const Text('Sửa lệnh'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: MillingPrimaryButton(
+                          label: 'Giữ lúa',
+                          isLoading: _actionBusy,
+                          onPressed: () => _reserve(order),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (status.canReserve)
                 MillingPrimaryButton(
                   label: 'Chọn bao và giữ lúa',
                   isLoading: _actionBusy,
@@ -870,18 +1010,105 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
                   isLoading: _actionBusy,
                   onPressed: () => _start(order),
                 )
-              else
+              else if (status.canContinueWeighing)
                 MillingPrimaryButton(
+                  key: const Key('milling_enter_output_button'),
+                  label: 'Nhập kết quả xay',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MillingResultConfirmationScreen(
+                        order: order,
+                        repository: widget.repository,
+                      ),
+                    ),
+                  ),
+                )
+                else
+                  MillingPrimaryButton(
                   label: status.canContinueWeighing
-                      ? 'Tiếp tục cân/kết quả'
+                      ? 'Chọn cân'
                       : 'Chỉ xem - ${status.label}',
                   onPressed: status.canContinueWeighing
-                      ? () => _continueWeighing(order)
+                      ? () => _chooseWeighing(order)
                       : null,
                 ),
             ],
-          );
+          ),
+        );
         },
+      );
+  }
+}
+
+class _MillingOutputEntryHint extends StatelessWidget {
+  const _MillingOutputEntryHint({required this.order});
+
+  final MillingOrder order;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.assignment_outlined, color: millingGreen),
+          title: const Text('Nhập kết quả xay'),
+          subtitle: Text(
+            'Đã giữ ${_kg(order.inputWeightKg)} lúa. Nhập Gạo, Tấm, Cám hoặc Trấu ở màn tiếp theo.',
+          ),
+        ),
+      );
+}
+
+class _StickyRiceConfirmBar extends StatelessWidget {
+  const _StickyRiceConfirmBar({
+    required this.pendingWeightKg,
+    required this.confirmedWeightKg,
+    required this.maxWeightKg,
+    required this.onConfirm,
+    super.key,
+  });
+
+  final double? pendingWeightKg;
+  final double? confirmedWeightKg;
+  final double maxWeightKg;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = pendingWeightKg;
+    final valid = pending != null &&
+        pending.isFinite &&
+        pending > 0 &&
+        pending <= maxWeightKg &&
+        pending != confirmedWeightKg;
+    final label = pending == null
+        ? 'Xác nhận số cân'
+        : pending == confirmedWeightKg
+            ? 'Đã xác nhận: ${_kg(pending)}'
+            : confirmedWeightKg == null
+                ? 'Xác nhận số cân'
+                : 'Xác nhận lại số cân';
+
+    return Material(
+      color: Colors.white,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const Key('milling_weighing_confirm_sticky_button'),
+              onPressed: valid ? onConfirm : null,
+              icon: const Icon(Icons.check_circle_outline),
+              label: Text(label),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: millingGreen,
+                disabledBackgroundColor: const Color(0xFFCBD5E1),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1053,6 +1280,7 @@ class _ExpandableSectionCard extends StatelessWidget {
     required this.icon,
     required this.children,
     this.emptyText,
+    super.key,
   });
 
   final String title;
@@ -1406,58 +1634,46 @@ class MillingStatusView {
   final bool canStart;
 
   factory MillingStatusView.fromOrder(MillingOrder order) {
-    final raw = (order.statusCode ?? order.statusName ?? '').toUpperCase();
-    final label = order.statusName?.trim().isNotEmpty == true
-        ? order.statusName!
-        : raw.isEmpty
-            ? 'Không rõ'
-            : raw;
-    if (raw.contains('DRAFT') || raw.contains('NHÁP')) {
+    final raw = (order.statusCode ?? '').trim().toUpperCase();
+    if (raw == 'DRAFT') {
       return MillingStatusView(
-        label: label,
+        label: 'Nháp',
         background: const Color(0xFFFEF3C7),
         foreground: const Color(0xFF92400E),
         icon: Icons.edit_document,
-        actionLabel: 'Xem',
+        actionLabel: 'Sửa lệnh',
         canContinueWeighing: false,
         canReserve: true,
         canStart: false,
       );
     }
-    if (raw.contains('RESERVED') || raw.contains('GIỮ')) {
+    if (raw == 'RESERVED') {
       return MillingStatusView(
-        label: label,
+        label: 'Đã giữ lúa',
         background: const Color(0xFFDBEAFE),
         foreground: const Color(0xFF1D4ED8),
         icon: Icons.lock_clock_rounded,
-        actionLabel: 'Xem',
+        actionLabel: 'Bắt đầu xay',
         canContinueWeighing: false,
         canReserve: false,
         canStart: true,
       );
     }
-    if (raw.contains('MILLING') ||
-        raw.contains('ĐANG XAY') ||
-        raw.contains('STARTED') ||
-        raw.contains('IN_PROGRESS') ||
-        raw.contains('WAITING_RESULT') ||
-        raw.contains('CHỜ NHẬP')) {
+    if (raw == 'IN_PROGRESS' || raw == 'MILLING') {
       return MillingStatusView(
-        label: label,
+        label: 'Đang xay',
         background: const Color(0xFFF3E8FF),
         foreground: const Color(0xFF7E22CE),
         icon: Icons.precision_manufacturing_outlined,
-        actionLabel: 'Tiếp tục',
+        actionLabel: 'Tiếp tục cân',
         canContinueWeighing: true,
         canReserve: false,
         canStart: false,
       );
     }
-    if (raw.contains('COMPLETED') ||
-        raw.contains('HOÀN') ||
-        raw.contains('FINISHED')) {
+    if (raw == 'COMPLETED') {
       return MillingStatusView(
-        label: label,
+        label: 'Hoàn tất',
         background: const Color(0xFFDCFCE7),
         foreground: const Color(0xFF166534),
         icon: Icons.check_circle_outline,
@@ -1467,9 +1683,9 @@ class MillingStatusView {
         canStart: false,
       );
     }
-    if (raw.contains('CANCEL') || raw.contains('HỦY')) {
+    if (raw == 'CANCELLED' || raw == 'CANCELED') {
       return MillingStatusView(
-        label: label,
+        label: 'Đã hủy',
         background: const Color(0xFFFEE2E2),
         foreground: const Color(0xFFB91C1C),
         icon: Icons.cancel_outlined,
@@ -1480,7 +1696,7 @@ class MillingStatusView {
       );
     }
     return MillingStatusView(
-      label: label,
+      label: 'Không rõ trạng thái',
       background: const Color(0xFFF1F5F9),
       foreground: const Color(0xFF475569),
       icon: Icons.help_outline_rounded,

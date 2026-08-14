@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
+import '../../models/milling_output_form.dart';
 import '../../../scale/models/weight_reading.dart';
 import '../../../scale/presentation/screens/scale_screen.dart';
 import '../widgets/milling_widgets.dart';
@@ -11,11 +12,13 @@ class BrokenWeighingScreen extends StatefulWidget {
   const BrokenWeighingScreen({
     required this.order,
     required this.repository,
+    this.initialOutputForms = const [],
     super.key,
   });
 
   final MillingOrder order;
   final MillingRepository repository;
+  final List<MillingOutputFormValue> initialOutputForms;
 
   @override
   State<BrokenWeighingScreen> createState() => _BrokenWeighingScreenState();
@@ -25,12 +28,14 @@ class _BrokenWeighingScreenState extends State<BrokenWeighingScreen> {
   late List<MillingBag> _bags;
   double? _latestWeightKg;
   late MillingScaleMode _scaleMode;
+  late List<MillingOutputFormValue> _outputForms;
 
   @override
   void initState() {
     super.initState();
     _bags = List.of(widget.order.brokenBags);
     _scaleMode = widget.order.scaleMode;
+    _outputForms = List.unmodifiable(widget.initialOutputForms);
   }
 
   MillingOrder get _currentOrder => widget.order.copyWith(
@@ -65,9 +70,21 @@ class _BrokenWeighingScreenState extends State<BrokenWeighingScreen> {
         builder: (_) => MillingResultConfirmationScreen(
           order: _currentOrder,
           repository: widget.repository,
+          initialOutputForms: _nextOutputForms(),
         ),
       ),
     );
+  }
+
+  List<MillingOutputFormValue> _nextOutputForms() {
+    final adapted = adaptLegacyMillingOutputs([
+      LegacyMillingOutputInput(
+        type: MillingOutputType.broken,
+        productVariantId: _currentOrder.brokenProductVariantId,
+        bagWeightsKg: _bags.map((bag) => bag.weightKg).toList(),
+      ),
+    ]);
+    return adapted.isEmpty ? _outputForms : upsertMillingOutput(_outputForms, adapted.single);
   }
 
   @override

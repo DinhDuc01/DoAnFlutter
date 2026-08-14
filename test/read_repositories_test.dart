@@ -5,7 +5,9 @@ import 'package:stocklite/features/account/data/api_account_repository.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/milling/data/api_milling_repository.dart';
+import 'package:stocklite/features/milling/models/milling_location.dart';
 import 'package:stocklite/features/milling/models/milling_order.dart';
+import 'package:stocklite/features/milling/models/milling_output_form.dart';
 import 'package:stocklite/features/notifications/data/api_notifications_repository.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
 import 'package:stocklite/features/quality_inspection/data/quality_inspection_repository.dart';
@@ -697,6 +699,7 @@ void main() {
       expect(page.recordsTotal, 3);
       expect(page.recordsFiltered, 1);
       expect(page.orders.single.millingCode, 'MO-21');
+      expect(page.orders.single.statusCode, 'IN_PROGRESS');
       final call = client.calls.single;
       expect(call.path, '/api/v1/milling-orders/paged-advanced');
       expect(call.body?['start'], 20);
@@ -822,6 +825,226 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('parses nullable output location fields safely', () {
+      final location = MillingLocation.fromJson(const {
+        'id': 12,
+        'warehouseId': 2,
+        'warehouseName': 'Kho A',
+        'slotCode': null,
+        'zoneName': null,
+        'maxCapacity': null,
+        'currentOccupancy': null,
+        'allowedCategoryId': null,
+        'currentProductVariantId': null,
+        'isQuarantine': null,
+        'isActive': null,
+      });
+
+      expect(location.id, 12);
+      expect(location.warehouseId, 2);
+      expect(location.maxCapacity, isNull);
+      expect(location.currentOccupancy, 0);
+      expect(location.isQuarantine, isFalse);
+      expect(location.isActive, isFalse);
+    });
+
+    test('sends putaway suggestion contract without selecting a location',
+        () async {
+      final client = FakeApiClient(
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/putaway/suggestions');
+          expect(token, 'token');
+          expect(body, {
+            'warehouseId': 2,
+            'productVariantId': 101,
+            'paddyLotId': null,
+            'requiredWeightKg': 3250.0,
+            'placementMode': 1,
+            'top': 5,
+          });
+          return {
+            'isSucceeded': true,
+            'resources': {
+              'suggestions': [
+                {
+                  'locationId': 12,
+                  'locationCode': 'A01',
+                  'zoneName': 'Khu A',
+                  'currentOccupancyKg': 100,
+                  'maxCapacityKg': 5000,
+                  'freeCapacityKg': 4900,
+                  'isEmpty': false,
+                },
+              ],
+            },
+          };
+        },
+      );
+
+      final suggestions = await ApiMillingRepository(apiClient: client)
+          .getPutawaySuggestions(
+            warehouseId: 2,
+            productVariantId: 101,
+            requiredWeightKg: 3250,
+          );
+
+      expect(suggestions.single.locationId, 12);
+      expect(client.calls.single.path, '/api/v1/putaway/suggestions');
+    });
+
+    test('builds complete outputs from local bags and selected locations',
+        () async {
+      Map<String, dynamic>? capturedBody;
+      final client = FakeApiClient(
+        onPost: (path, body, token) async {
+          if (path.endsWith('/complete')) capturedBody = body;
+          return {'isSucceeded': true};
+        },
+      );
+
+      const order = MillingOrder(
+        id: 21,
+        millingCode: 'MO-21',
+        inputLotCode: 'LOT-01',
+        inputWeightKg: 5000,
+        warehouseZone: 'Kho A',
+        locationCode: '12',
+        scaleCode: 'Cân thủ công',
+        statusCode: 'IN_PROGRESS',
+        riceProductVariantId: 101,
+        branProductVariantId: 102,
+        riceBags: [
+          MillingBag(index: 1, weightKg: 25),
+          MillingBag(index: 2, weightKg: 25),
+        ],
+        branBags: [MillingBag(index: 1, weightKg: 5)],
+      );
+
+      await ApiMillingRepository(apiClient: client).completeOrder(
+        order,
+        outputLocationIds: const {'RICE': 12, 'BRAN': 13},
+      );
+
+      expect(capturedBody?['outputs'], [
+        {
+          'productVariantId': 101,
+          'locationId': 12,
+          'outputType': 'RICE',
+          'outputWeightKg': 50.0,
+          'bagCount': 2,
+          'isByproduct': false,
+          'unitCost': null,
+        },
+        {
+          'productVariantId': 102,
+          'locationId': 13,
+          'outputType': 'BRAN',
+          'outputWeightKg': 5.0,
+          'bagCount': 1,
+          'isByproduct': true,
+          'unitCost': null,
+        },
+      ]);
+    });
+
+    test('sends validated multi-output form values without UI-only fields',
+        () async {
+      Map<String, dynamic>? capturedBody;
+      String? capturedToken;
+      final client = FakeApiClient(
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/milling-orders/21/complete');
+          capturedBody = body;
+          capturedToken = token;
+          return {'isSucceeded': true};
+        },
+      );
+
+      await ApiMillingRepository(apiClient: client).completeOrder(
+        _millingOrder(),
+        note: 'Đã kiểm tra thủ công',
+        outputForms: const [
+          MillingOutputFormValue(
+            type: MillingOutputType.rice,
+            productVariantId: 101,
+            locationId: 12,
+            bagCount: 4,
+            kgPerBag: 25,
+            outputWeightKg: 100,
+          ),
+          MillingOutputFormValue(
+            type: MillingOutputType.bran,
+            productVariantId: 102,
+            locationId: 13,
+            bagCount: 1,
+            kgPerBag: 5,
+            outputWeightKg: 5,
+          ),
+        ],
+      );
+
+      expect(capturedToken, 'token');
+      expect(capturedBody, {
+        'outputs': [
+          {
+            'productVariantId': 101,
+            'locationId': 12,
+            'outputType': 'RICE',
+            'outputWeightKg': 100.0,
+            'bagCount': 4,
+            'isByproduct': false,
+            'unitCost': null,
+          },
+          {
+            'productVariantId': 102,
+            'locationId': 13,
+            'outputType': 'BRAN',
+            'outputWeightKg': 5.0,
+            'bagCount': 1,
+            'isByproduct': true,
+            'unitCost': null,
+          },
+        ],
+        'note': 'Đã kiểm tra thủ công',
+      });
+      expect(capturedBody!.toString(), isNot(contains('kgPerBag')));
+      expect(client.calls.where((call) => call.method == 'POST'), hasLength(1));
+    });
+
+    test('does not treat an unsuccessful complete response as success',
+        () async {
+      final client = FakeApiClient(
+        onPost: (_, __, ___) async => {
+          'isSucceeded': false,
+          'message': 'Không thể hoàn tất lệnh',
+        },
+      );
+
+      await expectLater(
+        ApiMillingRepository(apiClient: client).completeOrder(
+          _millingOrder(),
+          outputForms: const [
+            MillingOutputFormValue(
+              type: MillingOutputType.rice,
+              productVariantId: 101,
+              locationId: 12,
+              bagCount: 1,
+              kgPerBag: 25,
+              outputWeightKg: 25,
+            ),
+          ],
+        ),
+        throwsA(
+          isA<MillingApiException>().having(
+            (error) => error.message,
+            'message',
+            'Không thể hoàn tất lệnh',
+          ),
+        ),
+      );
+      expect(client.calls, hasLength(1));
     });
 
     test('loads physical bags from source suggestions and sends Columns/BagIds',

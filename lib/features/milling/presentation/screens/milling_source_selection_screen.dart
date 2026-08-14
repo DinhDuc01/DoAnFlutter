@@ -32,6 +32,9 @@ class _MillingSourceSelectionScreenState
         (sum, column) => sum + column.totalWeightKg,
       );
 
+  bool get _isDraft =>
+      widget.order.statusCode?.trim().toUpperCase() == 'DRAFT';
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +45,14 @@ class _MillingSourceSelectionScreenState
     final suggestion = await widget.repository.getSourceSuggestion(widget.order.id);
     _columns = suggestion.columns;
     return suggestion;
+  }
+
+  void _refreshSuggestion() {
+    if (_submitting) return;
+    final future = _load();
+    setState(() {
+      _future = future;
+    });
   }
 
   void _setColumn(int index, List<MillingSourceBag> bags) {
@@ -87,9 +98,24 @@ class _MillingSourceSelectionScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (!_isDraft) {
+      return Scaffold(
+        backgroundColor: millingBackground,
+        appBar: const MillingAppBar(title: 'Giữ lúa cho lệnh xay'),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Chỉ có thể giữ lúa khi lệnh đang ở trạng thái Nháp.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: millingBackground,
-      appBar: const MillingAppBar(title: 'Chọn nguồn lúa'),
+      appBar: const MillingAppBar(title: 'Giữ lúa cho lệnh xay'),
       body: FutureBuilder<MillingSourceSuggestion>(
         future: _future,
         builder: (context, snapshot) {
@@ -99,7 +125,12 @@ class _MillingSourceSelectionScreenState
           if (snapshot.hasError) {
             return HErrorState(
               message: 'Không tải được nguồn lúa: ${snapshot.error}',
-              onRetry: () => setState(() => _future = _load()),
+              onRetry: () {
+                final future = _load();
+                setState(() {
+                  _future = future;
+                });
+              },
             );
           }
           final suggestion = snapshot.data;
@@ -125,6 +156,12 @@ class _MillingSourceSelectionScreenState
                       selectedWeightKg: _selectedWeight,
                       missingWeightKg: missing,
                     ),
+                    const SizedBox(height: 8),
+                    OutlinedButton.icon(
+                      onPressed: _submitting ? null : _refreshSuggestion,
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text('Tự động chọn nguồn phù hợp'),
+                    ),
                     const SizedBox(height: 12),
                     for (var i = 0; i < _columns.length; i++)
                       _ColumnCard(
@@ -149,7 +186,7 @@ class _MillingSourceSelectionScreenState
                         ? const CircularProgressIndicator(color: Colors.white)
                         : Text(missing > 0
                             ? 'Còn thiếu ${missing.toStringAsFixed(1)} kg'
-                            : 'Giữ lúa cho lệnh xay'),
+                            : 'Kiểm tra & giữ lúa'),
                   ),
                 ),
               ),

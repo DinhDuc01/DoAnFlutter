@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
+import '../../models/milling_output_form.dart';
 import '../../../scale/models/weight_reading.dart';
 import '../../../scale/presentation/screens/scale_screen.dart';
 import '../widgets/milling_widgets.dart';
@@ -13,12 +14,14 @@ class RiceWeighingScreen extends StatefulWidget {
     required this.order,
     required this.repository,
     this.includeBroken = false,
+    this.initialOutputForms = const [],
     super.key,
   });
 
   final MillingOrder order;
   final MillingRepository repository;
   final bool includeBroken;
+  final List<MillingOutputFormValue> initialOutputForms;
 
   @override
   State<RiceWeighingScreen> createState() => _RiceWeighingScreenState();
@@ -29,12 +32,14 @@ class _RiceWeighingScreenState extends State<RiceWeighingScreen> {
   late List<MillingBag> _bags;
   double? _latestWeightKg;
   late MillingScaleMode _scaleMode;
+  late List<MillingOutputFormValue> _outputForms;
 
   @override
   void initState() {
     super.initState();
     _bags = List<MillingBag>.of(widget.order.riceBags);
     _scaleMode = widget.order.scaleMode;
+    _outputForms = List.unmodifiable(widget.initialOutputForms);
   }
 
   MillingOrder get _currentOrder => widget.order.copyWith(
@@ -64,19 +69,29 @@ class _RiceWeighingScreenState extends State<RiceWeighingScreen> {
   }
 
   Future<void> _continue() async {
+    if (_isSaving) return;
     setState(() => _isSaving = true);
-    await widget.repository.saveRiceBags(_currentOrder);
     if (!mounted) return;
-    setState(() => _isSaving = false);
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => BranWeighingScreen(
           order: _currentOrder,
           repository: widget.repository,
           includeBroken: widget.includeBroken,
+          initialOutputForms: upsertMillingOutput(
+            _outputForms,
+            adaptLegacyMillingOutputs([
+              LegacyMillingOutputInput(
+                type: MillingOutputType.rice,
+                productVariantId: _currentOrder.riceProductVariantId,
+                bagWeightsKg: _bags.map((bag) => bag.weightKg).toList(),
+              ),
+            ]).single,
+          ),
         ),
       ),
     );
+    if (mounted) setState(() => _isSaving = false);
   }
 
   @override
