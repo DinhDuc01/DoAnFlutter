@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/format.dart';
 import '../../models/milling_order.dart';
 
 const millingBackground = Color(0xFFF2FBF6);
@@ -22,6 +23,7 @@ Future<double?> showManualWeightDialog(
         decoration: const InputDecoration(
           labelText: 'Khối lượng mỗi bao',
           suffixText: 'kg',
+          helperText: 'Làm tròn lên 0,1 kg',
         ),
       ),
       actions: [
@@ -31,9 +33,10 @@ Future<double?> showManualWeightDialog(
         ),
         FilledButton(
           onPressed: () {
-            final weight = double.tryParse(controller.text.trim());
+            final weight = parseDecimal(controller.text);
             if (weight != null && weight > 0) {
-              Navigator.of(dialogContext).pop(weight);
+              // Cùng quy tắc với cân điện tử: làm tròn lên 0,1 kg.
+              Navigator.of(dialogContext).pop(ceilKg(weight));
             }
           },
           child: const Text('Thêm bao'),

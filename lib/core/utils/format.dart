@@ -4,6 +4,28 @@
 /// nghìn theo kiểu Việt Nam (dấu chấm) giống bản web.
 library;
 
+import 'dart:math' as math;
+
+/// Làm tròn LÊN khối lượng về [digits] chữ số thập phân (mặc định 0,1 kg).
+///
+/// Dùng cho MỌI số kg đi vào chứng từ — số đọc từ cân điện tử lẫn số thủ kho
+/// gõ tay — để hai bên (mua lúa, đóng gói xuất kho) không lệch nhau và tổng
+/// tiền không phụ thuộc vào chữ số thứ ba của cân.
+///
+/// Luôn làm tròn lên nên phần chênh nghiêng về phía người bán/khách, không bao
+/// giờ ghi thiếu so với cân: `12,31 → 12,4`; `12,30 → 12,3`.
+///
+/// Nhân/chia số thực gây sai số (`12.3 * 10 = 122.99999999999999`, `ceil` ra
+/// 12,4 dù đã tròn), nên phải cắt nhiễu ở chữ số thứ 6 trước khi `ceil`.
+/// Chỉ dùng cho khối lượng không âm.
+double ceilKg(num? value, {int digits = 1}) {
+  final raw = (value ?? 0).toDouble();
+  if (!raw.isFinite) return 0;
+  final factor = math.pow(10, digits).toDouble();
+  final scaled = (raw * factor * 1e6).round() / 1e6;
+  return scaled.ceil() / factor;
+}
+
 /// `1234567` → `1.234.567 ₫`
 String formatMoney(num? value) {
   final rounded = (value ?? 0).round();

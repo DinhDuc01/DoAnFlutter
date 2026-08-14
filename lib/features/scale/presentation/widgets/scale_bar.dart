@@ -69,29 +69,46 @@ class ScaleBarState extends State<ScaleBar> {
   }
 
   Future<void> _attach() async {
-    final service = await _session.ensureInitialized();
+    // Thiếu Bluetooth / chạy trong môi trường không có plugin (widget test,
+    // máy không hỗ trợ BLE) thì thanh cân chỉ đứng im ở dòng "Kết nối cân
+    // điện tử" — không được làm hỏng form đang mở, vì nhập tay vẫn phải dùng
+    // được bình thường.
+    final BleScaleService service;
+    try {
+      service = await _session.ensureInitialized();
+    } catch (_) {
+      return;
+    }
     if (!mounted) return;
     setState(() => _service = service);
     service.addListener(_onScaleChanged);
-    _startTicker();
+    _syncTicker();
   }
 
   void _onPrefsChanged() {
     if (mounted) setState(() {});
   }
 
-  void _startTicker() {
-    _ticker?.cancel();
-    // Nhịp ngắn chỉ để vẽ vòng đếm ổn định + kích hoạt auto-capture đúng lúc,
-    // kể cả khi cân gửi mẫu thưa.
-    _ticker = Timer.periodic(const Duration(milliseconds: 120), (_) {
-      if (!mounted) return;
-      _evaluateAutoCapture();
-    });
+  /// Nhịp ngắn chỉ để vẽ vòng đếm ổn định + kích hoạt auto-capture đúng lúc,
+  /// kể cả khi cân gửi mẫu thưa. CHỈ chạy khi đã nối cân — không có cân thì
+  /// một timer lặp vô tận chỉ tốn pin (và treo `pumpAndSettle` trong test).
+  void _syncTicker() {
+    final connected = _service?.isConnected ?? false;
+    if (connected && _ticker == null) {
+      _ticker = Timer.periodic(const Duration(milliseconds: 120), (_) {
+        if (!mounted) return;
+        _evaluateAutoCapture();
+      });
+    } else if (!connected && _ticker != null) {
+      _ticker!.cancel();
+      _ticker = null;
+    }
   }
 
   void _onScaleChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    _syncTicker();
+    setState(() {});
   }
 
   void _evaluateAutoCapture() {
@@ -117,8 +134,13 @@ class ScaleBarState extends State<ScaleBar> {
 
   void _emit(WeightReading reading, {required bool automatic}) {
     unawaited(HapticFeedback.mediumImpact());
+    // Làm tròn LÊN 0,1 kg ngay tại nguồn: mọi màn dùng cân (mua lúa, đóng gói
+    // xuất kho…) nhận cùng một con số, không màn nào phải tự nhớ quy tắc.
     widget.onCapture(
-      reading.copyWith(deviceName: _service?.connectedDevice?.platformName),
+      reading.copyWith(
+        weight: ceilKg(reading.weight),
+        deviceName: _service?.connectedDevice?.platformName,
+      ),
       automatic,
     );
   }
@@ -279,9 +301,12 @@ class ScaleBarState extends State<ScaleBar> {
                   child: Text.rich(
                     TextSpan(children: [
                       TextSpan(
+                        // Hiện đúng con số sẽ được ghi vào phiếu (đã làm tròn
+                        // lên 0,1 kg), tránh cảnh trên thanh một số, vào ô một
+                        // số khác.
                         text: reading == null
                             ? '---'
-                            : formatNumber(reading.weight, digits: 3),
+                            : formatNumber(ceilKg(reading.weight), digits: 1),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 34,
@@ -325,8 +350,8 @@ class ScaleBarState extends State<ScaleBar> {
                   !widget.enabled
                       ? 'Chọn ô cần cân ở dưới rồi đặt hàng lên cân.'
                       : autoOn
-                          ? 'Đặt hàng lên cân, số ổn định sẽ tự điền.'
-                          : 'Số ổn định thì bấm "Lấy số".',
+                          ? 'Đặt hàng lên cân, số ổn định sẽ tự điền (làm tròn lên 0,1 kg).'
+                          : 'Số ổn định thì bấm "Lấy số" (làm tròn lên 0,1 kg).',
                   style: const TextStyle(color: Colors.white70, fontSize: 11.5),
                 ),
               ),

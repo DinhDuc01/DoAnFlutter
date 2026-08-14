@@ -476,9 +476,12 @@ class _PackingSheetState extends State<PackingSheet> {
             // Gợi ý sẵn số đã lấy để thủ kho chỉ phải sửa khi lệch.
             controller: TextEditingController(
               text: formatQuantityInput(
-                group.totalPickedKg > 0
-                    ? group.totalPickedKg
-                    : group.totalAllocatedKg,
+                ceilKg(
+                  group.totalPickedKg > 0
+                      ? group.totalPickedKg
+                      : group.totalAllocatedKg,
+                ),
+                digits: 1,
               ),
             ),
           ),
@@ -501,9 +504,10 @@ class _PackingSheetState extends State<PackingSheet> {
       ? _rows[_targetIndex]
       : null;
 
+  /// Tổng = tổng các dòng ĐÃ làm tròn lên 0,1 kg, khớp đúng số sẽ gửi lên BE.
   double get _total => _rows.fold(
         0.0,
-        (sum, row) => sum + (parseDecimal(row.controller.text) ?? 0),
+        (sum, row) => sum + ceilKg(parseDecimal(row.controller.text) ?? 0),
       );
 
   bool get _anyFromScale => _rows.any((row) => row.fromScale);
@@ -549,7 +553,7 @@ class _PackingSheetState extends State<PackingSheet> {
         SnackBar(
           duration: const Duration(seconds: 4),
           content: Text(
-            'Đã nhận ${formatNumber(reading.weight, digits: 3)} kg '
+            'Đã nhận ${formatNumber(reading.weight, digits: 1)} kg '
             '→ lô ${row.group.lotLabel} (bao ${row.bags.length})',
           ),
           action: SnackBarAction(
@@ -602,7 +606,11 @@ class _PackingSheetState extends State<PackingSheet> {
             _error = 'Khối lượng của lô ${row.group.lotLabel} không hợp lệ.');
         return;
       }
-      byItem[row.item.id] = (byItem[row.item.id] ?? 0) + value;
+      // Làm tròn lên 0,1 kg kể cả dòng gõ tay, để mọi số kg trên chứng từ theo
+      // cùng một quy tắc với số đọc từ cân.
+      final rounded = ceilKg(value);
+      row.write(formatQuantityInput(rounded, digits: 1));
+      byItem[row.item.id] = (byItem[row.item.id] ?? 0) + rounded;
       scaleByItem[row.item.id] =
           (scaleByItem[row.item.id] ?? false) || row.fromScale;
     }
@@ -611,11 +619,12 @@ class _PackingSheetState extends State<PackingSheet> {
       for (final entry in byItem.entries)
         PackingItemWeight(
           outboundOrderItemId: entry.key,
-          actualWeightKg: entry.value,
+          // Cộng dồn số thực sinh đuôi lẻ → chuẩn hoá lại về bội của 0,1.
+          actualWeightKg: ceilKg(entry.value),
           fromScale: scaleByItem[entry.key] ?? false,
         ),
     ];
-    final total = _total;
+    final total = ceilKg(_total);
 
     Navigator.of(context).pop(PackingResult(
       qrCode: qr,
@@ -755,7 +764,7 @@ class _PackingSheetState extends State<PackingSheet> {
                 for (var i = 0; i < row.bags.length; i++)
                   InputChip(
                     label: Text(
-                      'Bao ${i + 1}: ${formatNumber(row.bags[i], digits: 3)}',
+                      'Bao ${i + 1}: ${formatNumber(row.bags[i], digits: 1)}',
                       style: const TextStyle(fontSize: 11),
                     ),
                     visualDensity: VisualDensity.compact,
@@ -852,7 +861,9 @@ class _PackRow {
 
   void writeSum() {
     final sum = bags.fold(0.0, (total, bag) => total + bag);
-    write(bags.isEmpty ? '' : formatQuantityInput(sum));
+    // Cộng số thực sinh đuôi lẻ (0,1 + 0,2 = 0,30000000000000004) → chuẩn hoá
+    // lại về bội của 0,1.
+    write(bags.isEmpty ? '' : formatQuantityInput(ceilKg(sum), digits: 1));
   }
 }
 

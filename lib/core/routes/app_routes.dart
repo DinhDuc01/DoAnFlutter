@@ -8,7 +8,7 @@ import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_scr
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/thu_mua/presentation/screens/thu_mua_screen.dart';
 import '../../features/thu_mua/models/purchase_schedule.dart';
-import '../../features/kho/presentation/screens/kho_screen.dart';
+import '../../features/kho/presentation/screens/stock_take_list_screen.dart';
 import '../../features/products/presentation/screens/product_detail_screen.dart';
 import '../../features/reports/presentation/screens/reports_screen.dart';
 import '../../features/scan/presentation/screens/scan_qr_screen.dart';
@@ -64,7 +64,9 @@ class AppRoutes {
       },
       purchaseScheduleDetail: (_) => const PurchaseScheduleDetailScreen(),
       thuMuaSuccess: (_) => const ThuMuaSuccessScreen(),
-      stocktake: (_) => const KhoScreen(),
+      // Kiểm kê theo BAO (quét QR từng bao + cân). Màn cũ KhoScreen kiểm theo kg
+      // đã bị thay vì không phản ánh được cách kho gạo lưu hàng.
+      stocktake: (_) => const StockTakeListScreen(),
       productDetail: (_) => const ProductDetailScreen(),
       scanQr: (_) => const ScanQrScreen(),
       reports: (_) => const ReportsScreen(),
