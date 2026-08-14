@@ -688,6 +688,11 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
                 ),
               ),
               FilledButton.icon(
+                // Theme đặt minimumSize = Size.fromHeight(50) (rộng vô hạn) để
+                // nút chiếm trọn chiều ngang; trong Row thì chiều ngang không
+                // bị chặn nên ràng buộc vô hạn làm vỡ layout. Nút ở thanh dưới
+                // này nằm cạnh phần tổng tiền nên chỉ cần vừa nội dung.
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                 onPressed: _submitting ? null : _submit,
                 icon: _submitting
                     ? const SizedBox.square(

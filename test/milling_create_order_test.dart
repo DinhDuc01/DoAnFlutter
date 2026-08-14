@@ -277,4 +277,28 @@ class _FakeSalesOrderRepository implements SalesOrderRepository {
   Future<int> createOutbound(int id, List<CreateOutboundLine> items) async {
     return 0;
   }
+
+  // Màn xay xát chỉ đọc danh sách đơn bán; các API tạo/giữ hàng bên dưới thuộc
+  // luồng tạo đơn trên mobile nên fake này không cần chạy thật.
+  @override
+  Future<CreatedSalesOrder> create(CreateSalesOrderInput input) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> reserve(int id) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<SalesCustomerOption>> getCustomers() async => const [];
+
+  @override
+  Future<List<SalesWarehouseOption>> getWarehouses() async => const [];
+
+  @override
+  Future<List<SalesProductOption>> getProductVariants({
+    String keyword = '',
+  }) async =>
+      const [];
 }
