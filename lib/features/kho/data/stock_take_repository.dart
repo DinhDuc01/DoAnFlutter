@@ -65,10 +65,10 @@ abstract class StockTakeRepository {
 
 /// Kiểm kê theo BAO — đọc/ghi thẳng API `/stocktakes`.
 ///
-/// Bản cũ (`ApiKhoCheckRepository`) tự dựng phiếu ở client từ danh sách sản
-/// phẩm rồi gửi lên số kg tròn (int), nên vừa mất phần lẻ vừa không biết gì về
-/// bao. Ở đây backend là nơi chụp snapshot và tính toán; app chỉ ghi lại kết
-/// quả kiểm đếm từng bao.
+/// Backend là nơi chụp snapshot phiếu (gồm cả danh sách bao) và tính toán
+/// chênh lệch; app chỉ chọn phạm vi rồi ghi lại kết quả kiểm đếm từng bao.
+/// Client KHÔNG tự dựng dòng phiếu từ danh mục sản phẩm — làm vậy thì số liệu
+/// gửi lên chỉ là phỏng đoán của app, không phải tồn kho thật.
 class ApiStockTakeRepository implements StockTakeRepository {
   ApiStockTakeRepository({ApiClient? apiClient})
       : _apiClient = apiClient ?? ApiClient();

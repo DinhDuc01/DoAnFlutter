@@ -11,9 +11,10 @@ import 'stock_take_detail_screen.dart';
 
 /// Danh sách phiếu kiểm kê + tạo phiếu mới theo phạm vi.
 ///
-/// Màn cũ (`KhoScreen`) tự dựng phiếu ở client từ danh sách sản phẩm rồi gửi số
-/// kg đã làm tròn về int — mất phần lẻ và hoàn toàn không biết tới bao. Nay
-/// backend chụp snapshot (gồm cả danh sách bao), app chỉ chọn phạm vi.
+/// Phiếu do BACKEND chụp snapshot (gồm cả danh sách bao của từng lô tại từng
+/// vị trí), app chỉ chọn phạm vi kiểm kê. Đơn vị kiểm đếm là BAO chứ không phải
+/// kg: kho gạo lưu hàng theo bao nên "thiếu 50 kg" không cho biết là mất một
+/// bao hay hao đều nhiều bao.
 class StockTakeListScreen extends StatefulWidget {
   const StockTakeListScreen({this.repository, super.key});
 

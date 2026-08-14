@@ -2,7 +2,7 @@ import '../../../core/api/json_reader.dart';
 
 /// Một dòng tồn kho thật: một lô nằm ở một vị trí trong một kho.
 ///
-/// Khác với [KhoCheckItem] (dòng của phiếu kiểm kê), đây là dữ liệu tồn kho
+/// Khác với dòng của phiếu kiểm kê (`StockTakeLine`), đây là dữ liệu tồn kho
 /// hiện hành do `/api/v1/inventories/advanced` trả về. Toàn bộ khối lượng giữ
 /// nguyên kiểu `double` — lúa gạo luôn có phần lẻ kg, làm tròn về `int` là mất
 /// dữ liệu.

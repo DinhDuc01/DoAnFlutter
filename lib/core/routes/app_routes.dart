@@ -33,9 +33,7 @@ class AppRoutes {
   static const salesOrders = '/sales-orders'; // Danh sách đơn bán
   static const outboundOrders =
       '/outbound-orders'; // Phiếu xuất kho & giao hàng
-  static const stocktake = '/stocktake';
-  @Deprecated('Use stocktake')
-  static const inventory = stocktake;
+  static const stocktake = '/stocktake'; // Kiểm kê kho theo BAO
   static const productDetail = '/products/detail'; // Màn hình Chi tiết sản phẩm
   static const scanQr = '/scan-qr'; // Màn hình Quét mã QR/Barcode
   static const reports = '/reports'; // Màn hình Báo cáo & Biểu đồ
@@ -64,8 +62,8 @@ class AppRoutes {
       },
       purchaseScheduleDetail: (_) => const PurchaseScheduleDetailScreen(),
       thuMuaSuccess: (_) => const ThuMuaSuccessScreen(),
-      // Kiểm kê theo BAO (quét QR từng bao + cân). Màn cũ KhoScreen kiểm theo kg
-      // đã bị thay vì không phản ánh được cách kho gạo lưu hàng.
+      // Kiểm kê theo BAO: quét QR từng bao + cân, thay cho cách nhập tay số kg
+      // vốn không phản ánh được việc kho gạo lưu hàng theo bao.
       stocktake: (_) => const StockTakeListScreen(),
       productDetail: (_) => const ProductDetailScreen(),
       scanQr: (_) => const ScanQrScreen(),
