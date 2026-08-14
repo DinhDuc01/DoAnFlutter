@@ -157,19 +157,26 @@ class StockTakeLine {
     return [zone, slot].where((x) => (x ?? '').isNotEmpty).join('/');
   }
 
-  String get title => lotCode?.trim().isNotEmpty == true
-      ? lotCode!.trim()
-      : (sku?.trim().isNotEmpty == true ? sku!.trim() : 'Dòng #$id');
+  String get title {
+    final name = (productVariantName ?? sku ?? '').trim();
+    final lot = (lotCode ?? '').trim();
+    if (name.isNotEmpty && lot.isNotEmpty) return '$name ($lot)';
+    if (name.isNotEmpty) return name;
+    if (lot.isNotEmpty) return 'Lô $lot';
+    return 'Dòng #$id';
+  }
 
   factory StockTakeLine.fromJson(Map<String, dynamic> json) => StockTakeLine(
         id: JsonReader.integer(json, 'id') ?? 0,
-        productVariantName: JsonReader.string(json, 'productVariantName'),
-        sku: JsonReader.string(json, 'sku'),
+        productVariantName: JsonReader.string(json, 'productVariantName') ??
+            JsonReader.string(json, 'variantName'),
+        sku: JsonReader.string(json, 'sku') ?? JsonReader.string(json, 'sKU'),
         lotCode: JsonReader.string(json, 'lotCode'),
         zoneName: JsonReader.string(json, 'zoneName'),
         locationCode: JsonReader.string(json, 'locationCode'),
         systemQuantity: JsonReader.decimal(json, 'systemQuantity') ?? 0,
-        systemBagCount: JsonReader.integer(json, 'systemBagCount') ?? 0,
+        systemBagCount: JsonReader.integer(json, 'systemBagCount') ??
+            (JsonReader.decimal(json, 'systemQuantity')?.round() ?? 0),
         actualQuantity: JsonReader.decimal(json, 'actualQuantity'),
         countedBagCount: JsonReader.integer(json, 'countedBagCount'),
         quality: StockTakeQualityX.fromCode(JsonReader.string(json, 'qualityStatus')),

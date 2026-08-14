@@ -246,7 +246,7 @@ class ScaleBarState extends State<ScaleBar> {
     final reading = service.reading;
     final stable = reading?.isStable ?? false;
     final weight = reading?.weight ?? 0;
-    final canTake = widget.enabled && stable && weight > 0;
+    final canTake = widget.enabled && weight > 0;
     final autoOn = _prefs.autoCapture;
 
     return Container(

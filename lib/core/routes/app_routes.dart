@@ -8,20 +8,6 @@ import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_scr
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/thu_mua/presentation/screens/thu_mua_screen.dart';
 import '../../features/thu_mua/models/purchase_schedule.dart';
-import '../../features/kho/presentation/screens/stock_take_list_screen.dart';
-import '../../features/products/presentation/screens/product_detail_screen.dart';
-import 'package:flutter/material.dart';
-
-import '../../features/account/presentation/screens/change_password_screen.dart';
-import '../../features/account/presentation/screens/personal_info_screen.dart';
-import '../../features/auth/presentation/screens/login_screen.dart';
-import '../../features/thu_mua/presentation/screens/thu_mua_success_screen.dart';
-import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_screen.dart';
-import '../../features/home/presentation/screens/home_screen.dart';
-import '../../features/thu_mua/presentation/screens/thu_mua_screen.dart';
-import '../../features/thu_mua/models/purchase_schedule.dart';
-import '../../features/kho/presentation/screens/kho_screen.dart';
-import '../../features/products/presentation/screens/product_detail_screen.dart';
 import '../../features/reports/presentation/screens/reports_screen.dart';
 import '../../features/scan/presentation/screens/scan_qr_screen.dart';
 import '../../features/milling/presentation/screens/milling_preparation_screen.dart';
@@ -30,8 +16,9 @@ import '../../features/debts/presentation/screens/debt_screen.dart';
 import '../../features/quality_inspection/presentation/screens/quality_inspection_readonly_screen.dart';
 import '../../features/sales_orders/presentation/screens/sales_order_list_screen.dart';
 import '../../features/outbound_orders/presentation/screens/outbound_order_list_screen.dart';
+import '../../features/kho/presentation/screens/stock_take_detail_screen.dart';
 import '../../features/stock_take/presentation/screens/stock_take_list_screen.dart';
-import '../../features/stock_take/presentation/screens/stock_take_detail_screen.dart';
+import '../../features/products/presentation/screens/product_detail_screen.dart';
 
 /// Lớp định nghĩa tất cả các tuyến đường (routes) và điều hướng trong ứng dụng.
 class AppRoutes {
@@ -95,7 +82,11 @@ class AppRoutes {
       salesOrders: (_) => const SalesOrderListScreen(),
       outboundOrders: (_) => const OutboundOrderListScreen(),
       stockTakeList: (_) => const StockTakeListScreen(),
-      stockTakeDetail: (_) => const StockTakeDetailScreen(),
+      stockTakeDetail: (context) {
+        final arguments = ModalRoute.of(context)?.settings.arguments;
+        final id = arguments is int ? arguments : (arguments as Map)['id'] as int;
+        return StockTakeDetailScreen(stockTakeId: id);
+      },
     };
   }
 }

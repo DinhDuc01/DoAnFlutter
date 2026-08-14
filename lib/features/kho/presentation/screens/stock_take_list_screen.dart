@@ -104,11 +104,22 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
             AppGradientHeader(
               title: 'Kiểm kê kho',
               subtitle: 'Đếm theo BAO, cân lại bao nghi ngờ, ghi nhận chất lượng',
-              trailing: IconButton(
-                onPressed: _load,
-                color: Colors.white,
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Tải lại',
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: _createStockTake,
+                    color: Colors.white,
+                    icon: const Icon(Icons.add, size: 28),
+                    tooltip: 'Tạo phiếu mới',
+                  ),
+                  IconButton(
+                    onPressed: _load,
+                    color: Colors.white,
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Tải lại',
+                  ),
+                ],
               ),
             ),
             Expanded(child: _body()),

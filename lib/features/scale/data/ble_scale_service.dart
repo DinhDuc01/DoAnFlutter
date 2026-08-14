@@ -68,6 +68,14 @@ class BleScaleService extends ChangeNotifier {
 
   Future<void> initialize() async {
     if (_initialized || _disposed) return;
+    // Check BLE support; on unsupported platforms (e.g., CI environment), skip BLE initialization.
+    if (!await FlutterBluePlus.isSupported) {
+      _setError('Thiết bị này không hỗ trợ Bluetooth Low Energy.');
+      _initialized = true;
+      _notify();
+      return;
+    }
+    // BLE is supported; proceed with normal initialization.
     _initialized = true;
     FlutterBluePlus.setLogLevel(LogLevel.warning, color: false);
     _adapterState = FlutterBluePlus.adapterStateNow;
@@ -96,11 +104,7 @@ class BleScaleService extends ChangeNotifier {
         }
       }),
     );
-
-    if (!await FlutterBluePlus.isSupported) {
-      _setError('Thiết bị này không hỗ trợ Bluetooth Low Energy.');
-      return;
-    }
+    // No further action needed; BLE is now ready.
     _notify();
   }
 

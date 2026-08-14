@@ -15,19 +15,23 @@ class StockTakeException implements Exception {
 }
 
 /// Phạm vi chụp phiếu kiểm kê.
-enum StockTakeScope { warehouse, zone, column }
+enum StockTakeScope { warehouse, zone, column, lot, sku }
 
 extension StockTakeScopeX on StockTakeScope {
   String get code => switch (this) {
         StockTakeScope.warehouse => 'WAREHOUSE',
         StockTakeScope.zone => 'ZONE',
         StockTakeScope.column => 'COLUMN',
+        StockTakeScope.lot => 'LOT',
+        StockTakeScope.sku => 'SKU',
       };
 
   String get label => switch (this) {
         StockTakeScope.warehouse => 'Toàn kho',
         StockTakeScope.zone => 'Theo khu',
-        StockTakeScope.column => 'Theo cột',
+        StockTakeScope.column => 'Theo cột/vị trí',
+        StockTakeScope.lot => 'Theo lô',
+        StockTakeScope.sku => 'Theo SKU',
       };
 }
 

@@ -71,11 +71,31 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
   int _lineIndex = 0;
   int? _targetBagId;
 
+  late final TextEditingController _manualKgController;
+
   @override
   void initState() {
     super.initState();
+    _manualKgController = TextEditingController();
     _repository = widget.repository ?? ApiStockTakeRepository();
     _load(showLoading: false);
+  }
+
+  @override
+  void dispose() {
+    _manualKgController.dispose();
+    super.dispose();
+  }
+
+  void _syncManualKgController() {
+    final line = _line;
+    if (line == null) return;
+    final text = line.actualQuantity == null
+        ? '0'
+        : formatQuantityInput(line.actualQuantity, digits: 1);
+    if (_manualKgController.text != text) {
+      _manualKgController.text = text;
+    }
   }
 
   Future<void> _load({bool showLoading = true}) async {
@@ -90,6 +110,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
         _remoteChanged = false;
         if (_lineIndex >= detail.lines.length) _lineIndex = 0;
         _targetBagId = _firstUncountedBagId();
+        _syncManualKgController();
       });
     } catch (error) {
       if (!mounted) return;
@@ -149,32 +170,49 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
 
   void _onScaleCapture(WeightReading reading, bool automatic) {
     if (!_canEdit) return;
-    final bag = _targetBag;
-    if (bag == null) {
-      _snack('Chọn bao cần cân trước đã.', error: true);
-      return;
-    }
-    setState(() {
-      bag.countedWeightKg = ceilKg(reading.weight);
-      bag.counted = true;
-    });
+    final line = _line;
+    if (line == null) return;
 
-    if (!automatic) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        duration: const Duration(seconds: 4),
-        content: Text('Bao #${bag.bagNo}: ${formatNumber(bag.countedWeightKg, digits: 1)} kg'),
-        action: SnackBarAction(
-          label: 'Hoàn tác',
-          onPressed: () {
-            setState(() => bag.countedWeightKg = null);
-            _scaleBarKey.currentState?.suppressCurrentReading();
-          },
-        ),
-      ));
-    // Cân xong bao này thì nhảy sang bao chưa đếm kế tiếp để cân liên tục.
-    setState(() => _targetBagId = _firstUncountedBagId() ?? bag.id);
+    final capturedWeight = ceilKg(reading.weight);
+
+    if (line.hasBags) {
+      final bag = _targetBag;
+      if (bag == null) {
+        _snack('Chọn bao cần cân trước đã.', error: true);
+        return;
+      }
+      setState(() {
+        bag.countedWeightKg = capturedWeight;
+        bag.counted = true;
+      });
+
+      if (!automatic) {
+        _snack('Bao #${bag.bagNo}: ${formatNumber(bag.countedWeightKg, digits: 1)} kg');
+      } else {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            duration: const Duration(seconds: 4),
+            content: Text('Bao #${bag.bagNo}: ${formatNumber(bag.countedWeightKg, digits: 1)} kg'),
+            action: SnackBarAction(
+              label: 'Hoàn tác',
+              onPressed: () {
+                setState(() => bag.countedWeightKg = null);
+                _scaleBarKey.currentState?.suppressCurrentReading();
+              },
+            ),
+          ));
+      }
+      // Cân xong bao này thì nhảy sang bao chưa đếm kế tiếp để cân liên tục.
+      setState(() => _targetBagId = _firstUncountedBagId() ?? bag.id);
+    } else {
+      // Dòng không quản lý theo bao: gán thẳng khối lượng cân vào actualQuantity!
+      setState(() {
+        line.actualQuantity = capturedWeight;
+        _manualKgController.text = formatQuantityInput(capturedWeight, digits: 1);
+      });
+      _snack('Đã nhận số cân: ${formatNumber(capturedWeight, digits: 1)} kg');
+    }
   }
 
   /// Quét QR tem bao. Backend tra xem bao có thuộc phiếu không.
@@ -231,14 +269,6 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
     final detail = _detail;
     if (detail == null) return false;
 
-    final missingQuality = detail.lines.where(
-        (l) => l.quality.isFailed && (l.qualityNote ?? '').trim().isEmpty);
-    if (missingQuality.isNotEmpty) {
-      _snack('Dòng ${missingQuality.first.title}: chất lượng không đạt phải ghi rõ tình trạng.',
-          error: true);
-      return false;
-    }
-
     setState(() => _busy = true);
     try {
       await _repository.saveCounts(detail.id, detail.lines, note: detail.note);
@@ -258,31 +288,34 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
 
     final untouched = detail.lines.where((l) => !l.touched).toList();
     if (untouched.isNotEmpty) {
-      _snack('Còn ${untouched.length} dòng chưa kiểm đếm bao nào.', error: true);
+      _snack('Còn ${untouched.length} dòng chưa kiểm đếm.', error: true);
       return;
     }
     final needReason = detail.lines.where(
-        (l) => l.bagDifference != 0 && (l.note ?? '').trim().isEmpty);
+        (l) => (l.effectiveActualKg - l.systemQuantity).abs() >= 0.05 && (l.note ?? '').trim().isEmpty);
     if (needReason.isNotEmpty) {
-      _snack('Dòng ${needReason.first.title} lệch bao — bắt buộc nhập lý do.', error: true);
+      _snack('Dòng ${needReason.first.title} chênh lệch kg — bắt buộc nhập lý do.', error: true);
       return;
     }
-    final needRecount =
-        detail.lines.where((l) => l.bagDifference != 0 && !l.recountConfirmed);
+    final needRecount = detail.lines.where(
+        (l) => (l.effectiveActualKg - l.systemQuantity).abs() >= 0.05 && !l.recountConfirmed);
     if (needRecount.isNotEmpty) {
-      _snack('Dòng ${needRecount.first.title} lệch bao — phải xác nhận đã đếm lại.',
+      _snack('Dòng ${needRecount.first.title} chênh lệch kg — phải xác nhận đã đếm lại.',
           error: true);
       return;
     }
+
+    final totalActualKg = detail.lines.fold<double>(0, (s, l) => s + l.effectiveActualKg);
+    final totalSystemKg = detail.lines.fold<double>(0, (s, l) => s + l.systemQuantity);
+    final netDiffKg = totalActualKg - totalSystemKg;
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Gửi phiếu để duyệt?'),
         content: Text(
-          'Đã đếm ${detail.countedBags}/${detail.totalBags} bao'
-          '${detail.missingBags > 0 ? ', thiếu ${detail.missingBags} bao' : ''}.'
-          '${detail.hasQualityIssue ? '\nCó dòng ghi nhận chất lượng không đạt.' : ''}'
+          'Đã kiểm đếm ${formatKg(totalActualKg, digits: 1)} / ${formatKg(totalSystemKg, digits: 1)} kg'
+          '${netDiffKg.abs() >= 0.05 ? ' (chênh lệch ${netDiffKg >= 0 ? '+' : ''}${formatKg(netDiffKg, digits: 1)} kg)' : ''}.'
           '\nSau khi gửi, số liệu sẽ bị khoá.',
         ),
         actions: [
@@ -375,13 +408,38 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
           ),
           const SizedBox(height: 10),
         ],
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF4F6F8),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFE0E0E0)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.info_outline, size: 16, color: Colors.grey),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Ngưỡng: SMALL từ 0.5% hoặc 5 kg · LARGE từ 2% hoặc 20 kg.',
+                  style: TextStyle(fontSize: 12, color: Colors.black87),
+                ),
+              ),
+            ],
+          ),
+        ),
         _lineSelector(detail),
         const SizedBox(height: 12),
         if (_canEdit) ...[
           ScaleBar(
             key: _scaleBarKey,
-            enabled: _targetBag != null,
-            targetLabel: _targetBag == null ? null : 'bao ${_targetBag!.bagNo}',
+            enabled: _canEdit && (line != null && (line.hasBags ? _targetBag != null : true)),
+            targetLabel: line == null
+                ? null
+                : (line.hasBags
+                    ? (_targetBag == null ? 'Bao chưa chọn' : 'bao #${_targetBag!.bagNo}')
+                    : 'thực tế (kg)'),
             onCapture: _onScaleCapture,
           ),
           const SizedBox(height: 10),
@@ -403,91 +461,189 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
         else
           _manualKgCard(line),
         const SizedBox(height: 12),
-        _qualityCard(line),
-        const SizedBox(height: 12),
         _reasonCard(line),
       ],
     );
   }
 
   Widget _lineSelector(StockTakeDetail detail) {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: detail.lines.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final line = detail.lines[index];
-          final selected = index == _lineIndex;
-          final done = line.touched;
-          return ChoiceChip(
-            selected: selected,
-            label: Text(
-              '${line.title}${line.hasBags ? ' (${line.countedBags}/${line.systemBagCount})' : ''}',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+    if (detail.lines.length <= 1) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Danh sách mặt hàng/lô (${detail.lines.length}):',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF212B36),
+              ),
             ),
-            avatar: done
-                ? const Icon(Icons.check_circle, size: 16, color: AppColors.primary)
-                : null,
-            onSelected: (_) => setState(() {
-              _lineIndex = index;
-              _targetBagId = _firstUncountedBagId();
-            }),
-          );
-        },
-      ),
+            Text(
+              'Đang kiểm dòng ${_lineIndex + 1}/${detail.lines.length}',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF00A76F),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        SizedBox(
+          height: 42,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: detail.lines.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final line = detail.lines[index];
+              final selected = index == _lineIndex;
+              final done = line.touched;
+              return ChoiceChip(
+                selected: selected,
+                selectedColor: const Color(0xFFE8F5E9),
+                side: BorderSide(
+                  color: selected ? const Color(0xFF00A76F) : Colors.grey.shade300,
+                  width: selected ? 1.5 : 1.0,
+                ),
+                label: Text(
+                  '${line.title}${line.hasBags ? ' (${line.countedBags}/${line.systemBagCount})' : ''}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: selected ? const Color(0xFF00A76F) : Colors.black87,
+                  ),
+                ),
+                avatar: done
+                    ? const Icon(Icons.check_circle, size: 16, color: Color(0xFF00A76F))
+                    : null,
+                onSelected: (_) => setState(() {
+                  _lineIndex = index;
+                  _targetBagId = _firstUncountedBagId();
+                  _syncManualKgController();
+                }),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
     );
+  }
+
+  String _varianceTier(double systemKg, double diffKg) {
+    final absDiff = diffKg.abs();
+    if (absDiff < 0.05) return 'NONE';
+    final pct = systemKg > 0 ? (absDiff / systemKg) * 100 : 0;
+    if (pct >= 2.0 || absDiff >= 20) return 'LARGE';
+    if (pct >= 1.0 || absDiff >= 10) return 'MEDIUM';
+    if (pct >= 0.5 || absDiff >= 5) return 'SMALL';
+    return 'SMALL';
+  }
+
+  Color _tierColor(String tier) {
+    switch (tier) {
+      case 'NONE':
+        return Colors.grey;
+      case 'SMALL':
+        return Colors.blue;
+      case 'MEDIUM':
+        return Colors.orange;
+      case 'LARGE':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
   }
 
   Widget _lineSummary(StockTakeLine line) {
     final diffKg = line.effectiveActualKg - line.systemQuantity;
+    final tier = _varianceTier(line.systemQuantity, diffKg);
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(line.productVariantName ?? line.title,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
-          Text(
-            'Lô ${line.lotCode ?? '—'} · ${line.locationLabel}',
-            style:
-                TextStyle(fontSize: 12, color: AppColors.textSecondaryFor(context)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(line.productVariantName ?? line.title,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
+                    Text(
+                      'Lô ${line.lotCode ?? '—'} · ${line.locationLabel}',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondaryFor(context)),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _tierColor(tier).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  tier,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: _tierColor(tier),
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: AppStatTile(
-                  label: 'Bao',
-                  value: '${line.countedBags}/${line.systemBagCount}',
-                  tone: line.bagDifference == 0 ? AppTone.brand : AppTone.danger,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: AppStatTile(
-                  label: 'Sổ sách',
+                  label: 'Hệ thống',
                   value: formatKg(line.systemQuantity, digits: 1),
+                  tone: AppTone.neutral,
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: AppStatTile(
-                  label: 'Lệch',
-                  value: '${diffKg >= 0 ? '+' : ''}${formatKg(diffKg, digits: 1)}',
-                  tone: diffKg.abs() < 0.05 ? AppTone.neutral : AppTone.warning,
+                  label: 'Thực tế',
+                  value: line.touched
+                      ? formatKg(line.effectiveActualKg, digits: 1)
+                      : '0 kg',
+                  tone: !line.touched
+                      ? AppTone.neutral
+                      : (diffKg.abs() < 0.05 ? AppTone.brand : AppTone.warning),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: AppStatTile(
+                  label: 'Chênh lệch',
+                  value: line.touched
+                      ? '${diffKg >= 0 ? '+' : ''}${formatKg(diffKg, digits: 1)}'
+                      : '—',
+                  tone: !line.touched
+                      ? AppTone.neutral
+                      : (diffKg.abs() < 0.05 ? AppTone.neutral : (diffKg < 0 ? AppTone.danger : AppTone.warning)),
                 ),
               ),
             ],
           ),
-          if (line.bagDifference != 0) ...[
+          if (line.touched && diffKg.abs() >= 0.05) ...[
             const SizedBox(height: 8),
             AppInfoBanner(
-              tone: AppTone.danger,
+              tone: diffKg < 0 ? AppTone.danger : AppTone.warning,
               icon: Icons.error_outline_rounded,
-              message: line.bagDifference < 0
-                  ? 'Thiếu ${-line.bagDifference} bao — bắt buộc nhập lý do và xác nhận đếm lại.'
-                  : 'Thừa ${line.bagDifference} bao so với sổ sách.',
+              message: diffKg < 0
+                  ? 'Thiếu ${formatKg(-diffKg, digits: 1)} kg — bắt buộc nhập lý do và xác nhận đếm lại.'
+                  : 'Thừa ${formatKg(diffKg, digits: 1)} kg so với hệ thống.',
             ),
           ],
         ],
@@ -574,59 +730,23 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
   Widget _manualKgCard(StockTakeLine line) {
     return AppCard(
       child: TextFormField(
-        initialValue: line.actualQuantity == null
-            ? ''
-            : formatQuantityInput(line.actualQuantity, digits: 1),
+        controller: _manualKgController,
         enabled: _canEdit,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         decoration: const InputDecoration(
-          labelText: 'Khối lượng đếm được (kg)',
+          labelText: 'Khối lượng thực tế đếm được (kg) *',
           suffixText: 'kg',
-          helperText: 'Dòng này không quản lý theo bao',
+          helperText: 'Vừa vào chọn mặt hàng mặc định là 0 — gõ số kg kiểm đếm thực tế',
         ),
-        onChanged: (value) =>
-            setState(() => line.actualQuantity = parseDecimal(value)),
+        onChanged: (value) {
+          line.actualQuantity = parseDecimal(value);
+          setState(() {});
+        },
       ),
     );
   }
 
-  Widget _qualityCard(StockTakeLine line) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('Chất lượng', style: TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final quality in StockTakeQuality.values)
-                ChoiceChip(
-                  selected: line.quality == quality,
-                  label: Text(quality.label, style: const TextStyle(fontSize: 12)),
-                  onSelected:
-                      _canEdit ? (_) => setState(() => line.quality = quality) : null,
-                ),
-            ],
-          ),
-          if (line.quality.isFailed) ...[
-            const SizedBox(height: 10),
-            TextFormField(
-              initialValue: line.qualityNote,
-              enabled: _canEdit,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                labelText: 'Mô tả tình trạng *',
-                hintText: 'Ví dụ: 3 bao đáy cột bị ẩm, có mùi mốc',
-              ),
-              onChanged: (value) => line.qualityNote = value,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+
 
   Widget _reasonCard(StockTakeLine line) {
     return AppCard(
