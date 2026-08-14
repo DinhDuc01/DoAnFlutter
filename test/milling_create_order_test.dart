@@ -293,5 +293,8 @@ class _FakeSalesOrderRepository implements SalesOrderRepository {
   Future<List<SalesWarehouseOption>> getWarehouses() async => const [];
 
   @override
-  Future<List<SalesProductOption>> getProductVariants({String keyword = ''}) async => const [];
+  Future<List<SalesProductOption>> getProductVariants({
+    String keyword = '',
+  }) async =>
+      const [];
 }

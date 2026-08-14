@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../models/stock_take.dart';
-import '../../../../core/routes/app_routes.dart';
 
 class StockTakeCard extends StatelessWidget {
   final StockTakeSummary summary;
