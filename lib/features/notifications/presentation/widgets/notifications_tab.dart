@@ -7,11 +7,11 @@ import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/api_notifications_repository.dart';
 import '../../data/notification_center.dart';
-import '../../data/notification_navigator.dart';
 import '../../data/notifications_repository.dart';
 import '../../models/app_notification.dart';
 import 'notifications_card.dart';
 import 'notifications_filter_chips.dart';
+import 'notifications_pager.dart';
 
 /// Tab "Thông báo" — nay là màn danh sách đầy đủ duy nhất.
 ///
@@ -28,10 +28,17 @@ class NotificationsTab extends StatefulWidget {
   State<NotificationsTab> createState() => _NotificationsTabState();
 }
 
+/// Compatibility wrapper for callers/tests that still construct the old
+/// standalone notification screen. The app itself uses [NotificationsTab].
+@Deprecated('Use NotificationsTab')
+class NotificationsScreen extends NotificationsTab {
+  const NotificationsScreen({super.repository, super.key});
+}
+
 class _NotificationsTabState extends State<NotificationsTab>
     with RealtimeReloadMixin {
-  /// FCM chỉ đẩy khi có thông báo MỚI. Đọc/đọc-tất-cả ở web hay máy khác không
-  /// sinh push nên vẫn cần SignalR để danh sách và badge khớp nhau.
+  static const int _pageSize = 10;
+
   @override
   Set<String> get realtimeEntities => const {
         'Notification',
@@ -40,7 +47,6 @@ class _NotificationsTabState extends State<NotificationsTab>
 
   @override
   void onRealtimeChanged() => _load(showLoading: false);
-
   late final NotificationsRepository _repository;
 
   StreamSubscription<void>? _refreshSub;
@@ -50,10 +56,12 @@ class _NotificationsTabState extends State<NotificationsTab>
   Object? _error;
   bool _loading = true;
   bool _markingAll = false;
+  int _page = 1;
+  int _total = 0;
 
   ApiNotificationsRepository? get _api =>
       _repository is ApiNotificationsRepository
-          ? _repository as ApiNotificationsRepository
+          ? _repository
           : null;
 
   @override
@@ -82,10 +90,32 @@ class _NotificationsTabState extends State<NotificationsTab>
       });
     }
     try {
-      final items = await _repository.getNotifications();
+      final api = _api;
+      final NotificationPage page;
+      if (api == null) {
+        final items = await _repository.getNotifications();
+        page = NotificationPage(items: items, total: items.length);
+      } else if (_filter == NotificationFilter.alerts) {
+        final all = await _fetchAllPages(api);
+        final alerts = all.where((item) => item.isAlert).toList();
+        final start = (_page - 1) * _pageSize;
+        page = NotificationPage(
+          items: start >= alerts.length
+              ? const []
+              : alerts.skip(start).take(_pageSize).toList(),
+          total: alerts.length,
+        );
+      } else {
+        page = await api.fetch(
+          pageIndex: _page,
+          pageSize: _pageSize,
+          isRead: _filter == NotificationFilter.unread ? false : null,
+        );
+      }
       if (!mounted) return;
       setState(() {
-        _notifications = items;
+        _notifications = page.items;
+        _total = page.total;
         _error = null;
         _loading = false;
       });
@@ -96,6 +126,28 @@ class _NotificationsTabState extends State<NotificationsTab>
         _loading = false;
       });
     }
+  }
+
+  Future<List<AppNotification>> _fetchAllPages(
+    ApiNotificationsRepository api,
+  ) async {
+    final first = await api.fetch(pageIndex: 1, pageSize: _pageSize);
+    final items = [...first.items];
+    final pages = (first.total + _pageSize - 1) ~/ _pageSize;
+    for (var page = 2; page <= pages; page++) {
+      final next = await api.fetch(pageIndex: page, pageSize: _pageSize);
+      items.addAll(next.items);
+    }
+    return items;
+  }
+
+  int get _totalPages =>
+      _total <= 0 ? 1 : ((_total + _pageSize - 1) ~/ _pageSize);
+
+  void _goToPage(int page) {
+    if (page < 1 || page > _totalPages || page == _page) return;
+    setState(() => _page = page);
+    _load(showLoading: true);
   }
 
   int get _unreadCount =>
@@ -135,9 +187,42 @@ class _NotificationsTabState extends State<NotificationsTab>
     }
     if (!mounted) return;
 
-    // Chỉ điều hướng khi backend chỉ đúng một màn có trên mobile.
-    final route = NotificationNavigator.routeFor(notification.directionId);
-    if (route != null) await Navigator.of(context).pushNamed(route);
+    if (!mounted) return;
+    await _showNotificationDetail(notification.copyWith(isRead: true));
+  }
+
+  Future<void> _showNotificationDetail(AppNotification notification) {
+    return showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(notification.title,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        )),
+                const SizedBox(height: 12),
+                Text(notification.message),
+                const SizedBox(height: 12),
+                Text('Thời gian: ${notification.timeAgo}'),
+                Text('Loại: ${notification.type.name}'),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Đóng'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _dismiss(AppNotification notification) async {
@@ -184,9 +269,11 @@ class _NotificationsTabState extends State<NotificationsTab>
   @override
   Widget build(BuildContext context) {
     final unread = _unreadCount;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    return Material(
+      color: Colors.transparent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         AppGradientHeader(
           title: 'Thông báo',
           subtitle: unread == 0
@@ -211,7 +298,8 @@ class _NotificationsTabState extends State<NotificationsTab>
         ),
         const SizedBox(height: 8),
         Expanded(child: _body(unread)),
-      ],
+        ],
+      ),
     );
   }
 
@@ -239,7 +327,9 @@ class _NotificationsTabState extends State<NotificationsTab>
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        itemCount: visible.isEmpty ? 2 : visible.length + 1,
+        itemCount: visible.isEmpty
+            ? 2
+            : visible.length + 1 + (_totalPages > 1 ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           if (index == 0) {
@@ -247,7 +337,13 @@ class _NotificationsTabState extends State<NotificationsTab>
               selectedFilter: _filter,
               unreadCount: unread,
               alertCount: alertCount,
-              onChanged: (filter) => setState(() => _filter = filter),
+              onChanged: (filter) {
+                setState(() {
+                  _filter = filter;
+                  _page = 1;
+                });
+                _load(showLoading: true);
+              },
             );
           }
           if (visible.isEmpty) {
@@ -255,6 +351,13 @@ class _NotificationsTabState extends State<NotificationsTab>
               title: 'Không có thông báo phù hợp',
               description: 'Hãy thử chọn bộ lọc khác.',
               icon: Icons.notifications_none,
+            );
+          }
+          if (_totalPages > 1 && index == visible.length + 1) {
+            return NotificationsPager(
+              page: _page,
+              totalPages: _totalPages,
+              onChanged: _goToPage,
             );
           }
           final notification = visible[index - 1];

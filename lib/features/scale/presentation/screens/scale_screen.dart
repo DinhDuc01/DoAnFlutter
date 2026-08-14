@@ -194,7 +194,7 @@ class _ScaleScreenState extends State<ScaleScreen> {
 
   Widget _buildConnectedContent(BleScaleService service) {
     final reading = service.reading;
-    final stable = reading?.isStable ?? false;
+    final stable = reading?.isStable == true && (reading?.isFresh() ?? false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

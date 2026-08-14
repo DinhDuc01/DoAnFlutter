@@ -58,5 +58,39 @@ void main() {
         throwsFormatException,
       );
     });
+
+    test('rejects non-positive or non-finite weight', () {
+      expect(
+        () => WeightReading.fromJsonString('{"w":0,"s":true}'),
+        throwsFormatException,
+      );
+      expect(
+        () => WeightReading.fromJsonString('{"w":-1,"s":true}'),
+        throwsFormatException,
+      );
+    });
+
+    test('detects stale readings before capture', () {
+      final receivedAt = DateTime(2026, 8, 13, 10);
+      final reading = WeightReading(
+        weight: 2.45,
+        unit: 'kg',
+        isStable: true,
+        receivedAt: receivedAt,
+      );
+
+      expect(
+        reading.isFresh(
+          now: receivedAt.add(const Duration(seconds: 4)),
+        ),
+        isTrue,
+      );
+      expect(
+        reading.isFresh(
+          now: receivedAt.add(const Duration(seconds: 6)),
+        ),
+        isFalse,
+      );
+    });
   });
 }

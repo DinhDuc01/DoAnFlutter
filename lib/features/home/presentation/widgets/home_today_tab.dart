@@ -87,6 +87,8 @@ class HomeTodayTab extends StatelessWidget {
       _Shortcut(
           'Công nợ', Icons.account_balance_wallet_outlined, AppColors.warning,
           route: AppRoutes.debts),
+      _Shortcut('Chất lượng', Icons.science_outlined, AppColors.accentPurple,
+          route: AppRoutes.qualityInspections),
     ];
 
     return GridView.builder(
@@ -102,6 +104,7 @@ class HomeTodayTab extends StatelessWidget {
       itemBuilder: (context, index) {
         final item = items[index];
         return AppCard(
+          key: ValueKey(item.route ?? item.label),
           radius: AppColors.radiusMd,
           padding: const EdgeInsets.all(10),
           onTap: () {

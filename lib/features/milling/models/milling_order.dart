@@ -1,5 +1,19 @@
 import '../../../core/api/json_reader.dart';
 
+class MillingFilterOption {
+  const MillingFilterOption({
+    required this.id,
+    required this.name,
+    this.code,
+    this.color,
+  });
+
+  final int id;
+  final String name;
+  final String? code;
+  final String? color;
+}
+
 /// A single recorded bag produced by a milling order.
 class MillingBag {
   const MillingBag({
@@ -171,6 +185,68 @@ class MillingOrderPage {
   final int recordsFiltered;
 }
 
+class MillingSourceColumn {
+  const MillingSourceColumn({
+    required this.locationId,
+    this.locationCode,
+    required this.bags,
+  });
+
+  final int locationId;
+  final String? locationCode;
+  final List<MillingSourceBag> bags;
+
+  double get totalWeightKg => bags
+      .where((bag) => bag.selected)
+      .fold<double>(0, (sum, bag) => sum + bag.weightKg);
+
+  List<int> get selectedBagIds => bags
+      .where((bag) => bag.selected)
+      .map((bag) => bag.id)
+      .toList(growable: false);
+}
+
+class MillingSourceBag {
+  const MillingSourceBag({
+    required this.id,
+    required this.bagNo,
+    required this.weightKg,
+    required this.status,
+    this.selected = false,
+  });
+
+  final int id;
+  final int bagNo;
+  final double weightKg;
+  final String status;
+  final bool selected;
+
+  bool get selectable => status.trim().toUpperCase() == 'STORED';
+
+  MillingSourceBag copyWith({bool? selected}) => MillingSourceBag(
+        id: id,
+        bagNo: bagNo,
+        weightKg: weightKg,
+        status: status,
+        selected: selected ?? this.selected,
+      );
+}
+
+class MillingSourceSuggestion {
+  const MillingSourceSuggestion({
+    required this.requiredWeightKg,
+    required this.columns,
+  });
+
+  final double requiredWeightKg;
+  final List<MillingSourceColumn> columns;
+
+  double get selectedWeightKg => columns.fold<double>(
+        0,
+        (sum, column) => sum + column.totalWeightKg,
+      );
+}
+
 /// Mobile-facing data required to finish and pack a milling order.
 class MillingOrder {
   const MillingOrder({
@@ -211,6 +287,8 @@ class MillingOrder {
     this.totalCost,
     this.millingCost,
     this.incidentalCost,
+    this.moisturePercent,
+    this.expectedCompletionDate,
     this.createdDate,
     this.lastModifiedDate,
     this.inputs = const [],
@@ -254,6 +332,8 @@ class MillingOrder {
   final double? totalCost;
   final double? millingCost;
   final double? incidentalCost;
+  final double? moisturePercent;
+  final DateTime? expectedCompletionDate;
   final DateTime? createdDate;
   final DateTime? lastModifiedDate;
   final List<MillingOrderInput> inputs;
@@ -279,6 +359,10 @@ class MillingOrder {
     );
     final mappedInputWeightKg = actualPaddyInputKg ??
         (consumedInputKg > 0 ? consumedInputKg : computedPaddyKg);
+    final statusId = JsonReader.integer(json, 'statusId') ?? 0;
+    final statusCode = JsonReader.string(json, 'statusCode') ??
+        _statusCodeFromId(statusId);
+
     return MillingOrder(
       id: id,
       millingCode: JsonReader.string(json, 'millingCode') ?? 'MO-$id',
@@ -299,9 +383,9 @@ class MillingOrder {
       riceProductVariantId: _outputVariantId(outputs, 'RICE'),
       branProductVariantId: _outputVariantId(outputs, 'BRAN'),
       brokenProductVariantId: _outputVariantId(outputs, 'BROKEN'),
-      statusId: JsonReader.integer(json, 'statusId') ?? 0,
+      statusId: statusId,
       statusName: JsonReader.string(json, 'statusName'),
-      statusCode: JsonReader.string(json, 'statusCode'),
+      statusCode: statusCode,
       warehouseId: JsonReader.integer(json, 'warehouseId') ?? 0,
       warehouseName: JsonReader.string(json, 'warehouseName'),
       riceVarietyId: JsonReader.integer(json, 'riceVarietyId'),
@@ -322,12 +406,26 @@ class MillingOrder {
       totalCost: JsonReader.decimal(json, 'totalCost'),
       millingCost: JsonReader.decimal(json, 'millingCost'),
       incidentalCost: JsonReader.decimal(json, 'incidentalCost'),
+      moisturePercent: JsonReader.decimal(json, 'moisturePercent'),
+      expectedCompletionDate: _date(json, 'expectedCompletionDate'),
       createdDate: _date(json, 'createdDate'),
       lastModifiedDate: _date(json, 'lastModifiedDate'),
       inputs: inputs,
       outputs: outputs,
     );
   }
+
+  // The paged milling-order contract currently exposes statusId/statusName,
+  // while the detail contract also exposes statusCode. Keep the mapping
+  // limited to the backend's seeded IDs; unknown IDs must remain unknown.
+  static String? _statusCodeFromId(int statusId) => switch (statusId) {
+        1 => 'DRAFT',
+        2 => 'RESERVED',
+        3 => 'IN_PROGRESS',
+        5 => 'COMPLETED',
+        6 => 'CANCELLED',
+        _ => null,
+      };
 
   MillingOrder copyWith({
     List<MillingBag>? riceBags,
@@ -377,6 +475,8 @@ class MillingOrder {
       totalCost: totalCost,
       millingCost: millingCost,
       incidentalCost: incidentalCost,
+      moisturePercent: moisturePercent,
+      expectedCompletionDate: expectedCompletionDate,
       createdDate: createdDate,
       lastModifiedDate: lastModifiedDate,
       inputs: inputs,

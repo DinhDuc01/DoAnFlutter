@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utils/format.dart';
 import '../../models/milling_order.dart';
 
 const millingBackground = Color(0xFFF2FBF6);
@@ -11,41 +10,62 @@ Future<double?> showManualWeightDialog(
   BuildContext context, {
   required String productLabel,
 }) async {
-  final controller = TextEditingController();
-  final value = await showDialog<double>(
+  return showDialog<double>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text('Nhập cân $productLabel'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        decoration: const InputDecoration(
-          labelText: 'Khối lượng mỗi bao',
-          suffixText: 'kg',
-          helperText: 'Làm tròn lên 0,1 kg',
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Hủy'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final weight = parseDecimal(controller.text);
-            if (weight != null && weight > 0) {
-              // Cùng quy tắc với cân điện tử: làm tròn lên 0,1 kg.
-              Navigator.of(dialogContext).pop(ceilKg(weight));
-            }
-          },
-          child: const Text('Thêm bao'),
-        ),
-      ],
-    ),
+    builder: (_) => _ManualWeightDialog(productLabel: productLabel),
   );
-  controller.dispose();
-  return value;
+}
+
+class _ManualWeightDialog extends StatefulWidget {
+  const _ManualWeightDialog({required this.productLabel});
+
+  final String productLabel;
+
+  @override
+  State<_ManualWeightDialog> createState() => _ManualWeightDialogState();
+}
+
+class _ManualWeightDialogState extends State<_ManualWeightDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final weight = double.tryParse(
+      _controller.text.trim().replaceAll(',', '.'),
+    );
+    if (weight == null || !weight.isFinite || weight <= 0) return;
+    Navigator.of(context).pop(weight);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text('Nhập cân ${widget.productLabel}'),
+        content: TextField(
+          controller: _controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(
+            labelText: 'Khối lượng mỗi bao',
+            suffixText: 'kg',
+          ),
+          onSubmitted: (_) => _submit(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: _submit,
+            child: const Text('Thêm bao'),
+          ),
+        ],
+      );
 }
 
 /// Shared compact app bar for every milling step.
@@ -168,6 +188,7 @@ class BleScaleCaptureCard extends StatelessWidget {
     required this.onCapture,
     this.latestWeightKg,
     this.manualMode = false,
+    this.onModeChanged,
     this.color = millingGreen,
     super.key,
   });
@@ -177,6 +198,7 @@ class BleScaleCaptureCard extends StatelessWidget {
   final VoidCallback onCapture;
   final double? latestWeightKg;
   final bool manualMode;
+  final ValueChanged<bool>? onModeChanged;
   final Color color;
 
   @override
@@ -201,7 +223,7 @@ class BleScaleCaptureCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   manualMode
-                      ? 'Chế độ cân: Cân thủ công'
+                      ? 'Chế độ cân: Nhập tay'
                       : 'Chế độ cân: Cân IoT'
                           '${scaleCode.trim().isEmpty ? '' : ' · Thiết bị: $scaleCode'}',
                   style: const TextStyle(
@@ -214,6 +236,27 @@ class BleScaleCaptureCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
+          if (onModeChanged != null) ...[
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(
+                  value: true,
+                  label: Text('Nhập tay'),
+                  icon: Icon(Icons.edit_outlined),
+                ),
+                ButtonSegment<bool>(
+                  value: false,
+                  label: Text('Cân IoT'),
+                  icon: Icon(Icons.bluetooth_rounded),
+                ),
+              ],
+              selected: {manualMode},
+              onSelectionChanged: (selected) {
+                if (selected.isNotEmpty) onModeChanged!(selected.first);
+              },
+            ),
+            const SizedBox(height: 12),
+          ],
           Text(
             latestWeightKg == null
                 ? 'Chưa nhận số cân mới'

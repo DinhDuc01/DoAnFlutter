@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
+import '../../models/milling_output_form.dart';
 import '../../../scale/models/weight_reading.dart';
 import '../../../scale/presentation/screens/scale_screen.dart';
 import '../widgets/milling_widgets.dart';
@@ -11,11 +12,13 @@ class BrokenWeighingScreen extends StatefulWidget {
   const BrokenWeighingScreen({
     required this.order,
     required this.repository,
+    this.initialOutputForms = const [],
     super.key,
   });
 
   final MillingOrder order;
   final MillingRepository repository;
+  final List<MillingOutputFormValue> initialOutputForms;
 
   @override
   State<BrokenWeighingScreen> createState() => _BrokenWeighingScreenState();
@@ -24,18 +27,25 @@ class BrokenWeighingScreen extends StatefulWidget {
 class _BrokenWeighingScreenState extends State<BrokenWeighingScreen> {
   late List<MillingBag> _bags;
   double? _latestWeightKg;
+  late MillingScaleMode _scaleMode;
+  late List<MillingOutputFormValue> _outputForms;
 
   @override
   void initState() {
     super.initState();
     _bags = List.of(widget.order.brokenBags);
+    _scaleMode = widget.order.scaleMode;
+    _outputForms = List.unmodifiable(widget.initialOutputForms);
   }
 
-  MillingOrder get _currentOrder => widget.order.copyWith(brokenBags: _bags);
+  MillingOrder get _currentOrder => widget.order.copyWith(
+        brokenBags: _bags,
+        scaleMode: _scaleMode,
+      );
 
   Future<void> _captureWeight() async {
     final double? weight;
-    if (widget.order.scaleMode == MillingScaleMode.iot) {
+    if (_scaleMode == MillingScaleMode.iot) {
       final reading = await Navigator.of(context).push<WeightReading>(
         MaterialPageRoute(builder: (_) => const ScaleScreen()),
       );
@@ -43,7 +53,7 @@ class _BrokenWeighingScreenState extends State<BrokenWeighingScreen> {
     } else {
       weight = await showManualWeightDialog(context, productLabel: 'tấm');
     }
-    if (!mounted || weight == null) return;
+    if (!mounted || weight == null || !weight.isFinite || weight <= 0) return;
     final capturedWeight = weight;
     setState(() {
       _latestWeightKg = capturedWeight;
@@ -60,9 +70,21 @@ class _BrokenWeighingScreenState extends State<BrokenWeighingScreen> {
         builder: (_) => MillingResultConfirmationScreen(
           order: _currentOrder,
           repository: widget.repository,
+          initialOutputForms: _nextOutputForms(),
         ),
       ),
     );
+  }
+
+  List<MillingOutputFormValue> _nextOutputForms() {
+    final adapted = adaptLegacyMillingOutputs([
+      LegacyMillingOutputInput(
+        type: MillingOutputType.broken,
+        productVariantId: _currentOrder.brokenProductVariantId,
+        bagWeightsKg: _bags.map((bag) => bag.weightKg).toList(),
+      ),
+    ]);
+    return adapted.isEmpty ? _outputForms : upsertMillingOutput(_outputForms, adapted.single);
   }
 
   @override
@@ -79,7 +101,10 @@ class _BrokenWeighingScreenState extends State<BrokenWeighingScreen> {
             instruction: 'Cân từng bao tấm. Có thể bỏ qua nếu không phát sinh.',
             onCapture: _captureWeight,
             color: const Color(0xFF7C3AED),
-            manualMode: widget.order.scaleMode == MillingScaleMode.manual,
+            manualMode: _scaleMode == MillingScaleMode.manual,
+            onModeChanged: (manual) => setState(() {
+              _scaleMode = manual ? MillingScaleMode.manual : MillingScaleMode.iot;
+            }),
           ),
           const SizedBox(height: 10),
           WeighingSummary(

@@ -4,11 +4,16 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../data/api_milling_repository.dart';
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
+import '../../models/milling_plan_args.dart';
 import '../widgets/milling_widgets.dart';
+import '../widgets/milling_weighing_panel.dart';
 import 'milling_create_order_screen.dart';
+import 'milling_source_selection_screen.dart';
+import 'milling_result_confirmation_screen.dart';
 import 'rice_weighing_screen.dart';
 
 class MillingPreparationScreen extends StatefulWidget {
@@ -87,10 +92,29 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
     );
   }
 
-  Future<void> _openCreate() async {
+  bool _argsProcessed = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_argsProcessed) {
+      _argsProcessed = true;
+      final routeArgs = ModalRoute.of(context)?.settings.arguments;
+      if (routeArgs is MillingPlanArgs) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _openCreate(routeArgs);
+        });
+      }
+    }
+  }
+
+  Future<void> _openCreate([MillingPlanArgs? args]) async {
     final createdId = await Navigator.of(context).push<int>(
       MaterialPageRoute<int>(
-        builder: (_) => MillingCreateOrderScreen(repository: _repository),
+        builder: (_) => MillingCreateOrderScreen(
+          repository: _repository,
+          args: args,
+        ),
       ),
     );
     if (!mounted || createdId == null) return;
@@ -99,21 +123,43 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
     if (mounted) _reload();
   }
 
-  Future<void> _openFilters() async {
-    final result = await showModalBottomSheet<_MillingFilterSelection>(
+  Future<void> _openStatusFilter() async {
+    final result = await showModalBottomSheet<_MillingFilterResult>(
       context: context,
       showDragHandle: true,
       isScrollControlled: true,
-      builder: (context) => _MillingFilterSheet(
-        statuses: _knownStatuses,
-        warehouses: _knownWarehouses,
-        selectedStatusId: _statusId,
-        selectedWarehouseId: _warehouseId,
+      builder: (context) => _MillingLookupFilterSheet(
+        title: 'Chọn trạng thái',
+        allLabel: 'Tất cả trạng thái',
+        selectedId: _statusId,
+        loader: _repository.getMillingStatuses,
       ),
     );
     if (result == null || !mounted) return;
-    _statusId = result.statusId;
-    _warehouseId = result.warehouseId;
+    _statusId = result.id;
+    if (result.id != null) {
+      _knownStatuses = {..._knownStatuses, result.id!: result.name};
+    }
+    _reload();
+  }
+
+  Future<void> _openWarehouseFilter() async {
+    final result = await showModalBottomSheet<_MillingFilterResult>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (context) => _MillingLookupFilterSheet(
+        title: 'Chọn kho',
+        allLabel: 'Tất cả kho',
+        selectedId: _warehouseId,
+        loader: _repository.getWarehouses,
+      ),
+    );
+    if (result == null || !mounted) return;
+    _warehouseId = result.id;
+    if (result.id != null) {
+      _knownWarehouses = {..._knownWarehouses, result.id!: result.name};
+    }
     _reload();
   }
 
@@ -178,7 +224,6 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
                         recordsTotal: 0,
                         recordsFiltered: 0,
                       );
-                  _rememberFilterOptions(page.orders);
                   return RefreshIndicator(
                     onRefresh: () async {
                       _reload();
@@ -194,7 +239,8 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
                           selectedStatusId: _statusId,
                           selectedWarehouseId: _warehouseId,
                           onSearchChanged: _onSearchChanged,
-                          onOpenFilters: _openFilters,
+                          onOpenStatus: _openStatusFilter,
+                          onOpenWarehouse: _openWarehouseFilter,
                           onClear: () {
                             _searchController.clear();
                             _search = '';
@@ -236,26 +282,6 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen> {
     );
   }
 
-  void _rememberFilterOptions(List<MillingOrder> orders) {
-    final statuses = Map<int, String>.of(_knownStatuses);
-    final warehouses = Map<int, String>.of(_knownWarehouses);
-    for (final order in orders) {
-      if (order.statusId > 0) {
-        statuses[order.statusId] = order.statusName?.trim().isNotEmpty == true
-            ? order.statusName!
-            : 'Trạng thái ${order.statusId}';
-      }
-      if (order.warehouseId > 0) {
-        warehouses[order.warehouseId] =
-            order.warehouseName?.trim().isNotEmpty == true
-                ? order.warehouseName!
-                : 'Kho ${order.warehouseId}';
-      }
-    }
-    _knownStatuses = statuses;
-    _knownWarehouses = warehouses;
-  }
-
   String _statusLabel(int? id) {
     if (id == null) return 'Tất cả trạng thái';
     return _knownStatuses[id] ?? 'Trạng thái $id';
@@ -275,7 +301,8 @@ class _SearchAndFilters extends StatelessWidget {
     required this.selectedStatusId,
     required this.selectedWarehouseId,
     required this.onSearchChanged,
-    required this.onOpenFilters,
+    required this.onOpenStatus,
+    required this.onOpenWarehouse,
     required this.onClear,
   });
 
@@ -285,7 +312,8 @@ class _SearchAndFilters extends StatelessWidget {
   final int? selectedStatusId;
   final int? selectedWarehouseId;
   final ValueChanged<String> onSearchChanged;
-  final VoidCallback onOpenFilters;
+  final VoidCallback onOpenStatus;
+  final VoidCallback onOpenWarehouse;
   final VoidCallback onClear;
 
   @override
@@ -317,21 +345,20 @@ class _SearchAndFilters extends StatelessWidget {
             children: [
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(110, 50),
+                  minimumSize: const Size(0, 44),
                 ),
-                onPressed: onOpenFilters,
-                icon: const Icon(Icons.tune_rounded, size: 18),
-                label: const Text('Bộ lọc'),
+                onPressed: onOpenStatus,
+                icon: const Icon(Icons.flag_outlined, size: 18),
+                label: Text(statusLabel),
               ),
               const SizedBox(width: 8),
-              _FilterChipPill(
-                label: statusLabel,
-                active: selectedStatusId != null,
-              ),
-              const SizedBox(width: 8),
-              _FilterChipPill(
-                label: warehouseLabel,
-                active: selectedWarehouseId != null,
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size(0, 44),
+                ),
+                onPressed: onOpenWarehouse,
+                icon: const Icon(Icons.warehouse_outlined, size: 18),
+                label: Text(warehouseLabel),
               ),
               if (hasFilter) ...[
                 const SizedBox(width: 8),
@@ -379,201 +406,135 @@ class _MillingLoadingState extends StatelessWidget {
   }
 }
 
-class _MillingFilterSelection {
-  const _MillingFilterSelection({
-    required this.statusId,
-    required this.warehouseId,
-  });
+class _MillingFilterResult {
+  const _MillingFilterResult(this.id, this.name);
 
-  final int? statusId;
-  final int? warehouseId;
+  final int? id;
+  final String name;
 }
 
-class _MillingFilterSheet extends StatefulWidget {
-  const _MillingFilterSheet({
-    required this.statuses,
-    required this.warehouses,
-    required this.selectedStatusId,
-    required this.selectedWarehouseId,
+class _MillingLookupFilterSheet extends StatefulWidget {
+  const _MillingLookupFilterSheet({
+    required this.title,
+    required this.allLabel,
+    required this.selectedId,
+    required this.loader,
   });
 
-  final Map<int, String> statuses;
-  final Map<int, String> warehouses;
-  final int? selectedStatusId;
-  final int? selectedWarehouseId;
+  final String title;
+  final String allLabel;
+  final int? selectedId;
+  final Future<List<MillingFilterOption>> Function() loader;
 
   @override
-  State<_MillingFilterSheet> createState() => _MillingFilterSheetState();
+  State<_MillingLookupFilterSheet> createState() =>
+      _MillingLookupFilterSheetState();
 }
 
-class _MillingFilterSheetState extends State<_MillingFilterSheet> {
-  int? _statusId;
-  int? _warehouseId;
+class _MillingLookupFilterSheetState extends State<_MillingLookupFilterSheet> {
+  late Future<List<MillingFilterOption>> _future;
 
   @override
   void initState() {
     super.initState();
-    _statusId = widget.selectedStatusId;
-    _warehouseId = widget.selectedWarehouseId;
+    _future = widget.loader();
   }
+
+  void _retry() => setState(() => _future = widget.loader());
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          0,
-          16,
-          16 + MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Bộ lọc lệnh xay',
-              style: TextStyle(
-                color: Color(0xFF0F172A),
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .62,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.title,
+                style: const TextStyle(
+                  color: Color(0xFF0F172A),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
-            ),
-            const SizedBox(height: 14),
-            _FilterGroup(
-              title: 'Trạng thái',
-              selectedId: _statusId,
-              allLabel: 'Tất cả trạng thái',
-              options: widget.statuses,
-              onChanged: (value) => setState(() => _statusId = value),
-            ),
-            const SizedBox(height: 14),
-            _FilterGroup(
-              title: 'Kho',
-              selectedId: _warehouseId,
-              allLabel: 'Tất cả kho',
-              options: widget.warehouses,
-              onChanged: (value) => setState(() => _warehouseId = value),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        setState(() {
-                          _statusId = null;
-                          _warehouseId = null;
-                        });
-                      },
-                      child: const Text('Xóa lọc'),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: () => Navigator.of(context).pop(
-                        _MillingFilterSelection(
-                          statusId: _statusId,
-                          warehouseId: _warehouseId,
+              const SizedBox(height: 12),
+              Expanded(
+                child: FutureBuilder<List<MillingFilterOption>>(
+                  future: _future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return HErrorState(
+                        message: 'Không tải được dữ liệu: ${snapshot.error}',
+                        onRetry: _retry,
+                      );
+                    }
+                    final options = snapshot.data ?? const [];
+                    return ListView(
+                      children: [
+                        _MillingLookupTile(
+                          label: widget.allLabel,
+                          selected: widget.selectedId == null,
+                          onTap: () => Navigator.of(context).pop(
+                            _MillingFilterResult(null, widget.allLabel),
+                          ),
                         ),
-                      ),
-                      child: const Text('Áp dụng'),
-                    ),
-                  ),
-                ],
+                        for (final option in options)
+                          _MillingLookupTile(
+                            label: option.name,
+                            subtitle: option.code,
+                            selected: widget.selectedId == option.id,
+                            onTap: () => Navigator.of(context).pop(
+                              _MillingFilterResult(option.id, option.name),
+                            ),
+                          ),
+                        if (options.isEmpty)
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(child: Text('Chưa có dữ liệu')),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _FilterGroup extends StatelessWidget {
-  const _FilterGroup({
-    required this.title,
-    required this.selectedId,
-    required this.allLabel,
-    required this.options,
-    required this.onChanged,
-  });
-
-  final String title;
-  final int? selectedId;
-  final String allLabel;
-  final Map<int, String> options;
-  final ValueChanged<int?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Color(0xFF475569),
-            fontSize: 12,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            ChoiceChip(
-              label: Text(allLabel),
-              selected: selectedId == null,
-              onSelected: (_) => onChanged(null),
-            ),
-            for (final entry in options.entries)
-              ChoiceChip(
-                label: Text(entry.value),
-                selected: selectedId == entry.key,
-                onSelected: (_) => onChanged(entry.key),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _FilterChipPill extends StatelessWidget {
-  const _FilterChipPill({
+class _MillingLookupTile extends StatelessWidget {
+  const _MillingLookupTile({
     required this.label,
-    required this.active,
+    required this.selected,
+    required this.onTap,
+    this.subtitle,
   });
 
   final String label;
-  final bool active;
+  final String? subtitle;
+  final bool selected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: active ? const Color(0xFFDCFCE7) : const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: active ? const Color(0xFFBBF7D0) : const Color(0xFFE2E8F0),
-        ),
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+      leading: Icon(
+        selected ? Icons.radio_button_checked : Icons.radio_button_off,
+        color: selected ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
       ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          color: active ? const Color(0xFF166534) : const Color(0xFF475569),
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+      subtitle: subtitle?.trim().isNotEmpty == true ? Text(subtitle!) : null,
+      onTap: onTap,
     );
   }
 }
@@ -710,6 +671,7 @@ class _MillingOrderCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Text(
@@ -721,22 +683,15 @@ class _MillingOrderCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                FilledButton.tonalIcon(
-                  style: FilledButton.styleFrom(
-                    minimumSize: const Size(0, 40),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(0, 38),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   onPressed: onTap,
-                  icon: Icon(
-                    status.canContinueWeighing
-                        ? Icons.play_arrow_rounded
-                        : Icons.visibility_outlined,
-                  ),
-                  label: Text(status.actionLabel),
+                  icon: const Icon(Icons.visibility_outlined, size: 17),
+                  label: const Text('Xem chi tiết lệnh'),
                 ),
               ],
             ),
@@ -763,6 +718,10 @@ class _MillingOrderDetailScreen extends StatefulWidget {
 
 class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
   late Future<MillingOrder> _future;
+  bool _actionBusy = false;
+  double? _pendingRiceWeighing;
+  double? _confirmedRiceWeighing;
+  int _inlineRiceBagCount = 0;
 
   @override
   void initState() {
@@ -774,6 +733,50 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
     setState(() {
       _future = widget.repository.getMillingOrderDetail(widget.orderId);
     });
+  }
+
+  Future<void> _openInlineResult(MillingOrder order) async {
+    final weight = _confirmedRiceWeighing;
+    if (weight == null || weight <= 0) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => MillingResultConfirmationScreen(
+          order: order.copyWith(
+            riceBags: [MillingBag(index: 1, weightKg: weight)],
+          ),
+          repository: widget.repository,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _chooseWeighing(MillingOrder order) async {
+    final mode = await showModalBottomSheet<MillingScaleMode>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Chọn cân'),
+              subtitle: Text('Chọn chế độ cân cho bước tiếp theo'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Nhập cân thủ công'),
+              onTap: () => Navigator.pop(context, MillingScaleMode.manual),
+            ),
+            ListTile(
+              leading: const Icon(Icons.bluetooth_rounded),
+              title: const Text('Dùng cân IoT đã kết nối'),
+              onTap: () => Navigator.pop(context, MillingScaleMode.iot),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || mode == null) return;
+    _continueWeighing(order.copyWith(scaleMode: mode));
   }
 
   void _continueWeighing(MillingOrder order) {
@@ -788,41 +791,122 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
     );
   }
 
+  Future<void> _reserve(MillingOrder order) async {
+    if (_actionBusy) return;
+    if ((order.statusCode ?? '').trim().toUpperCase() != 'DRAFT') return;
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => MillingSourceSelectionScreen(
+          order: order,
+          repository: widget.repository,
+        ),
+      ),
+    );
+    if (changed == true && mounted) _reload();
+  }
+
+  Future<void> _start(MillingOrder order) async {
+    if (_actionBusy) return;
+    final statusCode = (order.statusCode ?? '').trim().toUpperCase();
+    if (statusCode != 'RESERVED') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Chỉ được bắt đầu lệnh khi lệnh đã giữ lúa.'),
+        ),
+      );
+      return;
+    }
+    setState(() => _actionBusy = true);
+    try {
+      await widget.repository.startOrder(order.id);
+      if (!mounted) return;
+      _reload();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã bắt đầu lệnh xay.')),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không bắt đầu được lệnh xay: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actionBusy = false);
+    }
+  }
+
+  Future<void> _editDraft(MillingOrder order) async {
+    final updated = await Navigator.of(context).push<dynamic>(
+      MaterialPageRoute<dynamic>(
+        builder: (_) => MillingCreateOrderScreen(
+          repository: widget.repository,
+          order: order,
+        ),
+      ),
+    );
+    if (updated == true && mounted) {
+      _reload();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: millingBackground,
-      appBar: MillingAppBar(
-        title: 'Chi tiết lệnh xay',
-        actions: [
-          IconButton(
-            tooltip: 'Làm mới',
-            onPressed: _reload,
-            icon: const Icon(Icons.refresh_rounded),
-          ),
-        ],
-      ),
-      body: FutureBuilder<MillingOrder>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const FormSkeleton();
-          }
-          if (snapshot.hasError) {
-            return HErrorState(
+    return FutureBuilder<MillingOrder>(
+      future: _future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Scaffold(
+            backgroundColor: millingBackground,
+            appBar: MillingAppBar(title: 'Chi tiết lệnh xay'),
+            body: FormSkeleton(),
+          );
+        }
+        if (snapshot.hasError) {
+          return Scaffold(
+            backgroundColor: millingBackground,
+            appBar: const MillingAppBar(title: 'Chi tiết lệnh xay'),
+            body: HErrorState(
               message: 'Không thể tải chi tiết lệnh xay: ${snapshot.error}',
               onRetry: _reload,
-            );
-          }
-          final order = snapshot.data;
-          if (order == null) {
-            return HErrorState(
+            ),
+          );
+        }
+        final order = snapshot.data;
+        if (order == null) {
+          return Scaffold(
+            backgroundColor: millingBackground,
+            appBar: const MillingAppBar(title: 'Chi tiết lệnh xay'),
+            body: HErrorState(
               message: 'Backend không trả về dữ liệu lệnh xay.',
               onRetry: _reload,
-            );
-          }
-          final status = MillingStatusView.fromOrder(order);
-          return Column(
+            ),
+          );
+        }
+        final status = MillingStatusView.fromOrder(order);
+        final confirmedRice = _confirmedRiceWeighing ?? order.outputsRiceKg;
+        final isDirtyRice = _pendingRiceWeighing != null &&
+            _pendingRiceWeighing != _confirmedRiceWeighing;
+        final isDraft = (order.statusCode ?? '').trim().toUpperCase() == 'DRAFT';
+
+        return Scaffold(
+          backgroundColor: millingBackground,
+          appBar: MillingAppBar(
+            title: 'Chi tiết lệnh xay',
+            actions: [
+              IconButton(
+                tooltip: 'Làm mới',
+                onPressed: _reload,
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+              if (isDraft)
+                IconButton(
+                  tooltip: 'Sửa lệnh',
+                  onPressed: () => _editDraft(order),
+                  icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                ),
+            ],
+          ),
+          body: Column(
             children: [
               Expanded(
                 child: RefreshIndicator(
@@ -831,7 +915,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
                     await _future;
                   },
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 96),
                     children: [
                       _DetailHeader(order: order, status: status),
                       const SizedBox(height: 12),
@@ -860,7 +944,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
                           Expanded(
                             child: _MetricTile(
                               label: 'Gạo thực tế',
-                              value: _kg(order.outputsRiceKg),
+                              value: _kg(confirmedRice),
                               icon: Icons.inventory_2_outlined,
                             ),
                           ),
@@ -876,26 +960,155 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      _InputsSection(inputs: order.inputs),
-                      const SizedBox(height: 12),
-                      _OutputsSection(outputs: order.outputs),
+                      if (!status.canContinueWeighing) ...[
+                        _InputsSection(inputs: order.inputs),
+                        const SizedBox(height: 12),
+                        _OutputsSection(outputs: order.outputs),
+                      ],
+                      if (status.canContinueWeighing) ...[
+                        const SizedBox(height: 12),
+                        _MillingOutputEntryHint(order: order),
+                      ],
                       const SizedBox(height: 12),
                       _MetadataCard(order: order),
                     ],
                   ),
                 ),
               ),
-              MillingPrimaryButton(
-                label: status.canContinueWeighing
-                    ? 'Tiếp tục cân/kết quả'
-                    : 'Chỉ xem - ${status.label}',
-                onPressed: status.canContinueWeighing
-                    ? () => _continueWeighing(order)
-                    : null,
-              ),
+              if (isDraft)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _actionBusy ? null : () => _editDraft(order),
+                          icon: const Icon(Icons.edit_rounded),
+                          label: const Text('Sửa lệnh'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: MillingPrimaryButton(
+                          label: 'Giữ lúa',
+                          isLoading: _actionBusy,
+                          onPressed: () => _reserve(order),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else if (status.canReserve)
+                MillingPrimaryButton(
+                  label: 'Chọn bao và giữ lúa',
+                  isLoading: _actionBusy,
+                  onPressed: () => _reserve(order),
+                )
+              else if (status.canStart)
+                MillingPrimaryButton(
+                  label: 'Bắt đầu xay',
+                  isLoading: _actionBusy,
+                  onPressed: () => _start(order),
+                )
+              else if (status.canContinueWeighing)
+                MillingPrimaryButton(
+                  key: const Key('milling_enter_output_button'),
+                  label: 'Nhập kết quả xay',
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => MillingResultConfirmationScreen(
+                        order: order,
+                        repository: widget.repository,
+                      ),
+                    ),
+                  ),
+                )
+                else
+                  MillingPrimaryButton(
+                  label: status.canContinueWeighing
+                      ? 'Chọn cân'
+                      : 'Chỉ xem - ${status.label}',
+                  onPressed: status.canContinueWeighing
+                      ? () => _chooseWeighing(order)
+                      : null,
+                ),
             ],
-          );
+          ),
+        );
         },
+      );
+  }
+}
+
+class _MillingOutputEntryHint extends StatelessWidget {
+  const _MillingOutputEntryHint({required this.order});
+
+  final MillingOrder order;
+
+  @override
+  Widget build(BuildContext context) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.assignment_outlined, color: millingGreen),
+          title: const Text('Nhập kết quả xay'),
+          subtitle: Text(
+            'Đã giữ ${_kg(order.inputWeightKg)} lúa. Nhập Gạo, Tấm, Cám hoặc Trấu ở màn tiếp theo.',
+          ),
+        ),
+      );
+}
+
+class _StickyRiceConfirmBar extends StatelessWidget {
+  const _StickyRiceConfirmBar({
+    required this.pendingWeightKg,
+    required this.confirmedWeightKg,
+    required this.maxWeightKg,
+    required this.onConfirm,
+    super.key,
+  });
+
+  final double? pendingWeightKg;
+  final double? confirmedWeightKg;
+  final double maxWeightKg;
+  final VoidCallback onConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    final pending = pendingWeightKg;
+    final valid = pending != null &&
+        pending.isFinite &&
+        pending > 0 &&
+        pending <= maxWeightKg &&
+        pending != confirmedWeightKg;
+    final label = pending == null
+        ? 'Xác nhận số cân'
+        : pending == confirmedWeightKg
+            ? 'Đã xác nhận: ${_kg(pending)}'
+            : confirmedWeightKg == null
+                ? 'Xác nhận số cân'
+                : 'Xác nhận lại số cân';
+
+    return Material(
+      color: Colors.white,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 10),
+          child: SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              key: const Key('milling_weighing_confirm_sticky_button'),
+              onPressed: valid ? onConfirm : null,
+              icon: const Icon(Icons.check_circle_outline),
+              label: Text(label),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(48),
+                backgroundColor: millingGreen,
+                disabledBackgroundColor: const Color(0xFFCBD5E1),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1067,6 +1280,7 @@ class _ExpandableSectionCard extends StatelessWidget {
     required this.icon,
     required this.children,
     this.emptyText,
+    super.key,
   });
 
   final String title;
@@ -1406,6 +1620,8 @@ class MillingStatusView {
     required this.icon,
     required this.actionLabel,
     required this.canContinueWeighing,
+    required this.canReserve,
+    required this.canStart,
   });
 
   final String label;
@@ -1414,78 +1630,80 @@ class MillingStatusView {
   final IconData icon;
   final String actionLabel;
   final bool canContinueWeighing;
+  final bool canReserve;
+  final bool canStart;
 
   factory MillingStatusView.fromOrder(MillingOrder order) {
-    final raw = (order.statusCode ?? order.statusName ?? '').toUpperCase();
-    final label = order.statusName?.trim().isNotEmpty == true
-        ? order.statusName!
-        : raw.isEmpty
-            ? 'Không rõ'
-            : raw;
-    if (raw.contains('DRAFT') || raw.contains('NHÁP')) {
+    final raw = (order.statusCode ?? '').trim().toUpperCase();
+    if (raw == 'DRAFT') {
       return MillingStatusView(
-        label: label,
+        label: 'Nháp',
         background: const Color(0xFFFEF3C7),
         foreground: const Color(0xFF92400E),
         icon: Icons.edit_document,
-        actionLabel: 'Xem',
+        actionLabel: 'Sửa lệnh',
         canContinueWeighing: false,
+        canReserve: true,
+        canStart: false,
       );
     }
-    if (raw.contains('RESERVED') || raw.contains('GIỮ')) {
+    if (raw == 'RESERVED') {
       return MillingStatusView(
-        label: label,
+        label: 'Đã giữ lúa',
         background: const Color(0xFFDBEAFE),
         foreground: const Color(0xFF1D4ED8),
         icon: Icons.lock_clock_rounded,
-        actionLabel: 'Xem',
+        actionLabel: 'Bắt đầu xay',
         canContinueWeighing: false,
+        canReserve: false,
+        canStart: true,
       );
     }
-    if (raw.contains('MILLING') ||
-        raw.contains('ĐANG XAY') ||
-        raw.contains('STARTED') ||
-        raw.contains('IN_PROGRESS') ||
-        raw.contains('WAITING_RESULT') ||
-        raw.contains('CHỜ NHẬP')) {
+    if (raw == 'IN_PROGRESS' || raw == 'MILLING') {
       return MillingStatusView(
-        label: label,
+        label: 'Đang xay',
         background: const Color(0xFFF3E8FF),
         foreground: const Color(0xFF7E22CE),
         icon: Icons.precision_manufacturing_outlined,
-        actionLabel: 'Tiếp tục',
+        actionLabel: 'Tiếp tục cân',
         canContinueWeighing: true,
+        canReserve: false,
+        canStart: false,
       );
     }
-    if (raw.contains('COMPLETED') ||
-        raw.contains('HOÀN') ||
-        raw.contains('FINISHED')) {
+    if (raw == 'COMPLETED') {
       return MillingStatusView(
-        label: label,
+        label: 'Hoàn tất',
         background: const Color(0xFFDCFCE7),
         foreground: const Color(0xFF166534),
         icon: Icons.check_circle_outline,
         actionLabel: 'Xem',
         canContinueWeighing: false,
+        canReserve: false,
+        canStart: false,
       );
     }
-    if (raw.contains('CANCEL') || raw.contains('HỦY')) {
+    if (raw == 'CANCELLED' || raw == 'CANCELED') {
       return MillingStatusView(
-        label: label,
+        label: 'Đã hủy',
         background: const Color(0xFFFEE2E2),
         foreground: const Color(0xFFB91C1C),
         icon: Icons.cancel_outlined,
         actionLabel: 'Xem',
         canContinueWeighing: false,
+        canReserve: false,
+        canStart: false,
       );
     }
     return MillingStatusView(
-      label: label,
+      label: 'Không rõ trạng thái',
       background: const Color(0xFFF1F5F9),
       foreground: const Color(0xFF475569),
       icon: Icons.help_outline_rounded,
       actionLabel: 'Xem',
       canContinueWeighing: false,
+      canReserve: false,
+      canStart: false,
     );
   }
 }

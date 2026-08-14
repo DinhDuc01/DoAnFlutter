@@ -143,6 +143,39 @@ void main() {
       expect(find.text('Có thể đóng'), findsNothing);
       expect(find.text('Không có thông báo mới'), findsOneWidget);
     });
+
+    testWidgets('tap only shows notification detail and does not navigate',
+        (tester) async {
+      const notification = AppNotification(
+        id: '9',
+        type: AppNotificationType.info,
+        title: 'Chi tiết thông báo',
+        message: 'Nội dung cần xem',
+        timeAgo: 'Vừa xong',
+        isRead: false,
+        directionId: '/admin/milling-orders',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          routes: {
+            '/admin/milling-orders': (_) => const Text('Màn nghiệp vụ'),
+          },
+          home: NotificationsScreen(
+            repository: _NotificationRepository([
+              Future.value(const [notification]),
+            ]),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Chi tiết thông báo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nội dung cần xem'), findsWidgets);
+      expect(find.text('Đóng'), findsOneWidget);
+      expect(find.text('Màn nghiệp vụ'), findsNothing);
+    });
   });
 
   group('QualityInspectionScreen states', () {
