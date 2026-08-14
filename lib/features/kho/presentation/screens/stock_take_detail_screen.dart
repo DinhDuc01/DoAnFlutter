@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
@@ -33,7 +34,31 @@ class StockTakeDetailScreen extends StatefulWidget {
   State<StockTakeDetailScreen> createState() => _StockTakeDetailScreenState();
 }
 
-class _StockTakeDetailScreenState extends State<StockTakeDetailScreen> {
+class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
+    with RealtimeReloadMixin {
+  @override
+  Set<String> get realtimeEntities => const {
+        'StockTake',
+        'StockTakeItem',
+        'StockTakeStatus',
+      };
+
+  /// Màn này giữ số đếm CHƯA LƯU của người dùng, nên không tự ghi đè:
+  /// - Phiếu đã khoá (không còn sửa được) → tải lại im lặng.
+  /// - Phiếu đang kiểm đếm → chỉ báo có thay đổi, để người dùng chủ động tải lại
+  ///   sau khi lưu, tránh mất công đếm dở.
+  @override
+  void onRealtimeChanged() {
+    if (_detail == null || !_canEdit) {
+      _load(showLoading: false);
+      return;
+    }
+    if (!_remoteChanged) setState(() => _remoteChanged = true);
+  }
+
+  /// Có thay đổi từ nơi khác nhưng chưa áp vào màn (xem [onRealtimeChanged]).
+  bool _remoteChanged = false;
+
   late final StockTakeRepository _repository;
   final GlobalKey<ScaleBarState> _scaleBarKey = GlobalKey<ScaleBarState>();
 
@@ -62,6 +87,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen> {
         _detail = detail;
         _error = null;
         _loading = false;
+        _remoteChanged = false;
         if (_lineIndex >= detail.lines.length) _lineIndex = 0;
         _targetBagId = _firstUncountedBagId();
       });
@@ -337,6 +363,18 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen> {
             icon: Icons.lock_outline_rounded,
             message: 'Phiếu đã ${detail.statusName.toLowerCase()} — số liệu được khoá.',
           ),
+        // Có người sửa phiếu ở nơi khác. Không tự ghi đè vì số đếm đang dở có
+        // thể chưa lưu — để người dùng tự chọn thời điểm tải lại.
+        if (_remoteChanged) ...[
+          AppInfoBanner(
+            tone: AppTone.warning,
+            icon: Icons.sync_problem_outlined,
+            message: 'Phiếu vừa được cập nhật ở nơi khác. '
+                'Lưu kết quả đang đếm rồi bấm để tải lại.',
+            onTap: _busy ? null : () => _load(showLoading: false),
+          ),
+          const SizedBox(height: 10),
+        ],
         _lineSelector(detail),
         const SizedBox(height: 12),
         if (_canEdit) ...[

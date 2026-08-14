@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
@@ -24,7 +25,19 @@ class StockTakeListScreen extends StatefulWidget {
   State<StockTakeListScreen> createState() => _StockTakeListScreenState();
 }
 
-class _StockTakeListScreenState extends State<StockTakeListScreen> {
+class _StockTakeListScreenState extends State<StockTakeListScreen>
+    with RealtimeReloadMixin {
+  /// Phiếu kiểm kê thường được duyệt trên web trong lúc kho vẫn đang xem danh sách.
+  @override
+  Set<String> get realtimeEntities => const {
+        'StockTake',
+        'StockTakeItem',
+        'StockTakeStatus',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
+
   late final StockTakeRepository _repository;
 
   List<StockTakeSummaryRow> _rows = const [];

@@ -18,7 +18,9 @@ class ThuMuaReceipt {
     this.supplier,
     this.expectedDate,
     this.scheduleId,
+    this.scheduleCode,
     this.riceVarietyId,
+    this.riceVarietyName,
     this.actualWeightKg = 0,
     this.moisturePercent,
     this.paidAmount = 0,
@@ -69,7 +71,13 @@ class ThuMuaReceipt {
   final ThuMuaSupplier? supplier;
   final DateTime? expectedDate;
   final int? scheduleId;
+
+  /// Mã lịch thu mua nguồn (nếu phiếu được lập từ lịch).
+  final String? scheduleCode;
   final int? riceVarietyId;
+
+  /// Tên giống lúa do API trả về — dùng khi lookup giống lúa không khả dụng.
+  final String? riceVarietyName;
   final double actualWeightKg;
   final double? moisturePercent;
   final double paidAmount;
@@ -95,7 +103,9 @@ class ThuMuaReceipt {
     ThuMuaSupplier? supplier,
     DateTime? expectedDate,
     int? scheduleId,
+    String? scheduleCode,
     int? riceVarietyId,
+    String? riceVarietyName,
     double? actualWeightKg,
     double? moisturePercent,
     double? paidAmount,
@@ -125,7 +135,9 @@ class ThuMuaReceipt {
       supplier: supplier ?? this.supplier,
       expectedDate: expectedDate ?? this.expectedDate,
       scheduleId: scheduleId ?? this.scheduleId,
+      scheduleCode: scheduleCode ?? this.scheduleCode,
       riceVarietyId: riceVarietyId ?? this.riceVarietyId,
+      riceVarietyName: riceVarietyName ?? this.riceVarietyName,
       actualWeightKg: actualWeightKg ?? this.actualWeightKg,
       moisturePercent: moisturePercent ?? this.moisturePercent,
       paidAmount: paidAmount ?? this.paidAmount,

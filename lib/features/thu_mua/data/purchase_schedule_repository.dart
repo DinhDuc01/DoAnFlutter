@@ -55,12 +55,11 @@ class PurchaseScheduleRepository {
     return schedules;
   }
 
-  /// Enriches a schedule with farmer contact information for the detail screen.
+  /// Enriches a schedule with fresh server data (giống lúa, kho, tình trạng lập phiếu)
+  /// and farmer contact information for the detail screen.
   Future<PurchaseSchedule> getScheduleDetails(
     PurchaseSchedule schedule,
   ) async {
-    if (schedule.farmerId <= 0) return schedule;
-
     final token = AuthSessionStore.current?.accessToken;
     if (token == null || token.isEmpty) {
       throw const ApiException(
@@ -68,14 +67,51 @@ class PurchaseScheduleRepository {
       );
     }
 
+    var result = schedule;
+
+    // Lấy bản mới nhất của lịch: có riceVarietyName, warehouseName và cờ canCreateReceipt.
+    if (schedule.id > 0) {
+      try {
+        final json = await _apiClient.get(
+          '/api/v1/paddy-purchase-schedules/${schedule.id}',
+          token: token,
+        );
+        final detail = JsonReader.map(json, 'resources');
+        if (detail != null) {
+          final fresh = PurchaseSchedule.fromJson(detail);
+          result = result.copyWith(
+            riceVariety: fresh.riceVariety,
+            riceVarietyId: fresh.riceVarietyId,
+            warehouseId: fresh.warehouseId,
+            warehouseName: fresh.warehouseName,
+            statusId: fresh.statusId,
+            statusCode: fresh.statusCode,
+            status: fresh.status,
+            estimatedWeightKg: fresh.estimatedWeightKg,
+            location: fresh.location,
+            expectedPrice: fresh.expectedPrice,
+            note: fresh.note,
+            receiptCount: fresh.receiptCount,
+            receiptedWeightKg: fresh.receiptedWeightKg,
+            remainingQtyKg: fresh.remainingQtyKg,
+            canCreateReceiptFlag: fresh.canCreateReceiptFlag,
+          );
+        }
+      } on ApiException {
+        // Giữ dữ liệu từ danh sách nếu API chi tiết không khả dụng.
+      }
+    }
+
+    if (schedule.farmerId <= 0) return result;
+
     final json = await _apiClient.get(
       '/api/v1/farmers/${schedule.farmerId}',
       token: token,
     );
     final farmer = JsonReader.map(json, 'resources');
-    if (farmer == null) return schedule;
+    if (farmer == null) return result;
 
-    return schedule.copyWith(
+    return result.copyWith(
       farmerName: JsonReader.string(farmer, 'name'),
       farmerPhone: JsonReader.string(farmer, 'phone'),
       farmerAddress: JsonReader.string(farmer, 'address'),

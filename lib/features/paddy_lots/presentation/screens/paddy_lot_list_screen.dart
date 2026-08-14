@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
@@ -19,7 +20,25 @@ class PaddyLotListScreen extends StatefulWidget {
   State<PaddyLotListScreen> createState() => _PaddyLotListScreenState();
 }
 
-class _PaddyLotListScreenState extends State<PaddyLotListScreen> {
+class _PaddyLotListScreenState extends State<PaddyLotListScreen>
+    with RealtimeReloadMixin {
+  /// Lô đổi trạng thái khi kiểm định, nhập kho, xay xát hay xuất kho ở nơi khác.
+  @override
+  Set<String> get realtimeEntities => const {
+        'PaddyLot',
+        'PaddyLotBag',
+        'PaddyLotBagContent',
+        'PaddyLotBagMovement',
+        'LotStatus',
+        'QualityInspection',
+        'Inventory',
+        'MillingOrderInput',
+        'MillingOrderOutput',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
+
   late final PaddyLotRepository _repository;
   final _searchController = TextEditingController();
   Timer? _debounce;

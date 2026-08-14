@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
@@ -31,7 +32,29 @@ class PaddyLotTraceabilityScreen extends StatefulWidget {
 }
 
 class _PaddyLotTraceabilityScreenState
-    extends State<PaddyLotTraceabilityScreen> {
+    extends State<PaddyLotTraceabilityScreen> with RealtimeReloadMixin {
+  /// Dòng đời lô kéo dài qua thu mua → kiểm định → nhập kho → xay → xuất kho,
+  /// mỗi bước do một người khác thao tác nên phải tự cập nhật.
+  @override
+  Set<String> get realtimeEntities => const {
+        'PaddyLot',
+        'PaddyLotBag',
+        'PaddyLotBagContent',
+        'PaddyLotBagMovement',
+        'LotStatus',
+        'QualityInspection',
+        'InboundOrder',
+        'InboundOrderItem',
+        'MillingOrder',
+        'MillingOrderInput',
+        'MillingOrderOutput',
+        'OutboundOrderItemAllocation',
+        'InventoryTransaction',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
+
   late final PaddyLotRepository _repository;
   PaddyLotTraceability? _traceability;
   Object? _error;
@@ -43,16 +66,26 @@ class _PaddyLotTraceabilityScreenState
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _traceability = null;
-      _error = null;
-    });
+  /// [showLoading] = false: reload im lặng (realtime) — giữ dữ liệu đang xem.
+  Future<void> _load({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _traceability = null;
+        _error = null;
+      });
+    }
     try {
       final result = await _repository.getTraceabilityById(widget.lotId);
-      if (mounted) setState(() => _traceability = result);
+      if (mounted) {
+        setState(() {
+          _traceability = result;
+          _error = null;
+        });
+      }
     } catch (error) {
-      if (mounted) setState(() => _error = error);
+      if (mounted && (showLoading || _traceability == null)) {
+        setState(() => _error = error);
+      }
     }
   }
 

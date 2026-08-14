@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
@@ -15,7 +16,22 @@ class DebtScreen extends StatefulWidget {
   State<DebtScreen> createState() => _DebtScreenState();
 }
 
-class _DebtScreenState extends State<DebtScreen> {
+class _DebtScreenState extends State<DebtScreen> with RealtimeReloadMixin {
+  /// Công nợ phát sinh từ chốt phiếu mua, giao hàng, trả hàng và các lần thu/chi
+  /// ở máy khác — số dư phải tự cập nhật, không chờ kéo làm mới.
+  @override
+  Set<String> get realtimeEntities => const {
+        'PartyDebt',
+        'DebtTransaction',
+        'PaddyPurchaseReceipt',
+        'OutboundOrder',
+        'CustomerReturnOrder',
+        'ReturnToSupplierOrder',
+      };
+
+  @override
+  void onRealtimeChanged() => _load();
+
   late final DebtRepository _repository;
   DebtDashboard? _data;
   Object? _error;

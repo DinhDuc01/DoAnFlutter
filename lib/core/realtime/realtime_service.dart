@@ -112,4 +112,11 @@ class RealtimeService {
     _pending.clear();
     if (!_controller.isClosed) _controller.add(snapshot);
   }
+
+  /// Phát tín hiệu thay đổi thủ công — chỉ dùng trong test (không cần hub thật).
+  @visibleForTesting
+  void debugEmit(Set<String> entityNames) {
+    if (entityNames.isEmpty || _controller.isClosed) return;
+    _controller.add(Set<String>.from(entityNames));
+  }
 }

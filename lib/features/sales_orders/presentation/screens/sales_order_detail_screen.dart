@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
@@ -13,10 +14,11 @@ import '../../models/sales_order.dart';
 import '../widgets/sales_order_card.dart' show salesOrderTone;
 import '../widgets/create_outbound_sheet.dart';
 
-/// Chi tiết đơn bán: xem thông tin, hủy đơn kèm lý do, tạo phiếu xuất và mở
-/// màn xay xát cho đơn cần xay.
+/// Chi tiết đơn bán: xem thông tin, KIỂM TRA & GIỮ HÀNG, hủy đơn kèm lý do,
+/// tạo phiếu xuất và mở màn xay xát cho đơn cần xay.
 ///
-/// Không có chức năng tạo/sửa/xác nhận/giữ hàng — các bước đó chỉ làm trên web.
+/// Cố ý KHÔNG có nút "Xác nhận đơn" — bước Mới tạo → Chờ xác nhận chỉ làm trên
+/// web. Mobile chờ web xác nhận rồi mới giữ hàng được.
 class SalesOrderDetailScreen extends StatefulWidget {
   const SalesOrderDetailScreen({
     required this.salesOrderId,
@@ -31,7 +33,26 @@ class SalesOrderDetailScreen extends StatefulWidget {
   State<SalesOrderDetailScreen> createState() => _SalesOrderDetailScreenState();
 }
 
-class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
+class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
+    with RealtimeReloadMixin {
+  /// Đơn này có thể được xác nhận trên web, hoặc phiếu xuất/lệnh xay đổi ở nơi
+  /// khác — tải lại im lặng để nút "Kiểm tra & giữ hàng" hiện đúng lúc.
+  @override
+  Set<String> get realtimeEntities => const {
+        'SalesOrder',
+        'SalesOrderItem',
+        'OutboundOrder',
+        'OutboundOrderItem',
+        'OutboundOrderItemAllocation',
+        'MillingOrder',
+        'MillingOrderOutput',
+        'SalesOrderStatus',
+        'OutboundOrderStatus',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
+
   late final SalesOrderRepository _repository;
   SalesOrderDetail? _order;
   Object? _error;
@@ -102,6 +123,49 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
     } catch (error) {
       if (!mounted) return;
       setState(() => _busy = false);
+      _snack('$error');
+    }
+  }
+
+  // ── Kiểm tra & giữ hàng ──────────────────────────────────────────────
+  /// Gọi `/reserve`: backend kiểm tra khách hàng còn hoạt động, hạn mức công nợ
+  /// và tồn khả dụng trước khi chuyển đơn sang "Đã giữ hàng".
+  Future<void> _reserveOrder(SalesOrderDetail order) async {
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Kiểm tra & giữ hàng'),
+        content: Text(
+          'Hệ thống sẽ kiểm tra khách hàng, hạn mức công nợ và tồn khả dụng '
+          'cho đơn ${order.soCode}. Nếu hợp lệ, đơn chuyển sang "Đã giữ hàng".',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Để sau'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Giữ hàng'),
+          ),
+        ],
+      ),
+    );
+    if (accepted != true || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      await _repository.reserve(order.id);
+      _changed = true;
+      if (!mounted) return;
+      setState(() => _busy = false);
+      _snack('Đã giữ hàng cho đơn ${order.soCode}.', success: true);
+      await _load(showLoading: false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      // Lỗi nghiệp vụ từ backend (thiếu tồn, vượt hạn mức, chưa xay xong...)
+      // hiển thị nguyên văn để nhân viên biết cần xử lý gì.
       _snack('$error');
     }
   }
@@ -252,6 +316,16 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
               icon: Icons.cancel_outlined,
             ),
           ],
+          if (order.waitingWebConfirm) ...[
+            const SizedBox(height: 12),
+            const AppInfoBanner(
+              message:
+                  'Đơn cần được xác nhận trên web trước khi giữ hàng. '
+                  'Sau khi web xác nhận, quay lại đây bấm "Kiểm tra & giữ hàng".',
+              tone: AppTone.info,
+              icon: Icons.desktop_windows_outlined,
+            ),
+          ],
           if (order.needsMilling) ...[
             const SizedBox(height: 12),
             AppInfoBanner(
@@ -400,6 +474,16 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen> {
           onPressed: _busy ? null : () => _openMilling(order),
           icon: const Icon(Icons.grain_outlined),
           label: const Text('Xay xát'),
+        ),
+      );
+    }
+    // Mobile chỉ có "Kiểm tra & giữ hàng"; bước xác nhận đơn để web làm.
+    if (order.canReserve) {
+      buttons.add(
+        FilledButton.icon(
+          onPressed: _busy ? null : () => _reserveOrder(order),
+          icon: const Icon(Icons.inventory_outlined),
+          label: const Text('Kiểm tra & giữ hàng'),
         ),
       );
     }

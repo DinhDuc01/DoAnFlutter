@@ -895,21 +895,42 @@ class _ScheduleCard extends StatelessWidget {
               text: schedule.location,
             ),
           ],
-          if (schedule.canCreateReceipt) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).pushNamed(
-                  AppRoutes.inbound,
-                  arguments: schedule,
-                ),
-                icon: const Icon(Icons.add_circle_outline, size: 18),
-                label: const Text('Tạo phiếu mua từ lịch'),
-                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
-              ),
+          if (schedule.receiptCount > 0) ...[
+            const SizedBox(height: 6),
+            _ScheduleInfoLine(
+              icon: Icons.receipt_long_outlined,
+              text: 'Đã lập ${schedule.receiptCount} phiếu • '
+                  '${schedule.receiptedWeightKg.toStringAsFixed(0)} kg'
+                  '${schedule.remainingQtyKg == null ? '' : ' • còn lại ${schedule.remainingQtyKg!.toStringAsFixed(0)} kg'}',
             ),
           ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            // Khóa nút khi lịch đã hủy / đã nhập kho / đã lập đủ phiếu.
+            child: OutlinedButton.icon(
+              onPressed: schedule.canCreateReceipt
+                  ? () => Navigator.of(context).pushNamed(
+                        AppRoutes.inbound,
+                        arguments: schedule,
+                      )
+                  : null,
+              icon: Icon(
+                schedule.canCreateReceipt
+                    ? Icons.add_circle_outline
+                    : Icons.block_outlined,
+                size: 18,
+              ),
+              label: Text(
+                schedule.canCreateReceipt
+                    ? 'Tạo phiếu mua từ lịch'
+                    : (schedule.blockedReason.isEmpty
+                        ? 'Không thể tạo phiếu'
+                        : schedule.blockedReason),
+              ),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
+            ),
+          ),
         ],
       ),
     );

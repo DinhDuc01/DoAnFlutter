@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
@@ -153,6 +154,13 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     if (widget.draft != null) return widget.draft!;
     final schedule = widget.schedule;
     if (schedule != null) {
+      // Chốt chặn cuối ở client: lịch đã hủy / đã nhập kho / đã đủ phiếu thì không mở form.
+      if (!schedule.canCreateReceipt) {
+        final reason = schedule.blockedReason.isEmpty
+            ? 'Lịch này không còn lập được phiếu mua.'
+            : '${schedule.blockedReason}. Không thể lập thêm phiếu mua cho lịch ${schedule.code}.';
+        throw ApiException(message: reason);
+      }
       return _receiptFromSchedule(schedule);
     }
     return _repository.getDraftReceipt();
@@ -179,7 +187,9 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       ),
       expectedDate: schedule.scheduledAt,
       scheduleId: schedule.id,
+      scheduleCode: schedule.code,
       riceVarietyId: schedule.riceVarietyId,
+      riceVarietyName: schedule.riceVariety,
     );
   }
 
@@ -851,9 +861,12 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   }
 
   Widget _buildErrorState(BuildContext context, Object? error) {
-    final message = error is ProductVariantApiException
-        ? error.message
-        : 'Không tải được phiếu mua lúa';
+    final message = switch (error) {
+      ProductVariantApiException e => e.message,
+      // Lỗi nghiệp vụ (VD: lịch đã đủ phiếu) cần hiển thị nguyên văn cho người dùng.
+      ApiException e => e.message,
+      _ => 'Không tải được phiếu mua lúa',
+    };
 
     return Center(
       child: Padding(
@@ -937,7 +950,22 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                 return const LinearProgressIndicator();
               }
               final varieties = _varieties;
-              if (varieties.isEmpty) return const SizedBox.shrink();
+              if (varieties.isEmpty) {
+                // Lookup giống lúa lỗi/rỗng: vẫn hiển thị giống đã lưu trên phiếu
+                // thay vì giấu luôn thông tin.
+                final saved = receipt.riceVarietyName?.trim();
+                if (saved == null || saved.isEmpty) return const SizedBox.shrink();
+                return InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Giống lúa',
+                    prefixIcon: Icon(Icons.grass_outlined),
+                  ),
+                  child: Text(
+                    saved,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                );
+              }
               final value = varieties.any((v) => v.id == _riceVarietyId)
                   ? _riceVarietyId
                   : null;

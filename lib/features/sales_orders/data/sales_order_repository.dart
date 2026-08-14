@@ -18,11 +18,189 @@ abstract class SalesOrderRepository {
 
   Future<SalesOrderDetail> getById(int id);
 
+  /// Tạo đơn bán mới (trạng thái NEW). Trả về id + mã đơn vừa tạo.
+  ///
+  /// Việc XÁC NHẬN đơn (NEW → Chờ xác nhận) chỉ làm trên web; mobile không gọi
+  /// `/confirm`. Mobile chỉ tạo đơn và kiểm tra & giữ hàng ([reserve]).
+  Future<CreatedSalesOrder> create(CreateSalesOrderInput input);
+
+  /// Kiểm tra & giữ hàng: Chờ xác nhận → Đã giữ hàng.
+  /// Backend kiểm tra khách hàng, hạn mức công nợ và tồn khả dụng.
+  Future<void> reserve(int id);
+
   /// Hủy đơn bán kèm lý do (backend lưu vào cột `CancelReason`).
   Future<void> cancel(int id, {required String reason});
 
   /// Tạo phiếu xuất (OutboundOrder DRAFT) từ đơn bán. Trả về id phiếu xuất.
   Future<int> createOutbound(int id, List<CreateOutboundLine> items);
+
+  /// Khách hàng đang hoạt động để chọn khi tạo đơn.
+  Future<List<SalesCustomerOption>> getCustomers();
+
+  /// Kho xuất hàng để chọn khi tạo đơn.
+  Future<List<SalesWarehouseOption>> getWarehouses();
+
+  /// Biến thể sản phẩm đang hoạt động (kèm giá bán gợi ý) để chọn dòng hàng.
+  Future<List<SalesProductOption>> getProductVariants({String keyword = ''});
+}
+
+/// Kết quả trả về sau khi tạo đơn bán.
+class CreatedSalesOrder {
+  const CreatedSalesOrder({
+    required this.id,
+    required this.soCode,
+    required this.totalAmount,
+  });
+
+  final int id;
+  final String soCode;
+  final double totalAmount;
+}
+
+/// Dữ liệu tạo đơn bán — khớp `CreateSalesOrderDto` của backend.
+/// BE tự tính LineAmount/TotalAmount nên mobile không gửi thành tiền.
+class CreateSalesOrderInput {
+  const CreateSalesOrderInput({
+    required this.customerId,
+    required this.warehouseId,
+    required this.channel,
+    required this.items,
+    this.expectedDeliveryDate,
+    this.requiresMilling = false,
+    this.depositAmount,
+    this.shippingAddress,
+    this.note,
+  });
+
+  final int customerId;
+  final int warehouseId;
+
+  /// DIRECT | WHOLESALE
+  final String channel;
+  final DateTime? expectedDeliveryDate;
+  final bool requiresMilling;
+  final double? depositAmount;
+  final String? shippingAddress;
+  final String? note;
+  final List<CreateSalesOrderLine> items;
+
+  Map<String, dynamic> toJson() => {
+        'customerId': customerId,
+        'warehouseId': warehouseId,
+        'channel': channel.toUpperCase(),
+        'expectedDeliveryDate': expectedDeliveryDate?.toIso8601String(),
+        'requiresMilling': requiresMilling,
+        'depositAmount': depositAmount,
+        'shippingAddress': _blankToNull(shippingAddress),
+        'note': _blankToNull(note),
+        'items': [for (final item in items) item.toJson()],
+      };
+}
+
+/// Một dòng hàng khi tạo đơn bán.
+class CreateSalesOrderLine {
+  const CreateSalesOrderLine({
+    required this.productVariantId,
+    required this.quantityOrdered,
+    required this.unitSalePrice,
+    this.discountAmount = 0,
+    this.note,
+  });
+
+  final int productVariantId;
+  final double quantityOrdered;
+  final double unitSalePrice;
+  final double discountAmount;
+  final String? note;
+
+  /// Thành tiền hiển thị trên mobile (BE tính lại khi lưu).
+  double get lineAmount {
+    final amount = quantityOrdered * unitSalePrice - discountAmount;
+    return amount < 0 ? 0 : amount;
+  }
+
+  Map<String, dynamic> toJson() => {
+        'productVariantId': productVariantId,
+        'quantityOrdered': quantityOrdered,
+        'unitSalePrice': unitSalePrice,
+        'discountAmount': discountAmount,
+        'note': _blankToNull(note),
+      };
+
+  CreateSalesOrderLine copyWith({
+    double? quantityOrdered,
+    double? unitSalePrice,
+    double? discountAmount,
+    String? note,
+  }) =>
+      CreateSalesOrderLine(
+        productVariantId: productVariantId,
+        quantityOrdered: quantityOrdered ?? this.quantityOrdered,
+        unitSalePrice: unitSalePrice ?? this.unitSalePrice,
+        discountAmount: discountAmount ?? this.discountAmount,
+        note: note ?? this.note,
+      );
+}
+
+/// Khách hàng để chọn trên form tạo đơn.
+class SalesCustomerOption {
+  const SalesCustomerOption({
+    required this.id,
+    required this.name,
+    this.code,
+    this.phone,
+    this.address,
+  });
+
+  final int id;
+  final String name;
+  final String? code;
+  final String? phone;
+  final String? address;
+
+  String get label =>
+      (code ?? '').trim().isEmpty ? name : '${code!.trim()} - $name';
+}
+
+/// Kho xuất hàng để chọn trên form tạo đơn.
+class SalesWarehouseOption {
+  const SalesWarehouseOption({
+    required this.id,
+    required this.name,
+    this.code,
+  });
+
+  final int id;
+  final String name;
+  final String? code;
+
+  String get label =>
+      (code ?? '').trim().isEmpty ? name : '${code!.trim()} - $name';
+}
+
+/// Biến thể sản phẩm để chọn dòng hàng.
+class SalesProductOption {
+  const SalesProductOption({
+    required this.id,
+    required this.name,
+    this.sku,
+    this.salePrice = 0,
+    this.unitName,
+  });
+
+  final int id;
+  final String name;
+  final String? sku;
+  final double salePrice;
+  final String? unitName;
+
+  String get label =>
+      (sku ?? '').trim().isEmpty ? name : '$name · ${sku!.trim()}';
+}
+
+String? _blankToNull(String? value) {
+  final trimmed = value?.trim();
+  return trimmed == null || trimmed.isEmpty ? null : trimmed;
 }
 
 /// Một dòng hàng cần xuất khi tạo phiếu xuất từ đơn bán.
@@ -93,6 +271,139 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
       throw const SalesOrderException('Backend không trả về chi tiết đơn bán.');
     }
     return SalesOrderDetail.fromJson(resources);
+  }
+
+  @override
+  Future<CreatedSalesOrder> create(CreateSalesOrderInput input) async {
+    if (input.customerId <= 0) {
+      throw const SalesOrderException('Vui lòng chọn khách hàng.');
+    }
+    if (input.warehouseId <= 0) {
+      throw const SalesOrderException('Vui lòng chọn kho xuất hàng.');
+    }
+    if (input.items.isEmpty) {
+      throw const SalesOrderException('Đơn bán phải có ít nhất 1 dòng sản phẩm.');
+    }
+    // Backend từ chối trùng biến thể trên cùng đơn — chặn sớm để báo lỗi rõ hơn.
+    final variantIds = input.items.map((x) => x.productVariantId).toList();
+    if (variantIds.toSet().length != variantIds.length) {
+      throw const SalesOrderException(
+        'Không được thêm trùng cùng một sản phẩm (SKU) trên đơn bán.',
+      );
+    }
+    if (input.items.any((x) => x.quantityOrdered <= 0)) {
+      throw const SalesOrderException('Số lượng của mỗi dòng hàng phải lớn hơn 0.');
+    }
+    if (input.items.any((x) => x.unitSalePrice < 0 || x.discountAmount < 0)) {
+      throw const SalesOrderException('Đơn giá và giảm giá không được âm.');
+    }
+
+    final json = await _guard(() => _api.post(
+          '/api/v1/sales-orders',
+          token: _token,
+          body: input.toJson(),
+        ));
+
+    final resources = JsonReader.map(json, 'resources');
+    return CreatedSalesOrder(
+      id: resources == null ? 0 : JsonReader.integer(resources, 'id') ?? 0,
+      soCode: resources == null
+          ? ''
+          : JsonReader.string(resources, 'soCode') ?? '',
+      totalAmount:
+          resources == null ? 0 : JsonReader.decimal(resources, 'totalAmount') ?? 0,
+    );
+  }
+
+  @override
+  Future<void> reserve(int id) async {
+    if (id <= 0) throw const SalesOrderException('Mã đơn bán không hợp lệ.');
+    await _guard(() => _api.post(
+          '/api/v1/sales-orders/$id/reserve',
+          token: _token,
+          body: const {},
+        ));
+  }
+
+  @override
+  Future<List<SalesCustomerOption>> getCustomers() async {
+    final json = await _guard(() => _api.get('/api/v1/customers', token: _token));
+    return [
+      for (final row in _rows(json))
+        if ((JsonReader.boolean(row, 'isActive') ?? true) &&
+            (JsonReader.integer(row, 'id') ?? 0) > 0)
+          SalesCustomerOption(
+            id: JsonReader.integer(row, 'id')!,
+            name: JsonReader.string(row, 'name') ?? 'Khách hàng',
+            code: JsonReader.string(row, 'code'),
+            phone: JsonReader.string(row, 'phone'),
+            address: JsonReader.string(row, 'address'),
+          ),
+    ]..sort((a, b) => a.name.compareTo(b.name));
+  }
+
+  @override
+  Future<List<SalesWarehouseOption>> getWarehouses() async {
+    final json = await _guard(() => _api.get('/api/v1/warehouse', token: _token));
+    return [
+      for (final row in _rows(json))
+        if ((JsonReader.boolean(row, 'isActive') ?? true) &&
+            (JsonReader.integer(row, 'id') ?? 0) > 0)
+          SalesWarehouseOption(
+            id: JsonReader.integer(row, 'id')!,
+            name: JsonReader.string(row, 'name') ??
+                JsonReader.string(row, 'warehouseName') ??
+                'Kho',
+            code: JsonReader.string(row, 'code'),
+          ),
+    ];
+  }
+
+  @override
+  Future<List<SalesProductOption>> getProductVariants({String keyword = ''}) async {
+    // Dùng đúng endpoint web đang dùng để danh sách sản phẩm khớp nhau.
+    final query = {
+      'pageIndex': '1',
+      'pageSize': '1000',
+      'isActive': 'true',
+      if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
+    };
+    final json = await _guard(
+      () => _api.get('/api/v1/product-variant/search', query: query, token: _token),
+    );
+    return [
+      for (final row in _rows(json))
+        if ((JsonReader.integer(row, 'id') ?? 0) > 0)
+          SalesProductOption(
+            id: JsonReader.integer(row, 'id')!,
+            name: JsonReader.string(row, 'name') ??
+                JsonReader.string(row, 'productName') ??
+                'Sản phẩm',
+            sku: JsonReader.string(row, 'sku'),
+            salePrice: JsonReader.decimal(row, 'salePrice') ?? 0,
+            unitName: JsonReader.string(row, 'unitOfMeasureName') ??
+                JsonReader.string(row, 'unitName'),
+          ),
+    ];
+  }
+
+  /// Đọc danh sách từ nhiều dạng bao ngoài: `resources` là List, hoặc là Map
+  /// chứa `dataSource`/`items` (endpoint search phân trang).
+  List<Map<String, dynamic>> _rows(Map<String, dynamic> json) {
+    final value = JsonReader.value(json, 'resources');
+    final list = switch (value) {
+      List<dynamic> items => items,
+      Map<String, dynamic> page => JsonReader.list(page, 'dataSource') ??
+          JsonReader.list(page, 'items') ??
+          JsonReader.list(page, 'data') ??
+          JsonReader.list(page, 'results') ??
+          const <dynamic>[],
+      _ => const <dynamic>[],
+    };
+    return [
+      for (final row in list)
+        if (row is Map<String, dynamic>) row,
+    ];
   }
 
   @override

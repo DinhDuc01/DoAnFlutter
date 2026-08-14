@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/api_notifications_repository.dart';
@@ -27,7 +28,19 @@ class NotificationsTab extends StatefulWidget {
   State<NotificationsTab> createState() => _NotificationsTabState();
 }
 
-class _NotificationsTabState extends State<NotificationsTab> {
+class _NotificationsTabState extends State<NotificationsTab>
+    with RealtimeReloadMixin {
+  /// FCM chỉ đẩy khi có thông báo MỚI. Đọc/đọc-tất-cả ở web hay máy khác không
+  /// sinh push nên vẫn cần SignalR để danh sách và badge khớp nhau.
+  @override
+  Set<String> get realtimeEntities => const {
+        'Notification',
+        'UserNotification',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
+
   late final NotificationsRepository _repository;
 
   StreamSubscription<void>? _refreshSub;

@@ -252,11 +252,25 @@ class _DetailContent extends StatelessWidget {
                 value:
                     '${schedule.riceVariety} · dự kiến ${_formatWeight(schedule.estimatedWeightKg)}',
               ),
+              if (schedule.warehouseName?.trim().isNotEmpty == true)
+                _DetailCard(
+                  label: 'Kho nhận',
+                  value: schedule.warehouseName!.trim(),
+                ),
               _DetailCard(
                 label: 'Giá dự kiến',
                 value: schedule.expectedPrice == null
                     ? 'Chưa cập nhật'
                     : '${_formatNumber(schedule.expectedPrice!)}đ/kg',
+              ),
+              // Tình trạng lập phiếu — cho biết vì sao lịch còn/không còn tạo được phiếu.
+              _DetailCard(
+                label: 'Phiếu đã lập',
+                value: schedule.receiptCount == 0
+                    ? 'Chưa có phiếu mua nào'
+                    : '${schedule.receiptCount} phiếu · '
+                        '${_formatWeight(schedule.receiptedWeightKg)}'
+                        '${schedule.remainingQtyKg == null ? '' : ' · còn lại ${_formatWeight(schedule.remainingQtyKg!)}'}',
               ),
               _DetailCard(label: 'Trạng thái', value: schedule.status),
               if (schedule.note?.trim().isNotEmpty == true)
@@ -267,8 +281,9 @@ class _DetailContent extends StatelessWidget {
         SafeArea(
           top: false,
           minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          // Khóa nút khi lịch đã hủy / đã nhập kho / đã lập đủ phiếu theo khối lượng dự kiến.
           child: FilledButton(
-            onPressed: schedule.isCancelled
+            onPressed: !schedule.canCreateReceipt
                 ? null
                 : () => Navigator.of(context).pushNamed(
                       AppRoutes.inbound,
@@ -283,7 +298,11 @@ class _DetailContent extends StatelessWidget {
               ),
             ),
             child: Text(
-              schedule.isCancelled ? 'Lịch đã hủy' : 'Tạo phiếu mua từ lịch',
+              schedule.canCreateReceipt
+                  ? 'Tạo phiếu mua từ lịch'
+                  : (schedule.blockedReason.isEmpty
+                      ? 'Không thể tạo phiếu'
+                      : schedule.blockedReason),
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w900,

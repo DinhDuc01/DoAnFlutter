@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
@@ -21,7 +22,23 @@ class PaddyLotDetailScreen extends StatefulWidget {
   State<PaddyLotDetailScreen> createState() => _PaddyLotDetailScreenState();
 }
 
-class _PaddyLotDetailScreenState extends State<PaddyLotDetailScreen> {
+class _PaddyLotDetailScreenState extends State<PaddyLotDetailScreen>
+    with RealtimeReloadMixin {
+  /// Lô có thể được kiểm định / nhập kho / xay ở máy khác trong lúc đang xem.
+  @override
+  Set<String> get realtimeEntities => const {
+        'PaddyLot',
+        'PaddyLotBag',
+        'PaddyLotBagContent',
+        'PaddyLotBagMovement',
+        'LotStatus',
+        'QualityInspection',
+        'Inventory',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
+
   late final PaddyLotRepository _repository;
   PaddyLotDetail? _detail;
   Object? _error;
@@ -33,16 +50,28 @@ class _PaddyLotDetailScreenState extends State<PaddyLotDetailScreen> {
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _detail = null;
-      _error = null;
-    });
+  /// [showLoading] = false: giữ dữ liệu cũ trên màn và thay im lặng khi có dữ
+  /// liệu mới — dùng cho reload realtime để màn không nháy về trạng thái trống.
+  Future<void> _load({bool showLoading = true}) async {
+    if (showLoading) {
+      setState(() {
+        _detail = null;
+        _error = null;
+      });
+    }
     try {
       final detail = await _repository.getLotDetail(widget.lotId);
-      if (mounted) setState(() => _detail = detail);
+      if (mounted) {
+        setState(() {
+          _detail = detail;
+          _error = null;
+        });
+      }
     } catch (error) {
-      if (mounted) setState(() => _error = error);
+      // Reload im lặng thất bại thì giữ nguyên dữ liệu đang hiển thị.
+      if (mounted && (showLoading || _detail == null)) {
+        setState(() => _error = error);
+      }
     }
   }
 
