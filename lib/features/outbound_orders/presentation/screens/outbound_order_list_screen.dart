@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_pagination.dart';
@@ -34,8 +35,24 @@ class OutboundOrderListScreen extends StatefulWidget {
       _OutboundOrderListScreenState();
 }
 
-class _OutboundOrderListScreenState extends State<OutboundOrderListScreen> {
+class _OutboundOrderListScreenState extends State<OutboundOrderListScreen>
+    with RealtimeReloadMixin {
   static const int _pageSize = 20;
+
+  /// Phiếu xuất chạy qua nhiều bước ở nhiều máy (phân bổ, lấy hàng, đóng gói,
+  /// giao hàng) → tải lại im lặng khi bất kỳ bước nào đổi.
+  @override
+  Set<String> get realtimeEntities => const {
+        'OutboundOrder',
+        'OutboundOrderItem',
+        'OutboundOrderItemAllocation',
+        'OutboundOrderStatus',
+        'SalesOrder',
+        'DeliveryNote',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
 
   /// Tab lọc trạng thái, ánh xạ 1-1 với `outboundStatusId` của backend.
   static const List<({int? id, String label})> _statusTabs = [

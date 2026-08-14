@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/utils/format.dart';
 import '../../../auth/data/auth_session_store.dart';
 import '../../../products/data/product_variant_api.dart';
+import '../../../scale/models/weight_reading.dart';
+import '../../../scale/presentation/widgets/scale_bar.dart';
 import '../../data/api_thu_mua_repository.dart';
 import '../../data/paddy_variety_api.dart';
 import '../../data/thu_mua_repository.dart';
@@ -34,6 +38,18 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   final List<TextEditingController> _bagWeightControllers = [];
   List<String?> _bagWeightErrors = [];
 
+  /// Bao nào có số đến từ cân điện tử (phần còn lại là gõ tay).
+  final List<bool> _bagFromScale = [];
+
+  /// Bao sẽ nhận số cân kế tiếp. Trỏ vào bao đang trống; nếu bao đó đã có số
+  /// thì lần cân sau sinh thêm một bao mới ngay dưới.
+  int _bagTargetIndex = 0;
+
+  /// Tên cân đã dùng — chỉ hiện khi thật sự có bao cân bằng cân điện tử.
+  String? _scaleDevice;
+
+  final GlobalKey<ScaleBarState> _scaleBarKey = GlobalKey<ScaleBarState>();
+
   final PaddyVarietyApi _varietyApi = PaddyVarietyApi();
   late final Future<ThuMuaReceipt> _receiptFuture;
   late final Future<List<ProductVariantStock>> _productsFuture;
@@ -57,12 +73,26 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   bool _isSubmitting = false;
   bool _isChangingProduct = false;
 
+  /// Tổng khối lượng = tổng các bao ĐÃ làm tròn lên 0,1 kg, để con số hiển thị
+  /// khớp đúng con số sẽ ghi vào phiếu.
   double get _enteredWeight => _bagWeightControllers.fold<double>(
         0,
-        (sum, controller) =>
-            sum +
-            (double.tryParse(controller.text.trim().replaceAll(',', '.')) ?? 0),
+        (sum, controller) => sum + ceilKg(parseDecimal(controller.text) ?? 0),
       );
+
+  bool get _anyBagFromScale => _bagFromScale.any((item) => item);
+
+  /// Nhãn cho thanh cân: bao đang trống thì cân vào chính nó, không thì cân
+  /// tiếp sẽ sinh bao mới.
+  String get _scaleTargetLabel {
+    final index = _bagTargetIndex;
+    final isEmpty = index >= 0 &&
+        index < _bagWeightControllers.length &&
+        (parseDecimal(_bagWeightControllers[index].text) ?? 0) <= 0;
+    return isEmpty
+        ? 'bao ${index + 1}'
+        : 'bao ${_bagWeightControllers.length + 1} (mới)';
+  }
 
   double get _enteredUnitPrice =>
       double.tryParse(_unitCostController.text.trim()) ?? 0;
@@ -124,6 +154,13 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     if (widget.draft != null) return widget.draft!;
     final schedule = widget.schedule;
     if (schedule != null) {
+      // Chốt chặn cuối ở client: lịch đã hủy / đã nhập kho / đã đủ phiếu thì không mở form.
+      if (!schedule.canCreateReceipt) {
+        final reason = schedule.blockedReason.isEmpty
+            ? 'Lịch này không còn lập được phiếu mua.'
+            : '${schedule.blockedReason}. Không thể lập thêm phiếu mua cho lịch ${schedule.code}.';
+        throw ApiException(message: reason);
+      }
       return _receiptFromSchedule(schedule);
     }
     return _repository.getDraftReceipt();
@@ -150,7 +187,9 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       ),
       expectedDate: schedule.scheduledAt,
       scheduleId: schedule.id,
+      scheduleCode: schedule.code,
       riceVarietyId: schedule.riceVarietyId,
+      riceVarietyName: schedule.riceVariety,
     );
   }
 
@@ -257,22 +296,45 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     for (final weight in weights) {
       _bagWeightControllers.add(
         TextEditingController(
-          text: weight > 0 ? weight.toStringAsFixed(1) : '',
+          text: weight > 0 ? formatQuantityInput(ceilKg(weight), digits: 1) : '',
         ),
       );
     }
     if (_bagWeightControllers.isEmpty) {
       _bagWeightControllers.add(TextEditingController());
     }
-    _bagWeightErrors = List<String?>.filled(_bagWeightControllers.length, null);
+    _syncBagMetadata();
+    _bagTargetIndex = _firstEmptyBagIndex() ?? _bagWeightControllers.length - 1;
+  }
+
+  /// Giữ độ dài hai danh sách phụ (lỗi, nguồn số) khớp danh sách bao.
+  void _syncBagMetadata() {
+    final length = _bagWeightControllers.length;
+    _bagWeightErrors = List<String?>.filled(length, null);
+    while (_bagFromScale.length < length) {
+      _bagFromScale.add(false);
+    }
+    while (_bagFromScale.length > length) {
+      _bagFromScale.removeLast();
+    }
+    if (_bagTargetIndex >= length) _bagTargetIndex = length - 1;
+    if (_bagTargetIndex < 0) _bagTargetIndex = 0;
+    if (!_anyBagFromScale) _scaleDevice = null;
+  }
+
+  int? _firstEmptyBagIndex() {
+    for (var i = 0; i < _bagWeightControllers.length; i++) {
+      if ((parseDecimal(_bagWeightControllers[i].text) ?? 0) <= 0) return i;
+    }
+    return null;
   }
 
   void _addBag() {
     if (_isSubmitting) return;
     setState(() {
       _bagWeightControllers.add(TextEditingController());
-      _bagWeightErrors =
-          List<String?>.filled(_bagWeightControllers.length, null);
+      _syncBagMetadata();
+      _bagTargetIndex = _bagWeightControllers.length - 1;
     });
   }
 
@@ -283,20 +345,100 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     setState(() {
       final controller = _bagWeightControllers.removeAt(index);
       controller.dispose();
+      if (index < _bagFromScale.length) _bagFromScale.removeAt(index);
       if (_bagWeightControllers.isEmpty) {
         _bagWeightControllers.add(TextEditingController());
       }
-      _bagWeightErrors =
-          List<String?>.filled(_bagWeightControllers.length, null);
+      _syncBagMetadata();
+    });
+    // Bao vừa bỏ có thể vẫn đang nằm trên cân — đừng nhận lại nó ngay.
+    _scaleBarKey.currentState?.suppressCurrentReading();
+  }
+
+  /// Người dùng gõ tay vào ô bao nào thì bao đó không còn là số từ cân nữa.
+  void _onBagEdited(int index) {
+    setState(() {
+      if (index >= 0 && index < _bagFromScale.length) {
+        _bagFromScale[index] = false;
+      }
+      if (!_anyBagFromScale) _scaleDevice = null;
     });
   }
 
+  // ── Nhận số từ cân điện tử ─────────────────────────────────────────
+  /// Mỗi lần cân đứng yên đủ lâu = MỘT BAO. Bao đích đang trống thì điền vào
+  /// nó, đã có số thì sinh thêm bao mới — nhờ vậy cân liên tiếp nhiều bao chỉ
+  /// việc đặt lên rồi nhấc ra, không phải chạm màn hình.
+  void _onScaleCapture(WeightReading reading, bool automatic) {
+    if (_isSubmitting) return;
+    final weight = ceilKg(reading.weight);
+    if (weight <= 0) return;
+
+    var index = _bagTargetIndex;
+    if (index < 0 || index >= _bagWeightControllers.length) {
+      index = _bagWeightControllers.length - 1;
+    }
+    final appended =
+        (parseDecimal(_bagWeightControllers[index].text) ?? 0) > 0;
+
+    setState(() {
+      if (appended) {
+        _bagWeightControllers.add(TextEditingController());
+        index = _bagWeightControllers.length - 1;
+      }
+      _bagWeightControllers[index].text =
+          formatQuantityInput(weight, digits: 1);
+      _syncBagMetadata();
+      _bagFromScale[index] = true;
+      _bagTargetIndex = index;
+      _scaleDevice = reading.deviceName?.trim().isNotEmpty == true
+          ? reading.deviceName!.trim()
+          : 'Cân BLE StockLite';
+    });
+
+    if (!automatic) return;
+    // Tự nhận thì phải có đường lùi: một chạm là bỏ bao vừa cân.
+    final capturedIndex = index;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          content: Text(
+            'Đã nhận ${formatNumber(weight, digits: 1)} kg '
+            '→ bao ${capturedIndex + 1}',
+          ),
+          action: SnackBarAction(
+            label: 'Hoàn tác',
+            onPressed: () => _undoCapture(capturedIndex, appended),
+          ),
+        ),
+      );
+  }
+
+  void _undoCapture(int index, bool appended) {
+    if (index < 0 || index >= _bagWeightControllers.length) return;
+    if (appended && _bagWeightControllers.length > 1) {
+      _removeBag(index);
+      return;
+    }
+    setState(() {
+      _bagWeightControllers[index].text = '';
+      if (index < _bagFromScale.length) _bagFromScale[index] = false;
+      _syncBagMetadata();
+      _bagTargetIndex = index;
+    });
+    _scaleBarKey.currentState?.suppressCurrentReading();
+  }
+
+  /// Kiểm tra danh sách bao và LÀM TRÒN LÊN 0,1 kg từng bao, kể cả bao gõ tay,
+  /// rồi ghi ngược số đã tròn vào ô để người dùng thấy đúng con số sẽ lưu.
   List<ThuMuaBag>? _validatedBags() {
     final bags = <ThuMuaBag>[];
     final errors = List<String?>.filled(_bagWeightControllers.length, null);
     for (var i = 0; i < _bagWeightControllers.length; i++) {
-      final raw = _bagWeightControllers[i].text.trim().replaceAll(',', '.');
-      final value = double.tryParse(raw);
+      final raw = _bagWeightControllers[i].text.trim();
+      final value = parseDecimal(raw);
       if (raw.isEmpty) {
         errors[i] = 'Khối lượng bao ${i + 1} là bắt buộc';
       } else if (value == null) {
@@ -304,7 +446,10 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
       } else if (value <= 0) {
         errors[i] = 'Khối lượng phải lớn hơn 0';
       } else {
-        bags.add(ThuMuaBag(sequenceNumber: i + 1, weightKg: value));
+        final rounded = ceilKg(value);
+        _bagWeightControllers[i].text =
+            formatQuantityInput(rounded, digits: 1);
+        bags.add(ThuMuaBag(sequenceNumber: i + 1, weightKg: rounded));
       }
     }
     if (bags.isEmpty && errors.every((item) => item == null)) {
@@ -510,8 +655,10 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     final bags = _validatedBags();
     if (bags == null) return;
     final bagCount = bags.length;
+    // Cộng dồn số thực sinh đuôi lẻ (12,4 + 13,1 = 25,500000000000004) →
+    // chuẩn hoá lại về bội của 0,1 trước khi tính tiền và gửi lên BE.
     final actualWeightKg =
-        bags.fold<double>(0, (sum, bag) => sum + bag.weightKg);
+        ceilKg(bags.fold<double>(0, (sum, bag) => sum + bag.weightKg));
     // Bắt buộc chọn giống lúa trước, rồi sản phẩm thuộc giống đó (đồng bộ web).
     if (_varieties.isNotEmpty && _riceVarietyId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -714,9 +861,12 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   }
 
   Widget _buildErrorState(BuildContext context, Object? error) {
-    final message = error is ProductVariantApiException
-        ? error.message
-        : 'Không tải được phiếu mua lúa';
+    final message = switch (error) {
+      ProductVariantApiException e => e.message,
+      // Lỗi nghiệp vụ (VD: lịch đã đủ phiếu) cần hiển thị nguyên văn cho người dùng.
+      ApiException e => e.message,
+      _ => 'Không tải được phiếu mua lúa',
+    };
 
     return Center(
       child: Padding(
@@ -800,7 +950,22 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                 return const LinearProgressIndicator();
               }
               final varieties = _varieties;
-              if (varieties.isEmpty) return const SizedBox.shrink();
+              if (varieties.isEmpty) {
+                // Lookup giống lúa lỗi/rỗng: vẫn hiển thị giống đã lưu trên phiếu
+                // thay vì giấu luôn thông tin.
+                final saved = receipt.riceVarietyName?.trim();
+                if (saved == null || saved.isEmpty) return const SizedBox.shrink();
+                return InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Giống lúa',
+                    prefixIcon: Icon(Icons.grass_outlined),
+                  ),
+                  child: Text(
+                    saved,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                );
+              }
               final value = varieties.any((v) => v.id == _riceVarietyId)
                   ? _riceVarietyId
                   : null;
@@ -946,13 +1111,26 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 12),
+          // Thanh cân dính ngay trên danh sách bao: cân là nguồn nhập chạy nền,
+          // không phải một màn hình riêng. Nhập tay vẫn dùng được như cũ.
+          ScaleBar(
+            key: _scaleBarKey,
+            enabled: !_isSubmitting,
+            targetLabel: _scaleTargetLabel,
+            onCapture: _onScaleCapture,
+          ),
+          const SizedBox(height: 12),
           _BagWeightsSection(
             controllers: _bagWeightControllers,
             errors: _bagWeightErrors,
+            fromScale: _bagFromScale,
+            targetIndex: _bagTargetIndex,
             totalWeightKg: _enteredWeight,
+            scaleDevice: _anyBagFromScale ? _scaleDevice : null,
             onAdd: _addBag,
             onRemove: _removeBag,
-            onChanged: () => setState(() {}),
+            onSelect: (index) => setState(() => _bagTargetIndex = index),
+            onChanged: _onBagEdited,
             isEnabled: !_isSubmitting,
           ),
           const SizedBox(height: 12),
@@ -1305,23 +1483,32 @@ class _BagWeightsSection extends StatelessWidget {
   const _BagWeightsSection({
     required this.controllers,
     required this.errors,
+    required this.fromScale,
+    required this.targetIndex,
     required this.totalWeightKg,
+    required this.scaleDevice,
     required this.onAdd,
     required this.onRemove,
+    required this.onSelect,
     required this.onChanged,
     required this.isEnabled,
   });
 
   final List<TextEditingController> controllers;
   final List<String?> errors;
+  final List<bool> fromScale;
+  final int targetIndex;
   final double totalWeightKg;
+  final String? scaleDevice;
   final VoidCallback onAdd;
   final ValueChanged<int> onRemove;
-  final VoidCallback onChanged;
+  final ValueChanged<int> onSelect;
+  final ValueChanged<int> onChanged;
   final bool isEnabled;
 
   @override
   Widget build(BuildContext context) {
+    final secondary = AppColors.textSecondaryFor(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1344,7 +1531,7 @@ class _BagWeightsSection extends StatelessWidget {
                 ),
               ),
               Text(
-                '${controllers.length} bao · ${totalWeightKg.toStringAsFixed(1)} kg',
+                '${controllers.length} bao · ${formatNumber(totalWeightKg, digits: 1)} kg',
                 style: const TextStyle(
                   color: AppColors.primaryDark,
                   fontWeight: FontWeight.w800,
@@ -1352,58 +1539,157 @@ class _BagWeightsSection extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 4),
+          Text(
+            scaleDevice == null
+                ? 'Đặt từng bao lên cân — mỗi lần cân đứng yên là một bao. Khối lượng làm tròn lên 0,1 kg.'
+                : 'Đang lấy số từ $scaleDevice. Khối lượng làm tròn lên 0,1 kg.',
+            style: TextStyle(fontSize: 11.5, color: secondary),
+          ),
           const SizedBox(height: 12),
           for (var index = 0; index < controllers.length; index++) ...[
-            Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.backgroundFor(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.borderFor(context)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Bao ${index + 1}',
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Xóa bao',
-                        onPressed: isEnabled && controllers.length > 1
-                            ? () => onRemove(index)
-                            : null,
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                    ],
-                  ),
-                  TextFormField(
-                    key: ValueKey('thu_mua_bag_weight_$index'),
-                    controller: controllers[index],
-                    enabled: isEnabled,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: InputDecoration(
-                      labelText: 'Khối lượng (kg) *',
-                      suffixText: 'kg',
-                      prefixIcon: const Icon(Icons.scale_outlined),
-                      errorText: index < errors.length ? errors[index] : null,
-                    ),
-                    onChanged: (_) => onChanged(),
-                  ),
-                ],
-              ),
+            _BagRow(
+              index: index,
+              controller: controllers[index],
+              errorText: index < errors.length ? errors[index] : null,
+              fromScale: index < fromScale.length && fromScale[index],
+              isTarget: index == targetIndex,
+              canRemove: isEnabled && controllers.length > 1,
+              isEnabled: isEnabled,
+              onRemove: () => onRemove(index),
+              onSelect: () => onSelect(index),
+              onChanged: () => onChanged(index),
             ),
           ],
           OutlinedButton.icon(
             onPressed: isEnabled ? onAdd : null,
             icon: const Icon(Icons.add),
             label: const Text('Thêm bao'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Một bao lúa: ô kg + cờ chọn làm bao đích của cân + nhãn nguồn số.
+class _BagRow extends StatelessWidget {
+  const _BagRow({
+    required this.index,
+    required this.controller,
+    required this.errorText,
+    required this.fromScale,
+    required this.isTarget,
+    required this.canRemove,
+    required this.isEnabled,
+    required this.onRemove,
+    required this.onSelect,
+    required this.onChanged,
+  });
+
+  final int index;
+  final TextEditingController controller;
+  final String? errorText;
+  final bool fromScale;
+  final bool isTarget;
+  final bool canRemove;
+  final bool isEnabled;
+  final VoidCallback onRemove;
+  final VoidCallback onSelect;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final secondary = AppColors.textSecondaryFor(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isTarget
+            ? AppColors.brandTintFor(context)
+            : AppColors.backgroundFor(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isTarget ? AppColors.primary : AppColors.borderFor(context),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              InkWell(
+                onTap: isEnabled && !isTarget ? onSelect : null,
+                borderRadius: BorderRadius.circular(99),
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Icon(
+                    isTarget
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 18,
+                    color: isTarget ? AppColors.primary : secondary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Bao ${index + 1}',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: fromScale
+                      ? AppColors.primary.withValues(alpha: 0.14)
+                      : AppColors.borderFor(context).withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      fromScale
+                          ? Icons.scale_rounded
+                          : Icons.keyboard_alt_outlined,
+                      size: 12,
+                      color: fromScale ? AppColors.primary : secondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      fromScale ? 'Từ cân' : 'Nhập tay',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: fromScale ? AppColors.primary : secondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Xóa bao',
+                onPressed: canRemove ? onRemove : null,
+                icon: const Icon(Icons.delete_outline),
+              ),
+            ],
+          ),
+          TextFormField(
+            key: ValueKey('thu_mua_bag_weight_$index'),
+            controller: controller,
+            enabled: isEnabled,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              labelText: 'Khối lượng (kg) *',
+              suffixText: 'kg',
+              prefixIcon: const Icon(Icons.scale_outlined),
+              errorText: errorText,
+            ),
+            onTap: isEnabled && !isTarget ? onSelect : null,
+            onChanged: (_) => onChanged(),
           ),
         ],
       ),

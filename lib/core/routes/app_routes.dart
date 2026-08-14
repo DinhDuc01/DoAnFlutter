@@ -8,7 +8,7 @@ import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_scr
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/thu_mua/presentation/screens/thu_mua_screen.dart';
 import '../../features/thu_mua/models/purchase_schedule.dart';
-import '../../features/kho/presentation/screens/kho_screen.dart';
+import '../../features/kho/presentation/screens/stock_take_list_screen.dart';
 import '../../features/products/presentation/screens/product_detail_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -48,9 +48,7 @@ class AppRoutes {
   static const salesOrders = '/sales-orders'; // Danh sách đơn bán
   static const outboundOrders =
       '/outbound-orders'; // Phiếu xuất kho & giao hàng
-  static const stocktake = '/stocktake';
-  @Deprecated('Use stocktake')
-  static const inventory = stocktake;
+  static const stocktake = '/stocktake'; // Kiểm kê kho theo BAO
   static const productDetail = '/products/detail'; // Màn hình Chi tiết sản phẩm
   static const scanQr = '/scan-qr'; // Màn hình Quét mã QR/Barcode
   static const reports = '/reports'; // Màn hình Báo cáo & Biểu đồ
@@ -82,7 +80,9 @@ class AppRoutes {
       },
       purchaseScheduleDetail: (_) => const PurchaseScheduleDetailScreen(),
       thuMuaSuccess: (_) => const ThuMuaSuccessScreen(),
-      stocktake: (_) => const KhoScreen(),
+      // Kiểm kê theo BAO: quét QR từng bao + cân, thay cho cách nhập tay số kg
+      // vốn không phản ánh được việc kho gạo lưu hàng theo bao.
+      stocktake: (_) => const StockTakeListScreen(),
       productDetail: (_) => const ProductDetailScreen(),
       scanQr: (_) => const ScanQrScreen(),
       reports: (_) => const ReportsScreen(),

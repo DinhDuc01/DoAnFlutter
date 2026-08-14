@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
+import '../../../../core/utils/format.dart';
 import '../../data/ble_scale_service.dart';
 import '../../data/scale_session.dart';
 import '../../models/weight_reading.dart';
@@ -231,7 +232,10 @@ class _ScaleScreenState extends State<ScaleScreen> {
                   TextSpan(
                     children: [
                       TextSpan(
-                        text: reading?.weight.toStringAsFixed(3) ?? '---',
+                        // Số hiển thị = số sẽ nhận (đã làm tròn lên 0,1 kg).
+                        text: reading == null
+                            ? '---'
+                            : ceilKg(reading.weight).toStringAsFixed(1),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 62,
@@ -265,8 +269,10 @@ class _ScaleScreenState extends State<ScaleScreen> {
         FilledButton.icon(
           onPressed: stable && reading!.weight > 0
               ? () => Navigator.of(context).pop<WeightReading>(
-                    // Kèm tên thiết bị để màn gọi ghi lại được nguồn số cân.
+                    // Kèm tên thiết bị để màn gọi ghi lại được nguồn số cân;
+                    // khối lượng làm tròn lên 0,1 kg như mọi luồng cân khác.
                     reading.copyWith(
+                      weight: ceilKg(reading.weight),
                       deviceName: service.connectedDevice?.platformName,
                     ),
                   )

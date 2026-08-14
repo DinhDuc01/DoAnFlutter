@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_pagination.dart';
 import '../../../../core/widgets/app_ui.dart';
@@ -9,9 +10,13 @@ import '../../../../core/widgets/state_widgets.dart';
 import '../../data/sales_order_repository.dart';
 import '../../models/sales_order.dart';
 import '../widgets/sales_order_card.dart';
+import 'sales_order_create_screen.dart';
 import 'sales_order_detail_screen.dart';
 
-/// Danh sách đơn bán — chỉ xem (tạo/sửa/giữ hàng thực hiện trên web).
+/// Danh sách đơn bán.
+///
+/// Mobile được TẠO đơn bán (giống web) và KIỂM TRA & GIỮ HÀNG ở màn chi tiết.
+/// Bước XÁC NHẬN đơn (Mới tạo → Chờ xác nhận) chỉ làm trên web.
 ///
 /// Lọc trạng thái, lọc kênh bán và phân trang đều chạy phía backend qua
 /// `POST /sales-orders/paged`, nên tổng số trang luôn khớp bộ lọc đang chọn.
@@ -29,8 +34,24 @@ class SalesOrderListScreen extends StatefulWidget {
   State<SalesOrderListScreen> createState() => _SalesOrderListScreenState();
 }
 
-class _SalesOrderListScreenState extends State<SalesOrderListScreen> {
+class _SalesOrderListScreenState extends State<SalesOrderListScreen>
+    with RealtimeReloadMixin {
   static const int _pageSize = 20;
+
+  /// Đơn bán đổi trạng thái do phiếu xuất/lệnh xay/công nợ ở nơi khác → tải lại.
+  @override
+  Set<String> get realtimeEntities => const {
+        'SalesOrder',
+        'SalesOrderItem',
+        'OutboundOrder',
+        'OutboundOrderItem',
+        'MillingOrder',
+        'SalesOrderStatus',
+        'Customer',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
 
   /// Chip lọc trạng thái — ánh xạ 1-1 với `statusId` của backend để bộ lọc và
   /// phân trang không đá nhau.
@@ -167,16 +188,32 @@ class _SalesOrderListScreenState extends State<SalesOrderListScreen> {
     _load();
   }
 
-  Future<void> _openDetail(SalesOrderSummary order) async {
+  Future<void> _openDetail(SalesOrderSummary order) => _openDetailById(order.id);
+
+  Future<void> _openDetailById(int salesOrderId) async {
     final changed = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => SalesOrderDetailScreen(
-          salesOrderId: order.id,
+          salesOrderId: salesOrderId,
           repository: _repository,
         ),
       ),
     );
     if (changed == true) _load(showLoading: false);
+  }
+
+  /// Mở form tạo đơn bán; tạo xong thì mở luôn chi tiết đơn vừa tạo.
+  Future<void> _createOrder() async {
+    final created = await Navigator.of(context).push<CreatedSalesOrder>(
+      MaterialPageRoute<CreatedSalesOrder>(
+        builder: (_) => SalesOrderCreateScreen(repository: _repository),
+      ),
+    );
+    if (!mounted || created == null) return;
+
+    await _load(showLoading: false);
+    if (!mounted || created.id <= 0) return;
+    await _openDetailById(created.id);
   }
 
   @override
@@ -185,7 +222,7 @@ class _SalesOrderListScreenState extends State<SalesOrderListScreen> {
       children: [
         AppGradientHeader(
           title: 'Đơn bán',
-          subtitle: 'Theo dõi đơn bán và tạo phiếu xuất kho',
+          subtitle: 'Tạo đơn, giữ hàng và tạo phiếu xuất kho',
           leading: widget.embedded
               ? null
               : IconButton(
@@ -204,12 +241,29 @@ class _SalesOrderListScreenState extends State<SalesOrderListScreen> {
       ],
     );
 
+    final createButton = FloatingActionButton.extended(
+      onPressed: _createOrder,
+      icon: const Icon(Icons.add),
+      label: const Text('Tạo đơn bán'),
+    );
+
     if (widget.embedded) {
-      return ColoredBox(color: AppColors.backgroundFor(context), child: content);
+      // Khi nhúng làm tab, Scaffold cha không nhận FAB nên đặt nút nổi bằng Stack.
+      return ColoredBox(
+        color: AppColors.backgroundFor(context),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            content,
+            Positioned(right: 16, bottom: 16, child: createButton),
+          ],
+        ),
+      );
     }
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(context),
       body: SafeArea(child: content),
+      floatingActionButton: createButton,
     );
   }
 
@@ -258,7 +312,7 @@ class _SalesOrderListScreenState extends State<SalesOrderListScreen> {
             const HEmptyState(
               title: 'Không có đơn bán phù hợp',
               description:
-                  'Thử đổi từ khóa, trạng thái hoặc kênh bán. Đơn bán được tạo trên web.',
+                  'Thử đổi từ khóa, trạng thái hoặc kênh bán, hoặc bấm "Tạo đơn bán".',
               icon: Icons.receipt_long_outlined,
             )
           else

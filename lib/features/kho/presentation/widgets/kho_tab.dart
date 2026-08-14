@@ -65,23 +65,37 @@ class _KhoTabState extends State<KhoTab> {
     'Location',
   };
 
+  /// Số dòng mỗi lượt tải. Nhỏ hơn màn web (10/trang) vì thẻ mobile cao hơn,
+  /// nhưng đủ để lần cuộn đầu tiên không phải chờ lượt gọi thứ hai.
+  static const int _pageSize = 30;
+
   InventoryStockFilter _filter = const InventoryStockFilter();
   _LotTypeTab _lotTab = _LotTypeTab.all;
+
+  final ScrollController _scrollController = ScrollController();
 
   InventoryStockPage? _page;
   Object? _error;
   bool _loading = true;
+  bool _loadingMore = false;
+
+  /// Mỗi lần đổi bộ lọc/tải lại tăng một nấc. Kết quả của lượt tải cũ về muộn
+  /// sẽ mang số cũ và bị bỏ qua, tránh trộn dữ liệu của hai bộ lọc khác nhau.
+  int _requestId = 0;
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiInventoryStockRepository();
+    _scrollController.addListener(_onScroll);
     // Lần tải đầu KHÔNG bật showLoading: _loading đã mặc định true, gọi
     // setState trong initState sẽ ném lỗi setState-during-build.
     _load(showLoading: false);
     _realtimeSubscription = RealtimeService.instance.onEntitiesChanged.listen((changed) {
       if (changed.isEmpty || changed.any(_entities.contains)) {
-        _load(showLoading: false);
+        // Giữ nguyên số dòng đang xem: người dùng cuộn sâu rồi mà một biến
+        // động tồn kho kéo họ về 30 dòng đầu thì rất khó chịu.
+        _load(showLoading: false, keepLoaded: true);
       }
     });
   }
@@ -90,11 +104,23 @@ class _KhoTabState extends State<KhoTab> {
   void dispose() {
     _searchDebounce?.cancel();
     _realtimeSubscription?.cancel();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _load({bool showLoading = true}) async {
+  /// Tải lại từ đầu. Dùng cho lần đầu, đổi bộ lọc, realtime, kéo làm mới.
+  ///
+  /// [keepLoaded] = true thì lấy lại đúng số dòng đang hiển thị thay vì co về
+  /// một trang, để lần tải lại do realtime không cuốn người dùng lên đầu.
+  Future<void> _load({bool showLoading = true, bool keepLoaded = false}) async {
+    final requestId = ++_requestId;
+    final loaded = _page?.lines.length ?? 0;
+    // Chặn trên để một màn đang mở rất nhiều dòng không kéo về cả nghìn bản ghi
+    // mỗi lần có biến động tồn kho.
+    final length = keepLoaded && loaded > _pageSize
+        ? (loaded > 300 ? 300 : loaded)
+        : _pageSize;
     if (showLoading && mounted) {
       setState(() {
         _loading = true;
@@ -102,19 +128,57 @@ class _KhoTabState extends State<KhoTab> {
       });
     }
     try {
-      final page = await _repository.load(filter: _filter);
-      if (!mounted) return;
+      final page = await _repository.load(filter: _filter, length: length);
+      if (!mounted || requestId != _requestId) return;
       setState(() {
         _page = page;
         _error = null;
         _loading = false;
+        _loadingMore = false;
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || requestId != _requestId) return;
       setState(() {
         _error = error;
         _loading = false;
+        _loadingMore = false;
       });
+    }
+  }
+
+  /// Tải thêm một trang và nối vào cuối danh sách.
+  Future<void> _loadMore() async {
+    final page = _page;
+    if (page == null || _loadingMore || _loading || !page.hasMore) return;
+
+    final requestId = _requestId;
+    setState(() => _loadingMore = true);
+    try {
+      final next = await _repository.load(
+        filter: _filter,
+        start: page.lines.length,
+        length: _pageSize,
+      );
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _page = page.append(next);
+        _loadingMore = false;
+      });
+    } catch (error) {
+      if (!mounted || requestId != _requestId) return;
+      setState(() => _loadingMore = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không tải thêm được: $error')),
+      );
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    // Nạp trước khi chạm đáy để danh sách không bị khựng giữa chừng.
+    if (position.pixels >= position.maxScrollExtent - 400) {
+      unawaited(_loadMore());
     }
   }
 
@@ -162,6 +226,7 @@ class _KhoTabState extends State<KhoTab> {
   // ── Bộ lọc ─────────────────────────────────────────────────────────
   Widget _searchAndFilterBar() {
     final warehouses = _page?.warehouses ?? const <WarehouseOption>[];
+    final lotStatuses = _page?.lotStatuses ?? const <LotStatusOption>[];
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       child: Column(
@@ -222,6 +287,24 @@ class _KhoTabState extends State<KhoTab> {
                       icon: Icons.warehouse_outlined,
                       selected: _filter.warehouseId != null,
                       onTap: () => _pickWarehouse(warehouses),
+                    ),
+                  ),
+                if (lotStatuses.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _FilterChip(
+                      label: _filter.lotStatusId == null
+                          ? 'Trạng thái lô'
+                          : lotStatuses
+                              .firstWhere(
+                                (s) => s.id == _filter.lotStatusId,
+                                orElse: () => const LotStatusOption(
+                                    id: 0, name: 'Trạng thái lô'),
+                              )
+                              .name,
+                      icon: Icons.label_outline_rounded,
+                      selected: _filter.lotStatusId != null,
+                      onTap: () => _pickLotStatus(lotStatuses),
                     ),
                   ),
                 Padding(
@@ -287,6 +370,45 @@ class _KhoTabState extends State<KhoTab> {
         : _filter.copyWith(warehouseId: chosen));
   }
 
+  /// Chọn trạng thái lô để lọc — đây là cách xem "chỉ các lô đang cách ly"
+  /// theo TRẠNG THÁI LÔ, khác với chip "Cách ly" (lọc theo tồn đang bị giữ ở
+  /// vị trí cách ly). Hai điều kiện có thể dùng cùng lúc.
+  Future<void> _pickLotStatus(List<LotStatusOption> statuses) async {
+    final chosen = await showModalBottomSheet<int?>(
+      context: context,
+      showDragHandle: true,
+      builder: (context) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.select_all_rounded),
+              title: const Text('Tất cả trạng thái'),
+              selected: _filter.lotStatusId == null,
+              onTap: () => Navigator.of(context).pop(-1),
+            ),
+            for (final status in statuses)
+              ListTile(
+                leading: Icon(
+                  status.isQuarantine
+                      ? Icons.block_outlined
+                      : Icons.label_outline_rounded,
+                  color: status.isQuarantine ? AppColors.danger : null,
+                ),
+                title: Text(status.name),
+                selected: _filter.lotStatusId == status.id,
+                onTap: () => Navigator.of(context).pop(status.id),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (chosen == null) return;
+    _applyFilter(chosen == -1
+        ? _filter.copyWith(clearLotStatus: true)
+        : _filter.copyWith(lotStatusId: chosen));
+  }
+
   // ── Nội dung ───────────────────────────────────────────────────────
   Widget _body() {
     if (_loading && _page == null) return const ListSkeleton();
@@ -305,6 +427,7 @@ class _KhoTabState extends State<KhoTab> {
     return RefreshIndicator(
       onRefresh: () => _load(showLoading: false),
       child: ListView(
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
@@ -338,9 +461,32 @@ class _KhoTabState extends State<KhoTab> {
             if (page.hasMore)
               Padding(
                 padding: const EdgeInsets.only(top: 4, bottom: 8),
+                child: _loadingMore
+                    ? const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(8),
+                          child: SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          ),
+                        ),
+                      )
+                    // Cuộn gần đáy là tự tải; nút này chỉ để dự phòng khi
+                    // danh sách chưa đủ dài để cuộn.
+                    : OutlinedButton.icon(
+                        onPressed: _loadMore,
+                        icon: const Icon(Icons.expand_more_rounded),
+                        label: Text(
+                          'Tải thêm (còn '
+                          '${page.totalRecords - page.lines.length} dòng)',
+                        ),
+                      ),
+              )
+            else if (page.lines.length > _pageSize)
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 8),
                 child: Text(
-                  'Đang hiện ${page.lines.length} dòng đầu. Dùng tìm kiếm hoặc '
-                  'bộ lọc để thu hẹp kết quả.',
+                  'Đã hiện hết ${page.lines.length} dòng.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
@@ -368,6 +514,16 @@ class _KhoTabState extends State<KhoTab> {
     );
   }
 
+  /// Số cho thẻ KPI: kg khi còn nhỏ, tự đổi sang tấn khi lớn để không tràn ô.
+  /// Backend chưa cấu hình khối lượng thì rơi về số đơn vị (bao).
+  String _kpi(InventoryStockSummary summary, double value) {
+    if (!summary.hasWeightData) return '${formatNumber(value)} đv';
+    if (value.abs() >= 1000) {
+      return '${formatNumber(value / 1000, digits: 1)} t';
+    }
+    return formatKg(value, digits: 1);
+  }
+
   Widget _summaryGrid(InventoryStockSummary summary) {
     return Column(
       children: [
@@ -376,14 +532,14 @@ class _KhoTabState extends State<KhoTab> {
             Expanded(
               child: AppStatTile(
                 label: 'Tồn thực tế',
-                value: formatKg(summary.totalOnHand),
+                value: _kpi(summary, summary.onHandKg),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: AppStatTile(
                 label: 'Khả dụng',
-                value: formatKg(summary.totalAvailable),
+                value: _kpi(summary, summary.availableKg),
                 tone: AppTone.brand,
               ),
             ),
@@ -395,7 +551,7 @@ class _KhoTabState extends State<KhoTab> {
             Expanded(
               child: AppStatTile(
                 label: 'Đã giữ',
-                value: formatKg(summary.totalReserved),
+                value: _kpi(summary, summary.reservedKg),
                 tone: AppTone.info,
               ),
             ),
@@ -403,7 +559,7 @@ class _KhoTabState extends State<KhoTab> {
             Expanded(
               child: AppStatTile(
                 label: 'Đang xử lý',
-                value: formatKg(summary.totalProcessing),
+                value: _kpi(summary, summary.processingKg),
                 tone: AppTone.warning,
               ),
             ),
@@ -411,8 +567,8 @@ class _KhoTabState extends State<KhoTab> {
             Expanded(
               child: AppStatTile(
                 label: 'Cách ly',
-                value: formatKg(summary.totalQuarantine),
-                tone: summary.totalQuarantine > 0
+                value: _kpi(summary, summary.quarantineKg),
+                tone: summary.quarantineKg > 0
                     ? AppTone.danger
                     : AppTone.neutral,
               ),

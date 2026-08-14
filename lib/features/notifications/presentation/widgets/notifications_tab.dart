@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../data/api_notifications_repository.dart';
@@ -34,8 +35,18 @@ class NotificationsScreen extends NotificationsTab {
   const NotificationsScreen({super.repository, super.key});
 }
 
-class _NotificationsTabState extends State<NotificationsTab> {
+class _NotificationsTabState extends State<NotificationsTab>
+    with RealtimeReloadMixin {
   static const int _pageSize = 10;
+
+  @override
+  Set<String> get realtimeEntities => const {
+        'Notification',
+        'UserNotification',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
   late final NotificationsRepository _repository;
 
   StreamSubscription<void>? _refreshSub;

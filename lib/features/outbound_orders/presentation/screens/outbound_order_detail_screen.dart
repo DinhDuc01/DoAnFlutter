@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
@@ -40,7 +41,25 @@ class OutboundOrderDetailScreen extends StatefulWidget {
       _OutboundOrderDetailScreenState();
 }
 
-class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen> {
+class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
+    with RealtimeReloadMixin {
+  /// Nhiều người cùng xử lý một phiếu xuất (kho phân bổ, giao hàng xác nhận)
+  /// nên tiến trình phải tự cập nhật, không chờ bấm tải lại.
+  @override
+  Set<String> get realtimeEntities => const {
+        'OutboundOrder',
+        'OutboundOrderItem',
+        'OutboundOrderItemAllocation',
+        'OutboundOrderStatus',
+        'DeliveryNote',
+        'SalesOrder',
+        'Inventory',
+        'PaddyLotBag',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
+
   late final OutboundOrderRepository _repository;
   late final SalesOrderRepository _salesOrderRepository;
 

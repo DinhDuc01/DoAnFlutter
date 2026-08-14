@@ -107,6 +107,34 @@ void main() {
       expect(summary.totalOnHand, 0);
       expect(summary.lineCount, 0);
     });
+
+    test('thẻ KPI đọc kg thật, không đọc nhầm số bao', () {
+      final summary = InventoryStockSummary.fromJson(const {
+        // total* là SỐ BAO (Floor(kg/quy cách)), total*WeightKg mới là kg.
+        'totalOnHand': 40,
+        'totalAvailable': 25,
+        'totalQuarantine': 5,
+        'totalOnHandWeightKg': 2000.5,
+        'totalAvailableWeightKg': 1250.5,
+        'totalQuarantineWeightKg': 250,
+      });
+
+      expect(summary.hasWeightData, isTrue);
+      expect(summary.onHandKg, 2000.5);
+      expect(summary.availableKg, 1250.5);
+      expect(summary.quarantineKg, 250);
+    });
+
+    test('backend chưa trả *WeightKg thì rơi về số cũ, không hiện 0', () {
+      final summary = InventoryStockSummary.fromJson(const {
+        'totalOnHand': 40,
+        'totalAvailable': 25,
+      });
+
+      expect(summary.hasWeightData, isFalse);
+      expect(summary.onHandKg, 40);
+      expect(summary.availableKg, 25);
+    });
   });
 
   group('InventoryStockFilter', () {

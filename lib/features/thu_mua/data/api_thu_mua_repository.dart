@@ -408,7 +408,9 @@ class ApiThuMuaRepository implements ThuMuaRepository {
         JsonReader.string(data, 'receiptDate') ?? '',
       ),
       scheduleId: JsonReader.integer(data, 'scheduleId'),
+      scheduleCode: JsonReader.string(data, 'scheduleCode'),
       riceVarietyId: JsonReader.integer(data, 'riceVarietyId'),
+      riceVarietyName: JsonReader.string(data, 'riceVarietyName'),
       actualWeightKg: JsonReader.decimal(data, 'actualWeightKg') ?? 0,
       moisturePercent: quality == null
           ? null

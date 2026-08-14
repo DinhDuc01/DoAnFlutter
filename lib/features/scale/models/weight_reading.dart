@@ -33,8 +33,8 @@ class WeightReading {
     return !age.isNegative && age <= maxAge;
   }
 
-  WeightReading copyWith({String? deviceName}) => WeightReading(
-        weight: weight,
+  WeightReading copyWith({double? weight, String? deviceName}) => WeightReading(
+        weight: weight ?? this.weight,
         unit: unit,
         isStable: isStable,
         receivedAt: receivedAt,

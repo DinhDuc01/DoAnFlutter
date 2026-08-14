@@ -5,9 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/core/routes/app_routes.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
-import 'package:stocklite/features/kho/data/kho_check_repository.dart';
-import 'package:stocklite/features/kho/models/kho_check.dart';
-import 'package:stocklite/features/kho/presentation/screens/kho_screen.dart';
 import 'package:stocklite/features/products/data/product_variant_api.dart';
 import 'package:stocklite/features/thu_mua/data/thu_mua_repository.dart';
 import 'package:stocklite/features/thu_mua/models/thu_mua_receipt.dart';
@@ -361,64 +358,8 @@ void main() {
     });
   });
 
-  group('KhoScreen', () {
-    phoneTestWidgets('shows loading and repository error states',
-        (tester) async {
-      final completer = Completer<KhoCheck>();
-      await tester.pumpWidget(
-        MaterialApp(
-            home: KhoScreen(repository: _KhoRepository(completer.future))),
-      );
-      expect(find.text('Đang tải phiếu kiểm kê...'), findsOneWidget);
-
-      completer.completeError('stocktake failed');
-      await tester.pumpAndSettle();
-      expect(find.text('Không tải được dữ liệu tồn kho'), findsOneWidget);
-    });
-
-    phoneTestWidgets('requires actual quantity for every product',
-        (tester) async {
-      final repository = _KhoRepository(Future.value(_stockCheck()));
-      await tester.pumpWidget(
-        MaterialApp(home: KhoScreen(repository: repository)),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byType(Checkbox).first);
-      await tester.pump();
-      await tester.tap(find.text('Tạo phiếu kiểm kê'));
-      await tester.pump();
-
-      expect(
-        find.text('Vui lòng nhập số lượng thực tế cho tất cả sản phẩm.'),
-        findsOneWidget,
-      );
-      expect(repository.createCount, 0);
-    });
-
-    phoneTestWidgets('submits entered stocktake quantity', (tester) async {
-      final repository = _KhoRepository(Future.value(_stockCheck()));
-      await tester.pumpWidget(
-        MaterialApp(home: KhoScreen(repository: repository)),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byType(Checkbox).first);
-      await tester.pump();
-      await tester.enterText(
-        find.byKey(const ValueKey('actual_1_3')),
-        '15',
-      );
-      await tester.tap(find.text('Tạo phiếu kiểm kê'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(repository.createCount, 1);
-      expect(repository.lastItems.single.actualQuantity, 15);
-      expect(find.text('Đã tạo phiếu kiểm kê'), findsOneWidget);
-      expect(find.text('Mã phiếu backend: #77'), findsOneWidget);
-    });
-  });
+  // Màn kiểm kê nay là StockTakeListScreen/StockTakeDetailScreen (kiểm theo
+  // BAO) — test nằm ở stock_take_screen_test.dart.
 }
 
 void phoneTestWidgets(String description, WidgetTesterCallback callback) {
@@ -533,27 +474,6 @@ class _ThuMuaRepository implements ThuMuaRepository {
   Future<void> confirmPurchaseOrder(int orderId) async {}
 }
 
-class _KhoRepository implements KhoCheckRepository {
-  _KhoRepository(this.check);
-  final Future<KhoCheck> check;
-  int createCount = 0;
-  List<KhoCheckItem> lastItems = const [];
-
-  @override
-  Future<KhoCheck> getDraftCheck() => check;
-
-  @override
-  Future<int> createStockTake({
-    required KhoCheck check,
-    required List<KhoCheckItem> items,
-    String? note,
-  }) async {
-    createCount++;
-    lastItems = items;
-    return 77;
-  }
-}
-
 ThuMuaReceipt _inboundReceipt() {
   return ThuMuaReceipt(
     productVariantId: 1,
@@ -602,25 +522,6 @@ ThuMuaReceipt _editReceipt() {
     ),
     actualWeightKg: 25,
     moisturePercent: 14,
-  );
-}
-
-KhoCheck _stockCheck() {
-  return KhoCheck(
-    warehouseId: 1,
-    checkCode: 'ST-01',
-    warehouseName: 'Kho A',
-    noteHint: '',
-    checkedAt: DateTime(2026),
-    items: const [
-      KhoCheckItem(
-        productVariantId: 1,
-        productName: 'Gạo',
-        sku: 'GAO',
-        systemQuantity: 10,
-        locationId: 3,
-      ),
-    ],
   );
 }
 

@@ -2,7 +2,7 @@ import '../../../core/api/json_reader.dart';
 
 /// Một dòng tồn kho thật: một lô nằm ở một vị trí trong một kho.
 ///
-/// Khác với [KhoCheckItem] (dòng của phiếu kiểm kê), đây là dữ liệu tồn kho
+/// Khác với dòng của phiếu kiểm kê (`StockTakeLine`), đây là dữ liệu tồn kho
 /// hiện hành do `/api/v1/inventories/advanced` trả về. Toàn bộ khối lượng giữ
 /// nguyên kiểu `double` — lúa gạo luôn có phần lẻ kg, làm tròn về `int` là mất
 /// dữ liệu.
@@ -154,6 +154,14 @@ class InventoryStockLine {
 }
 
 /// 5 chỉ số KPI đầu màn Kho, lấy từ `/api/v1/inventories/summary`.
+///
+/// API trả HAI bộ số cho cùng 5 thẻ:
+/// * `total*` — **số bao**, backend tính `Floor(kg / quy cách bao)`;
+/// * `total*WeightKg` — **khối lượng kg** thật.
+///
+/// Màn Kho từng đọc bộ `total*` rồi in kèm đuôi "kg", nên số trên mobile lệch
+/// hẳn so với web (web đọc `*WeightKg` rồi đổi ra tấn). Nay giữ cả hai và mọi
+/// chỗ hiển thị dùng các getter `*Kg` dưới đây.
 class InventoryStockSummary {
   const InventoryStockSummary({
     this.totalOnHand = 0,
@@ -161,19 +169,48 @@ class InventoryStockSummary {
     this.totalReserved = 0,
     this.totalProcessing = 0,
     this.totalQuarantine = 0,
+    this.totalOnHandWeightKg = 0,
+    this.totalAvailableWeightKg = 0,
+    this.totalReservedWeightKg = 0,
+    this.totalProcessingWeightKg = 0,
+    this.totalQuarantineWeightKg = 0,
     this.lineCount = 0,
     this.quarantineLotCount = 0,
     this.lowStockCount = 0,
   });
 
+  /// Số bao (Floor(kg / quy cách)) — KHÔNG phải kg.
   final double totalOnHand;
   final double totalAvailable;
   final double totalReserved;
   final double totalProcessing;
   final double totalQuarantine;
+
+  /// Khối lượng thật (kg).
+  final double totalOnHandWeightKg;
+  final double totalAvailableWeightKg;
+  final double totalReservedWeightKg;
+  final double totalProcessingWeightKg;
+  final double totalQuarantineWeightKg;
+
   final int lineCount;
   final int quarantineLotCount;
   final int lowStockCount;
+
+  /// Backend cũ (chưa có `*WeightKg`) thì rơi về số bao để thẻ không trống.
+  double get onHandKg =>
+      totalOnHandWeightKg > 0 ? totalOnHandWeightKg : totalOnHand;
+  double get availableKg =>
+      totalOnHandWeightKg > 0 ? totalAvailableWeightKg : totalAvailable;
+  double get reservedKg =>
+      totalOnHandWeightKg > 0 ? totalReservedWeightKg : totalReserved;
+  double get processingKg =>
+      totalOnHandWeightKg > 0 ? totalProcessingWeightKg : totalProcessing;
+  double get quarantineKg =>
+      totalOnHandWeightKg > 0 ? totalQuarantineWeightKg : totalQuarantine;
+
+  /// true khi số đang hiển thị là kg thật (dùng để chọn đơn vị trên thẻ).
+  bool get hasWeightData => totalOnHandWeightKg > 0;
 
   factory InventoryStockSummary.fromJson(Map<String, dynamic> json) {
     return InventoryStockSummary(
@@ -182,11 +219,42 @@ class InventoryStockSummary {
       totalReserved: JsonReader.decimal(json, 'totalReserved') ?? 0,
       totalProcessing: JsonReader.decimal(json, 'totalProcessing') ?? 0,
       totalQuarantine: JsonReader.decimal(json, 'totalQuarantine') ?? 0,
+      totalOnHandWeightKg:
+          JsonReader.decimal(json, 'totalOnHandWeightKg') ?? 0,
+      totalAvailableWeightKg:
+          JsonReader.decimal(json, 'totalAvailableWeightKg') ?? 0,
+      totalReservedWeightKg:
+          JsonReader.decimal(json, 'totalReservedWeightKg') ?? 0,
+      totalProcessingWeightKg:
+          JsonReader.decimal(json, 'totalProcessingWeightKg') ?? 0,
+      totalQuarantineWeightKg:
+          JsonReader.decimal(json, 'totalQuarantineWeightKg') ?? 0,
       lineCount: JsonReader.integer(json, 'lineCount') ?? 0,
       quarantineLotCount: JsonReader.integer(json, 'quarantineLotCount') ?? 0,
       lowStockCount: JsonReader.integer(json, 'lowStockCount') ?? 0,
     );
   }
+}
+
+/// Trạng thái lô cho bộ lọc (lấy từ `/api/v1/lot-status`).
+class LotStatusOption {
+  const LotStatusOption({required this.id, required this.name, this.code});
+
+  final int id;
+  final String name;
+  final String? code;
+
+  /// Trạng thái "đang cách ly" — dùng để bật sẵn chip Cách ly cho đúng lô.
+  bool get isQuarantine =>
+      (code ?? '').toUpperCase().contains('QUARANTINE') ||
+      name.toLowerCase().contains('cách ly');
+
+  factory LotStatusOption.fromJson(Map<String, dynamic> json) =>
+      LotStatusOption(
+        id: JsonReader.integer(json, 'id') ?? 0,
+        name: JsonReader.string(json, 'name') ?? 'Trạng thái',
+        code: JsonReader.string(json, 'code'),
+      );
 }
 
 /// Kho để đổ vào bộ lọc đầu màn.
@@ -211,6 +279,7 @@ class InventoryStockPage {
     required this.lines,
     required this.summary,
     required this.warehouses,
+    required this.lotStatuses,
     required this.totalRecords,
     required this.loadedAt,
   });
@@ -218,10 +287,31 @@ class InventoryStockPage {
   final List<InventoryStockLine> lines;
   final InventoryStockSummary summary;
   final List<WarehouseOption> warehouses;
+  final List<LotStatusOption> lotStatuses;
   final int totalRecords;
   final DateTime loadedAt;
 
   bool get hasMore => lines.length < totalRecords;
+
+  /// Gộp trang kế tiếp vào trang hiện tại (cuộn tới đâu tải tới đó).
+  ///
+  /// Lọc trùng theo `id`: realtime có thể chèn/xoá dòng giữa hai lần gọi làm
+  /// lệch cửa sổ phân trang, khi đó cùng một dòng rơi vào cả hai trang.
+  InventoryStockPage append(InventoryStockPage next) {
+    final seen = {for (final line in lines) line.id};
+    return InventoryStockPage(
+      lines: [
+        ...lines,
+        for (final line in next.lines)
+          if (seen.add(line.id)) line,
+      ],
+      summary: next.summary,
+      warehouses: next.warehouses.isEmpty ? warehouses : next.warehouses,
+      lotStatuses: next.lotStatuses.isEmpty ? lotStatuses : next.lotStatuses,
+      totalRecords: next.totalRecords,
+      loadedAt: next.loadedAt,
+    );
+  }
 }
 
 DateTime? _date(Map<String, dynamic> json, String key) {

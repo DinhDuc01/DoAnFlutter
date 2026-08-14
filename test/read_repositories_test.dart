@@ -284,15 +284,17 @@ void main() {
       expect(schedules.single.estimatedWeightKg, 2500);
     });
 
-    test('returns original schedule when farmer id is invalid', () async {
+    test('skips farmer lookup when farmer id is invalid', () async {
       final client = FakeApiClient();
       final schedule = _schedule(farmerId: 0);
 
       final result = await PurchaseScheduleRepository(apiClient: client)
           .getScheduleDetails(schedule);
 
-      expect(result, same(schedule));
-      expect(client.calls, isEmpty);
+      // Vẫn làm mới lịch (giống lúa, kho, cờ chặn lập phiếu) nhưng bỏ qua API nông dân.
+      expect(result.code, schedule.code);
+      expect(result.farmerPhone, isNull);
+      expect(client.calls.single.path, '/api/v1/paddy-purchase-schedules/1');
     });
 
     test('requires login before loading farmer details', () async {
@@ -305,15 +307,32 @@ void main() {
       );
     });
 
-    test('enriches schedule from farmer endpoint', () async {
+    test('enriches schedule from detail + farmer endpoints', () async {
       final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': {
-            'name': 'Nông hộ B',
-            'phone': '0909',
-            'address': 'Tiền Giang',
-          },
-        },
+        onGet: (path, __, ___) async => path.contains('paddy-purchase-schedules')
+            ? {
+                'resources': {
+                  'id': 1,
+                  'farmerId': 2,
+                  'scheduleCode': 'TM-01',
+                  'riceVarietyName': 'ST25',
+                  'warehouseName': 'Kho A',
+                  'statusCode': 'CONFIRMED',
+                  'statusName': 'Đã xác nhận',
+                  'estimatedQtyKg': 1000,
+                  'receiptCount': 1,
+                  'receiptedWeightKg': 1000,
+                  'remainingQtyKg': 0,
+                  'canCreateReceipt': false,
+                },
+              }
+            : {
+                'resources': {
+                  'name': 'Nông hộ B',
+                  'phone': '0909',
+                  'address': 'Tiền Giang',
+                },
+              },
       );
 
       final result = await PurchaseScheduleRepository(apiClient: client)
@@ -322,7 +341,43 @@ void main() {
       expect(result.farmerName, 'Nông hộ B');
       expect(result.farmerPhone, '0909');
       expect(result.farmerAddress, 'Tiền Giang');
-      expect(client.calls.single.path, '/api/v1/farmers/2');
+      // Lịch đã đủ khối lượng dự kiến → không cho lập thêm phiếu.
+      expect(result.riceVariety, 'ST25');
+      expect(result.warehouseName, 'Kho A');
+      expect(result.receiptCount, 1);
+      expect(result.canCreateReceipt, isFalse);
+      expect(result.blockedReason, 'Lịch đã đủ phiếu mua');
+      expect(
+        client.calls.map((call) => call.path),
+        ['/api/v1/paddy-purchase-schedules/1', '/api/v1/farmers/2'],
+      );
+    });
+
+    test('blocks receipt creation once the estimated weight is reached', () {
+      final full = PurchaseSchedule.fromJson({
+        'id': 3,
+        'statusCode': 'CONFIRMED',
+        'estimatedQtyKg': 2000,
+        'receiptCount': 2,
+        'receiptedWeightKg': 2000,
+      });
+      final partial = PurchaseSchedule.fromJson({
+        'id': 4,
+        'statusCode': 'CONFIRMED',
+        'estimatedQtyKg': 2000,
+        'receiptCount': 1,
+        'receiptedWeightKg': 800,
+      });
+      // Lịch không khai báo khối lượng dự kiến chỉ được lập 1 phiếu.
+      final noEstimate = PurchaseSchedule.fromJson({
+        'id': 5,
+        'statusCode': 'CONFIRMED',
+        'receiptCount': 1,
+      });
+
+      expect(full.canCreateReceipt, isFalse);
+      expect(partial.canCreateReceipt, isTrue);
+      expect(noEstimate.canCreateReceipt, isFalse);
     });
   });
 
