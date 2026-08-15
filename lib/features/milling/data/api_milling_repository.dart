@@ -277,8 +277,11 @@ class ApiMillingRepository implements MillingRepository {
         'top': 5,
       },
     );
-    final resources = JsonReader.map(json, 'resources');
+    final resources = JsonReader.map(json, 'resources') ?? JsonReader.map(json, 'data');
     final rows = JsonReader.list(resources ?? const {}, 'suggestions') ??
+        JsonReader.list(json, 'suggestions') ??
+        JsonReader.list(json, 'resources') ??
+        JsonReader.list(json, 'data') ??
         const [];
     return [
       for (final item in rows.whereType<Map<String, dynamic>>())
@@ -352,14 +355,15 @@ class ApiMillingRepository implements MillingRepository {
 
   @override
   Future<List<MillingProductOption>> getOutputProducts() async {
-    final products = await _productVariantApi.activeVariantsWithStock();
+    final products = await _productVariantApi.activeVariants();
     return [
       for (final product in products)
         MillingProductOption(
           id: product.id,
           name: product.name,
           sku: product.sku,
-          outputType: _outputType(product.name),
+          outputType: _outputType(product.name, product.categoryName),
+          targetWeightKg: product.weightKg > 0 ? product.weightKg : null,
         ),
     ];
   }
@@ -580,10 +584,11 @@ class ApiMillingRepository implements MillingRepository {
     throw MillingApiException(JsonReader.string(json, 'message') ?? fallback);
   }
 
-  static String _outputType(String name) {
-    final value = name.toLowerCase();
-    if (value.contains('cám')) return 'BRAN';
-    if (value.contains('tấm')) return 'BROKEN';
+  static String _outputType(String name, [String? categoryName]) {
+    final value = '$name ${categoryName ?? ''}'.toLowerCase();
+    if (value.contains('cám') || value.contains('bran')) return 'BRAN';
+    if (value.contains('tấm') || value.contains('broken')) return 'BROKEN';
+    if (value.contains('trấu') || value.contains('husk')) return 'HUSK';
     return 'RICE';
   }
 

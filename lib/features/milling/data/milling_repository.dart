@@ -146,7 +146,28 @@ class MockMillingRepository implements MillingRepository {
     required int warehouseId,
     required int productVariantId,
     required double requiredWeightKg,
-  }) async => const [];
+  }) async => [
+        const MillingPutawaySuggestion(
+          locationId: 1,
+          locationCode: 'K1-A01',
+          zoneName: 'Khu A - Thành phẩm',
+          currentOccupancyKg: 1000,
+          maxCapacityKg: 10000,
+          freeCapacityKg: 9000,
+          isEmpty: false,
+          reason: 'Vị trí gợi ý tự động (Top 1) sức chứa dư 9.000kg',
+        ),
+        const MillingPutawaySuggestion(
+          locationId: 2,
+          locationCode: 'K1-A02',
+          zoneName: 'Khu A - Phụ phẩm',
+          currentOccupancyKg: 500,
+          maxCapacityKg: 5000,
+          freeCapacityKg: 4500,
+          isEmpty: false,
+          reason: 'Vị trí gần khu vực xay xát',
+        ),
+      ];
 
   @override
   Future<int> createOrder({
@@ -230,18 +251,21 @@ class MockMillingRepository implements MillingRepository {
           sku: 'RICE-001',
           name: 'Gạo thành phẩm',
           outputType: 'RICE',
+          targetWeightKg: 50.0,
         ),
         MillingProductOption(
           id: 102,
           sku: 'BRAN-001',
           name: 'Cám',
           outputType: 'BRAN',
+          targetWeightKg: 10.0,
         ),
         MillingProductOption(
           id: 103,
           sku: 'BROKEN-001',
           name: 'Tấm',
           outputType: 'BROKEN',
+          targetWeightKg: 25.0,
         ),
       ];
 

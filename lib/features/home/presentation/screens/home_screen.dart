@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../widgets/home_today_tab.dart';
@@ -23,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late int _currentIndex;
+  bool _handlingBack = false;
   final GlobalKey<ThuMuaTabState> _thuMuaKey = GlobalKey<ThuMuaTabState>();
 
   late final List<Widget> _tabs;
@@ -51,21 +53,60 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundFor(context),
-      body: SafeArea(
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _tabs,
+    return PopScope<void>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || _handlingBack || !mounted) return;
+        if (_currentIndex != 0) {
+          setState(() => _currentIndex = 0);
+          return;
+        }
+        _confirmExit();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundFor(context),
+        body: SafeArea(
+          child: IndexedStack(
+            index: _currentIndex,
+            children: _tabs,
+          ),
+        ),
+        bottomNavigationBar: MainBottomNavigation(
+          currentIndex: _currentIndex,
+          onTap: (index) {
+            setState(() => _currentIndex = index);
+            if (index == 1) _thuMuaKey.currentState?.refreshLatest();
+          },
         ),
       ),
-      bottomNavigationBar: MainBottomNavigation(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() => _currentIndex = index);
-          if (index == 1) _thuMuaKey.currentState?.refreshLatest();
-        },
-      ),
     );
+  }
+
+  Future<void> _confirmExit() async {
+    _handlingBack = true;
+    try {
+      final shouldExit = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Thoát ứng dụng?'),
+          content: const Text('Bạn có chắc muốn thoát StockLite không?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Ở lại'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Thoát'),
+            ),
+          ],
+        ),
+      );
+      if (shouldExit == true && mounted) {
+        await SystemNavigator.pop();
+      }
+    } finally {
+      _handlingBack = false;
+    }
   }
 }
