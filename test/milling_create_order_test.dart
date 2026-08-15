@@ -203,7 +203,9 @@ void main() {
 
     expect(find.text('Tạo lệnh xay'), findsOneWidget);
     expect(find.text('Chọn kho'), findsOneWidget);
-    for (var i = 0; i < 4 && find.text('Chọn lô lúa (không bắt buộc)').evaluate().isEmpty; i++) {
+    for (var i = 0;
+        i < 4 && find.text('Chọn lô lúa (không bắt buộc)').evaluate().isEmpty;
+        i++) {
       await tester.drag(find.byType(ListView).first, const Offset(0, -500));
       await tester.pumpAndSettle();
     }
@@ -254,6 +256,9 @@ class _CreateRepository extends MockMillingRepository {
 }
 
 class _FakeSalesOrderRepository implements SalesOrderRepository {
+  @override
+  Future<void> confirm(int id) async {}
+
   @override
   Future<SalesOrderPage> getPaged({
     String? keyword,

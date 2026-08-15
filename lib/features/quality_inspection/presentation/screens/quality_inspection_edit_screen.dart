@@ -85,7 +85,8 @@ class _QualityInspectionEditScreenState
     _noteController.text = inspection.note ?? '';
     _moldLevel = _oneOf(inspection.moldLevel, QualityVocab.mold);
     _pestLevel = _oneOf(inspection.pestLevel, QualityVocab.pest);
-    _packagingStatus = _oneOf(inspection.packagingStatus, QualityVocab.packaging);
+    _packagingStatus =
+        _oneOf(inspection.packagingStatus, QualityVocab.packaging);
     _handling = _oneOf(inspection.handling, QualityVocab.handling);
     _inspectedAt = inspection.inspectedAt ?? DateTime.now();
     if (_lot == null && inspection.paddyLotId > 0) _loadLot();
@@ -250,7 +251,8 @@ class _QualityInspectionEditScreenState
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: passed ? AppColors.primaryDark : AppColors.warning,
+              backgroundColor:
+                  passed ? AppColors.primaryDark : AppColors.warning,
             ),
             child: const Text('Đồng ý'),
           ),
@@ -292,6 +294,21 @@ class _QualityInspectionEditScreenState
 
   @override
   Widget build(BuildContext context) {
+    if (AuthSessionStore.current?.user.isWarehouseWorker == true) {
+      return Scaffold(
+        backgroundColor: AppColors.backgroundFor(context),
+        appBar: AppBar(title: const Text('Chất lượng & cách ly')),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              'Nhân viên kho chỉ được xem thông tin chất lượng và cách ly.',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    }
     final lot = _lot;
     // Đã chọn bao để tách thì chỉ còn đường "cách ly một phần" — giống web ẩn
     // nút duyệt đạt khi có bao được chọn.
@@ -311,7 +328,8 @@ class _QualityInspectionEditScreenState
               leading: IconButton(
                 color: Colors.white,
                 icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+                onPressed:
+                    _saving ? null : () => Navigator.of(context).pop(false),
               ),
             ),
             Expanded(
@@ -543,7 +561,8 @@ class _QualityInspectionEditScreenState
           OutlinedButton.icon(
             onPressed: _saving ? null : _pickDateTime,
             icon: const Icon(Icons.event_rounded),
-            label: Text('Ngày kiểm: ${formatDate(_inspectedAt, withTime: true)}'),
+            label:
+                Text('Ngày kiểm: ${formatDate(_inspectedAt, withTime: true)}'),
           ),
           const SizedBox(height: 12),
           TextField(

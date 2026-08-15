@@ -33,12 +33,14 @@ class MillingProductOption {
     required this.name,
     required this.sku,
     required this.outputType,
+    this.targetWeightKg,
   });
 
   final int id;
   final String name;
   final String sku;
   final String outputType;
+  final double? targetWeightKg;
 }
 
 class MillingPaddyLotOption {

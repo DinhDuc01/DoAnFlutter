@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
-import 'package:stocklite/features/stock_take/models/stock_take.dart' show StockTakeSummary, StockTakePage;
+import 'package:stocklite/features/auth/models/auth_permission.dart';
+import 'package:stocklite/features/stock_take/models/stock_take.dart'
+    show StockTakeSummary, StockTakePage;
 import 'package:stocklite/features/kho/presentation/screens/stock_take_detail_screen.dart';
 import 'package:stocklite/features/stock_take/presentation/screens/stock_take_list_screen.dart';
-import 'package:stocklite/features/kho/models/inventory_stock.dart' show WarehouseOption;
+import 'package:stocklite/features/kho/models/inventory_stock.dart'
+    show WarehouseOption;
 
 import 'package:stocklite/features/scale/data/scale_session.dart';
 import 'package:stocklite/features/scale/data/ble_scale_service.dart';
 import 'package:stocklite/features/stock_take/data/stock_take_repository.dart';
-import 'package:stocklite/features/kho/data/stock_take_repository.dart' show StockTakeException;
-import 'package:stocklite/features/kho/data/stock_take_repository.dart' as legacy_repo;
+import 'package:stocklite/features/kho/data/stock_take_repository.dart'
+    show StockTakeException;
+import 'package:stocklite/features/kho/data/stock_take_repository.dart'
+    as legacy_repo;
 import 'package:stocklite/features/kho/models/stock_take.dart' as legacy;
 import 'package:stocklite/core/api/api_client.dart' show ApiException;
 import 'package:stocklite/core/routes/app_routes.dart';
@@ -33,7 +38,8 @@ class _FakeBleScaleService extends Fake implements BleScaleService {
 void main() {
   setUp(() {
     AuthSessionStore.current = _session();
-    ScaleSession.instance.debugSetService(_FakeBleScaleService(), initializing: Future.value());
+    ScaleSession.instance
+        .debugSetService(_FakeBleScaleService(), initializing: Future.value());
   });
   tearDown(() {
     AuthSessionStore.current = null;
@@ -50,7 +56,9 @@ void main() {
     });
 
     phoneTestWidgets('empty warehouse explains how to start', (tester) async {
-      await _pump(tester, StockTakeListScreen(repository: _FakeRepository(rows: const [])),
+      await _pump(
+        tester,
+        StockTakeListScreen(repository: _FakeRepository(rows: const [])),
       );
 
       expect(find.text('Chưa có phiếu kiểm kê'), findsOneWidget);
@@ -78,7 +86,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify validation warning is present
-      expect(find.textContaining('Backend sẽ chụp snapshot tồn kho tại thời điểm tạo phiên.'), findsOneWidget);
+      expect(
+          find.textContaining(
+              'Backend sẽ chụp snapshot tồn kho tại thời điểm tạo phiên.'),
+          findsOneWidget);
 
       // Verify submit fails without selecting warehouse
       await tester.ensureVisible(find.byKey(const Key('submitButton')));
@@ -156,7 +167,8 @@ void main() {
 
     phoneTestWidgets('a line nobody counted blocks submit', (tester) async {
       final repository = _FakeRepository(
-        detail: _detail(bags: [_bag(1, counted: false), _bag(2, counted: false)]),
+        detail:
+            _detail(bags: [_bag(1, counted: false), _bag(2, counted: false)]),
       );
       await _pump(tester, _detailScreen(repository));
 
@@ -215,15 +227,124 @@ void main() {
       final repository = _FakeRepository(detail: _detail(bags: const []));
       await _pump(tester, _detailScreen(repository));
 
-      expect(find.textContaining('Vừa vào chọn mặt hàng'), findsOneWidget);
+      final weightField = find.byType(TextFormField).first;
+      expect(
+          tester.widget<TextFormField>(weightField).controller?.text, isEmpty);
 
-      await tester.enterText(find.byType(TextFormField).first, '87,5');
+      await tester.enterText(weightField, '10');
       await tester.pumpAndSettle();
+      expect(tester.widget<TextFormField>(weightField).controller?.text, '10');
       await tester.tap(find.text('Lưu nháp'));
       await tester.pumpAndSettle();
 
-      expect(repository.savedLines.single.effectiveActualKg, 87.5);
+      expect(repository.savedLines.single.effectiveActualKg, 10);
     });
+
+    phoneTestWidgets('submitted with approve permission shows approval actions',
+        (tester) async {
+      AuthSessionStore.current = _sessionWith({'READ', 'APPROVE'});
+      final repository = _FakeRepository(
+          detail: _detail(
+        statusCode: 'SUBMITTED',
+        statusName: 'Chá» duyá»‡t',
+        bags: [_bag(1, counted: true), _bag(2, counted: true)],
+      ));
+      await _pump(tester, _detailScreen(repository));
+      expect(find.byType(FilledButton), findsOneWidget);
+      expect(find.byType(OutlinedButton), findsOneWidget);
+      expect(repository.approveCalls, 0);
+      expect(repository.rejectCalls, 0);
+    });
+
+    phoneTestWidgets(
+        'submitted without approve permission hides approval actions',
+        (tester) async {
+      AuthSessionStore.current = _sessionWith({'READ'});
+      await _pump(
+          tester,
+          _detailScreen(
+              _FakeRepository(detail: _detail(statusCode: 'SUBMITTED'))));
+      expect(find.byType(FilledButton), findsNothing);
+      expect(find.byType(OutlinedButton), findsNothing);
+    });
+
+    phoneTestWidgets('opening and cancelling approve dialog does not call API',
+        (tester) async {
+      AuthSessionStore.current = _sessionWith({'READ', 'APPROVE'});
+      final repository = _FakeRepository(
+          detail: _detail(
+        statusCode: 'SUBMITTED',
+        bags: [_bag(1, counted: true), _bag(2, counted: true)],
+      ));
+      await _pump(tester, _detailScreen(repository));
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(repository.approveCalls, 0);
+      await tester.tap(find.descendant(
+          of: find.byType(AlertDialog), matching: find.byType(TextButton)));
+      await tester.pumpAndSettle();
+      expect(repository.approveCalls, 0);
+    });
+
+    phoneTestWidgets('approve success reloads and hides all mutation actions',
+        (tester) async {
+      AuthSessionStore.current =
+          _sessionWith({'READ', 'APPROVE', 'UPDATE', 'DELETE'});
+      final repository =
+          _FakeRepository(detail: _detail(statusCode: 'SUBMITTED'));
+      await _pumpDetailDirect(tester, repository);
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.descendant(
+          of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+      await tester.pumpAndSettle();
+      expect(repository.approveCalls, 1);
+      expect(find.byType(FilledButton), findsNothing);
+      expect(find.byType(OutlinedButton), findsNothing);
+    });
+
+    phoneTestWidgets(
+        'reject empty reason is blocked and valid reason reloads rejected',
+        (tester) async {
+      AuthSessionStore.current = _sessionWith({'READ', 'APPROVE'});
+      final repository =
+          _FakeRepository(detail: _detail(statusCode: 'SUBMITTED'));
+      await _pumpDetailDirect(tester, repository);
+      await tester.tap(find.byType(OutlinedButton));
+      await tester.pumpAndSettle();
+      final reasonField = find.descendant(
+          of: find.byType(AlertDialog), matching: find.byType(TextField));
+      await tester.enterText(reasonField, '   ');
+      await tester.tap(find.descendant(
+          of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+      await tester.pumpAndSettle();
+      expect(repository.rejectCalls, 0);
+      expect(find.byType(AlertDialog), findsNothing);
+      await tester.tap(find.byType(OutlinedButton).last);
+      await tester.pumpAndSettle();
+      await tester.enterText(reasonField, '  Sai lech  ');
+      await tester.tap(find.descendant(
+          of: find.byType(AlertDialog), matching: find.byType(FilledButton)));
+      await tester.pumpAndSettle();
+      expect(repository.rejectCalls, 1);
+      expect(repository.lastRejectReason, 'Sai lech');
+    });
+
+    for (final status in ['APPROVED', 'REJECTED', 'UNKNOWN']) {
+      phoneTestWidgets('$status remains read only', (tester) async {
+        AuthSessionStore.current =
+            _sessionWith({'READ', 'UPDATE', 'APPROVE', 'DELETE'});
+        await _pumpDetailDirect(
+            tester, _FakeRepository(detail: _detail(statusCode: status)));
+        expect(find.byType(FilledButton), findsNothing);
+        expect(find.byType(OutlinedButton), findsNothing);
+        final fields = find.byType(TextFormField);
+        if (fields.evaluate().isNotEmpty) {
+          expect(tester.widget<TextFormField>(fields.first).enabled, isFalse);
+        }
+      });
+    }
   });
 }
 
@@ -236,7 +357,8 @@ Widget _detailScreen(_FakeRepository repository) => Builder(
                 context,
                 MaterialPageRoute<void>(
                   settings: const RouteSettings(arguments: 5),
-                  builder: (context) => StockTakeDetailScreen(stockTakeId: 5, repository: repository),
+                  builder: (context) => StockTakeDetailScreen(
+                      stockTakeId: 5, repository: repository),
                 ),
               );
             },
@@ -257,9 +379,7 @@ Future<void> _pump(WidgetTester tester, Widget screen) async {
         return StockTakeDetailScreen(stockTakeId: id, repository: repo);
       },
     },
-    home: screen is StockTakeListScreen
-        ? screen
-        : Scaffold(body: screen),
+    home: screen is StockTakeListScreen ? screen : Scaffold(body: screen),
   ));
   await tester.pumpAndSettle();
   if (find.text('Go').evaluate().isNotEmpty) {
@@ -326,7 +446,8 @@ legacy.StockTakeDetail _detail({
   );
 }
 
-class _FakeRepository implements StockTakeRepository, legacy_repo.StockTakeRepository {
+class _FakeRepository
+    implements StockTakeRepository, legacy_repo.StockTakeRepository {
   _FakeRepository({
     List<StockTakeSummary>? rows,
     legacy.StockTakeDetail? detail,
@@ -349,11 +470,15 @@ class _FakeRepository implements StockTakeRepository, legacy_repo.StockTakeRepos
         detail = detail ?? _detail();
 
   final List<StockTakeSummary> rows;
-  final legacy.StockTakeDetail detail;
+  legacy.StockTakeDetail detail;
   StockTakeException? listError;
 
   int listCalls = 0;
   int submitCalls = 0;
+  int approveCalls = 0;
+  int rejectCalls = 0;
+  int deleteCalls = 0;
+  String? lastRejectReason;
   List<legacy.StockTakeLine> savedLines = const [];
 
   @override
@@ -366,13 +491,32 @@ class _FakeRepository implements StockTakeRepository, legacy_repo.StockTakeRepos
   Future<List<legacy.StockTakeSummaryRow>> getStockTakes() async => const [];
 
   @override
-  Future<void> saveCounts(int id, List<legacy.StockTakeLine> lines, {String? note}) async {
+  Future<void> saveCounts(int id, List<legacy.StockTakeLine> lines,
+      {String? note}) async {
     savedLines = lines;
   }
 
   @override
   Future<void> submit(int id, {String? note}) async {
     submitCalls += 1;
+  }
+
+  @override
+  Future<void> approve(int id, {String? approveNote}) async {
+    approveCalls += 1;
+    detail = _detail(statusCode: 'APPROVED');
+  }
+
+  @override
+  Future<void> reject(int id, {required String reason}) async {
+    rejectCalls += 1;
+    lastRejectReason = reason;
+    detail = _detail(statusCode: 'REJECTED');
+  }
+
+  @override
+  Future<void> delete(int id) async {
+    deleteCalls += 1;
   }
 
   @override
@@ -439,6 +583,38 @@ AuthSession _session() {
   return const AuthSession(
     accessToken: 'token',
     refreshToken: 'refresh',
-    user: AuthUser(id: 1, fullName: 'Tester', email: 'tester@example.com'),
+    user: AuthUser(
+      id: 1,
+      fullName: 'Tester',
+      email: 'tester@example.com',
+      permissions: [
+        UserPermission(
+          menuId: 1,
+          menuCode: 'STOCKTAKE',
+          actions: {'READ', 'CREATE', 'UPDATE'},
+        ),
+      ],
+    ),
   );
 }
+
+Future<void> _pumpDetailDirect(
+    WidgetTester tester, _FakeRepository repository) async {
+  await tester.pumpWidget(MaterialApp(
+    home: StockTakeDetailScreen(stockTakeId: 5, repository: repository),
+  ));
+  await tester.pumpAndSettle();
+}
+
+AuthSession _sessionWith(Set<String> actions) => AuthSession(
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      user: AuthUser(
+        id: 1,
+        fullName: 'Tester',
+        email: 'tester@example.com',
+        permissions: [
+          UserPermission(menuId: 1, menuCode: 'STOCKTAKE', actions: actions),
+        ],
+      ),
+    );

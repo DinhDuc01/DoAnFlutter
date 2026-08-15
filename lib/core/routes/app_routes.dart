@@ -20,6 +20,7 @@ import '../../features/quality_inspection/presentation/screens/quality_inspectio
 import '../../features/inbound/presentation/screens/inbound_putaway_screen.dart';
 import '../../features/sales_orders/presentation/screens/sales_order_list_screen.dart';
 import '../../features/outbound_orders/presentation/screens/outbound_order_list_screen.dart';
+import '../widgets/permission_guard.dart';
 
 /// Lớp định nghĩa tất cả các tuyến đường (routes) và điều hướng trong ứng dụng.
 class AppRoutes {
@@ -63,33 +64,53 @@ class AppRoutes {
       },
       inbound: (context) {
         final arguments = ModalRoute.of(context)?.settings.arguments;
-        return ThuMuaScreen(
-          schedule: arguments is PurchaseSchedule ? arguments : null,
+        return PermissionGuard(
+          menuCode: 'RICE_PURCHASE',
+          child: ThuMuaScreen(
+            schedule: arguments is PurchaseSchedule ? arguments : null,
+          ),
         );
       },
-      purchaseScheduleDetail: (_) => const PurchaseScheduleDetailScreen(),
-      thuMuaSuccess: (_) => const ThuMuaSuccessScreen(),
+      purchaseScheduleDetail: (_) => const PermissionGuard(
+          menuCode: 'RICE_PURCHASE', child: PurchaseScheduleDetailScreen()),
+      thuMuaSuccess: (_) => const PermissionGuard(
+          menuCode: 'RICE_PURCHASE', child: ThuMuaSuccessScreen()),
       // Kiểm kê theo BAO: quét QR từng bao + cân, thay cho cách nhập tay số kg
       // vốn không phản ánh được việc kho gạo lưu hàng theo bao.
-      stocktake: (_) => const StockTakeListScreen(),
-      stockTakeList: (_) => const StockTakeListScreen(),
+      stocktake: (_) => const PermissionGuard(
+          menuCode: 'STOCKTAKE', child: StockTakeListScreen()),
+      stockTakeList: (_) => const PermissionGuard(
+          menuCode: 'STOCKTAKE', child: StockTakeListScreen()),
       stockTakeDetail: (context) {
         final arguments = ModalRoute.of(context)?.settings.arguments;
-        final id = arguments is int ? arguments : (arguments as Map)['id'] as int;
-        return StockTakeDetailScreen(stockTakeId: id);
+        final id =
+            arguments is int ? arguments : (arguments as Map)['id'] as int;
+        return PermissionGuard(
+          menuCode: 'STOCKTAKE',
+          child: StockTakeDetailScreen(stockTakeId: id),
+        );
       },
-      productDetail: (_) => const ProductDetailScreen(),
+      productDetail: (_) => const PermissionGuard(
+          menuCode: 'PRODUCT', child: ProductDetailScreen()),
       scanQr: (_) => const ScanQrScreen(),
-      reports: (_) => const ReportsScreen(),
+      reports: (_) =>
+          const PermissionGuard(menuCode: 'REPORTS', child: ReportsScreen()),
       personalInfo: (_) => const PersonalInfoScreen(),
       changePassword: (_) => const ChangePasswordScreen(),
-      milling: (_) => const MillingPreparationScreen(),
-      paddyLots: (_) => const PaddyLotListScreen(),
-      debts: (_) => const DebtScreen(),
-      qualityInspections: (_) => const QualityInspectionScreen(),
-      inboundPutaway: (_) => const InboundPutawayScreen(),
-      salesOrders: (_) => const SalesOrderListScreen(),
-      outboundOrders: (_) => const OutboundOrderListScreen(),
+      milling: (_) => const PermissionGuard(
+          menuCode: 'MILLING_ORDERS', child: MillingPreparationScreen()),
+      paddyLots: (_) => const PermissionGuard(
+          menuCode: 'PADDY_LOTS', child: PaddyLotListScreen()),
+      debts: (_) =>
+          const PermissionGuard(menuCode: 'DEBTS', child: DebtScreen()),
+      qualityInspections: (_) => const PermissionGuard(
+          menuCode: 'QUALITY_INSPECTIONS', child: QualityInspectionScreen()),
+      inboundPutaway: (_) => const PermissionGuard(
+          menuCode: 'INBOUND_ORDERS', child: InboundPutawayScreen()),
+      salesOrders: (_) => const PermissionGuard(
+          menuCode: 'SALE_ORDERS', child: SalesOrderListScreen()),
+      outboundOrders: (_) => const PermissionGuard(
+          menuCode: 'OUTBOUND_ORDERS', child: OutboundOrderListScreen()),
     };
   }
 }

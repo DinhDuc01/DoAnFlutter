@@ -24,6 +24,9 @@ abstract class SalesOrderRepository {
   /// `/confirm`. Mobile chỉ tạo đơn và kiểm tra & giữ hàng ([reserve]).
   Future<CreatedSalesOrder> create(CreateSalesOrderInput input);
 
+  /// Duyệt/xác nhận đơn bán mới: NEW -> PENDING_CONFIRM.
+  Future<void> confirm(int id);
+
   /// Kiểm tra & giữ hàng: Chờ xác nhận → Đã giữ hàng.
   /// Backend kiểm tra khách hàng, hạn mức công nợ và tồn khả dụng.
   Future<void> reserve(int id);
@@ -239,8 +242,9 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
           body: {
             'keyword': (keyword ?? '').trim().isEmpty ? null : keyword!.trim(),
             'statusId': (statusId ?? 0) > 0 ? statusId : null,
-            'channel':
-                (channel ?? '').trim().isEmpty ? null : channel!.trim().toUpperCase(),
+            'channel': (channel ?? '').trim().isEmpty
+                ? null
+                : channel!.trim().toUpperCase(),
             'page': page < 1 ? 1 : page,
             'pageSize': pageSize,
           },
@@ -248,7 +252,8 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
 
     final resources = JsonReader.map(json, 'resources');
     if (resources == null) {
-      throw const SalesOrderException('Backend không trả về danh sách đơn bán.');
+      throw const SalesOrderException(
+          'Backend không trả về danh sách đơn bán.');
     }
     final rows = JsonReader.list(resources, 'items') ?? const [];
     return SalesOrderPage(
@@ -258,6 +263,18 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
           if (row is Map<String, dynamic>) SalesOrderSummary.fromJson(row),
       ],
     );
+  }
+
+  @override
+  Future<void> confirm(int id) async {
+    if (id <= 0) {
+      throw const SalesOrderException('Mã đơn bán không hợp lệ.');
+    }
+    await _guard(() => _api.post(
+          '/api/v1/sales-orders/$id/confirm',
+          token: _token,
+          body: const {},
+        ));
   }
 
   @override
@@ -282,7 +299,8 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
       throw const SalesOrderException('Vui lòng chọn kho xuất hàng.');
     }
     if (input.items.isEmpty) {
-      throw const SalesOrderException('Đơn bán phải có ít nhất 1 dòng sản phẩm.');
+      throw const SalesOrderException(
+          'Đơn bán phải có ít nhất 1 dòng sản phẩm.');
     }
     // Backend từ chối trùng biến thể trên cùng đơn — chặn sớm để báo lỗi rõ hơn.
     final variantIds = input.items.map((x) => x.productVariantId).toList();
@@ -292,7 +310,8 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
       );
     }
     if (input.items.any((x) => x.quantityOrdered <= 0)) {
-      throw const SalesOrderException('Số lượng của mỗi dòng hàng phải lớn hơn 0.');
+      throw const SalesOrderException(
+          'Số lượng của mỗi dòng hàng phải lớn hơn 0.');
     }
     if (input.items.any((x) => x.unitSalePrice < 0 || x.discountAmount < 0)) {
       throw const SalesOrderException('Đơn giá và giảm giá không được âm.');
@@ -307,11 +326,11 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
     final resources = JsonReader.map(json, 'resources');
     return CreatedSalesOrder(
       id: resources == null ? 0 : JsonReader.integer(resources, 'id') ?? 0,
-      soCode: resources == null
-          ? ''
-          : JsonReader.string(resources, 'soCode') ?? '',
-      totalAmount:
-          resources == null ? 0 : JsonReader.decimal(resources, 'totalAmount') ?? 0,
+      soCode:
+          resources == null ? '' : JsonReader.string(resources, 'soCode') ?? '',
+      totalAmount: resources == null
+          ? 0
+          : JsonReader.decimal(resources, 'totalAmount') ?? 0,
     );
   }
 
@@ -327,7 +346,8 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
 
   @override
   Future<List<SalesCustomerOption>> getCustomers() async {
-    final json = await _guard(() => _api.get('/api/v1/customers', token: _token));
+    final json =
+        await _guard(() => _api.get('/api/v1/customers', token: _token));
     return [
       for (final row in _rows(json))
         if ((JsonReader.boolean(row, 'isActive') ?? true) &&
@@ -344,7 +364,8 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
 
   @override
   Future<List<SalesWarehouseOption>> getWarehouses() async {
-    final json = await _guard(() => _api.get('/api/v1/warehouse', token: _token));
+    final json =
+        await _guard(() => _api.get('/api/v1/warehouse', token: _token));
     return [
       for (final row in _rows(json))
         if ((JsonReader.boolean(row, 'isActive') ?? true) &&
@@ -360,7 +381,8 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
   }
 
   @override
-  Future<List<SalesProductOption>> getProductVariants({String keyword = ''}) async {
+  Future<List<SalesProductOption>> getProductVariants(
+      {String keyword = ''}) async {
     // Dùng đúng endpoint web đang dùng để danh sách sản phẩm khớp nhau.
     final query = {
       'pageIndex': '1',
@@ -369,7 +391,8 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
       if (keyword.trim().isNotEmpty) 'keyword': keyword.trim(),
     };
     final json = await _guard(
-      () => _api.get('/api/v1/product-variant/search', query: query, token: _token),
+      () => _api.get('/api/v1/product-variant/search',
+          query: query, token: _token),
     );
     return [
       for (final row in _rows(json))
@@ -429,7 +452,9 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
     final json = await _guard(() => _api.post(
           '/api/v1/sales-orders/$id/create-outbound',
           token: _token,
-          body: {'items': [for (final item in items) item.toJson()]},
+          body: {
+            'items': [for (final item in items) item.toJson()]
+          },
         ));
     final resources = JsonReader.map(json, 'resources');
     return resources == null

@@ -12,6 +12,9 @@ abstract class AuthService {
   /// Làm mới cặp token dựa trên [session] hiện tại (access token đã hết hạn).
   /// Trả về [AuthSession] mới với accessToken/refreshToken vừa được cấp lại.
   Future<AuthSession> refresh(AuthSession session);
+
+  /// Nạp phiên người dùng hiện tại (Profile + Roles + Permissions + Menus) từ API /api/v1/auth/me/session.
+  Future<AuthSession> fetchSession(AuthSession session);
 }
 
 /// Lớp ngoại lệ (Exception) tùy chỉnh dùng để biểu diễn các lỗi xảy ra trong quá trình xác thực.

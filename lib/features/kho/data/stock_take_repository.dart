@@ -62,6 +62,9 @@ abstract class StockTakeRepository {
   });
   Future<void> saveCounts(int id, List<StockTakeLine> lines, {String? note});
   Future<void> submit(int id, {String? note});
+  Future<void> approve(int id, {String? approveNote});
+  Future<void> reject(int id, {required String reason});
+  Future<void> delete(int id);
   Future<ScanBagResult> scanBag(int id, String qrCode);
   Future<List<StockTakeLocationOption>> getLocations(int warehouseId);
   Future<List<WarehouseOption>> getWarehouses();
@@ -91,6 +94,12 @@ class ApiStockTakeRepository implements StockTakeRepository {
         error.message,
         isTransient: error.statusCode == null || error.statusCode! >= 500,
       );
+
+  void _requireSuccess(Map<String, dynamic> response) {
+    if (response['isSucceeded'] == false) {
+      throw StockTakeException(JsonReader.string(response, 'message') ?? 'Thao tác thất bại.');
+    }
+  }
 
   @override
   Future<List<StockTakeSummaryRow>> getStockTakes() async {
@@ -184,6 +193,44 @@ class ApiStockTakeRepository implements StockTakeRepository {
         token: _token,
         body: {'note': note?.trim()},
       );
+    } on ApiException catch (error) {
+      _rethrow(error);
+    }
+  }
+
+  @override
+  Future<void> approve(int id, {String? approveNote}) async {
+    try {
+      final response = await _apiClient.put(
+        '/api/v1/stocktakes/$id/approve',
+        token: _token,
+        body: {'approveNote': approveNote?.trim()},
+      );
+      _requireSuccess(response);
+    } on ApiException catch (error) {
+      _rethrow(error);
+    }
+  }
+
+  @override
+  Future<void> reject(int id, {required String reason}) async {
+    try {
+      final response = await _apiClient.put(
+        '/api/v1/stocktakes/$id/reject',
+        token: _token,
+        body: {'reason': reason.trim()},
+      );
+      _requireSuccess(response);
+    } on ApiException catch (error) {
+      _rethrow(error);
+    }
+  }
+
+  @override
+  Future<void> delete(int id) async {
+    try {
+      final response = await _apiClient.delete('/api/v1/stocktakes/$id', token: _token);
+      _requireSuccess(response);
     } on ApiException catch (error) {
       _rethrow(error);
     }

@@ -7,6 +7,7 @@ import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/purchase_schedule_repository.dart';
 import '../../data/api_thu_mua_repository.dart';
 import '../../models/purchase_schedule.dart';
@@ -33,6 +34,8 @@ class ThuMuaTab extends StatefulWidget {
 }
 
 class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
+  bool get _warehouseReadOnly =>
+      AuthSessionStore.current?.user.isWarehouseWorker == true;
   final PurchaseScheduleRepository _repository = PurchaseScheduleRepository();
   final ApiThuMuaRepository _receiptRepository = ApiThuMuaRepository();
   Future<List<PurchaseSchedule>>? _schedulesFuture;
@@ -188,14 +191,15 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
               Text(
                   '${draft.actualWeightKg.toStringAsFixed(1)} kg • ${draft.bagCount} bao'),
               const SizedBox(height: 18),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.of(sheetContext).pop();
-                  _editDraft(draft);
-                },
-                icon: const Icon(Icons.verified_outlined),
-                label: const Text('Tiếp tục chỉnh sửa'),
-              ),
+              if (!_warehouseReadOnly)
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    _editDraft(draft);
+                  },
+                  icon: const Icon(Icons.verified_outlined),
+                  label: const Text('Tiếp tục chỉnh sửa'),
+                ),
             ],
           ),
         ),
@@ -526,16 +530,17 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                   color: Colors.white,
                   icon: const Icon(Icons.refresh),
                 ),
-                IconButton(
-                  tooltip: 'Tạo phiếu mua lúa',
-                  onPressed: () =>
-                      Navigator.of(context).pushNamed(AppRoutes.inbound),
-                  color: Colors.white,
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.18),
+                if (!_warehouseReadOnly)
+                  IconButton(
+                    tooltip: 'Tạo phiếu mua lúa',
+                    onPressed: () =>
+                        Navigator.of(context).pushNamed(AppRoutes.inbound),
+                    color: Colors.white,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.18),
+                    ),
+                    icon: const Icon(Icons.add),
                   ),
-                  icon: const Icon(Icons.add),
-                ),
               ],
             ),
           ),
@@ -794,9 +799,9 @@ class _ScheduleListState extends State<_ScheduleList> {
             icon: Icons.search_off_rounded,
           )
         else
-        for (final item in schedules) ...[
-          _ScheduleCard(schedule: item),
-        ],
+          for (final item in schedules) ...[
+            _ScheduleCard(schedule: item),
+          ],
       ],
     );
   }
@@ -905,32 +910,33 @@ class _ScheduleCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            // Khóa nút khi lịch đã hủy / đã nhập kho / đã lập đủ phiếu.
-            child: OutlinedButton.icon(
-              onPressed: schedule.canCreateReceipt
-                  ? () => Navigator.of(context).pushNamed(
-                        AppRoutes.inbound,
-                        arguments: schedule,
-                      )
-                  : null,
-              icon: Icon(
-                schedule.canCreateReceipt
-                    ? Icons.add_circle_outline
-                    : Icons.block_outlined,
-                size: 18,
+          if (AuthSessionStore.current?.user.isWarehouseWorker != true)
+            SizedBox(
+              width: double.infinity,
+              // Khóa nút khi lịch đã hủy / đã nhập kho / đã lập đủ phiếu.
+              child: OutlinedButton.icon(
+                onPressed: schedule.canCreateReceipt
+                    ? () => Navigator.of(context).pushNamed(
+                          AppRoutes.inbound,
+                          arguments: schedule,
+                        )
+                    : null,
+                icon: Icon(
+                  schedule.canCreateReceipt
+                      ? Icons.add_circle_outline
+                      : Icons.block_outlined,
+                  size: 18,
+                ),
+                label: Text(
+                  schedule.canCreateReceipt
+                      ? 'Tạo phiếu mua từ lịch'
+                      : (schedule.blockedReason.isEmpty
+                          ? 'Không thể tạo phiếu'
+                          : schedule.blockedReason),
+                ),
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
               ),
-              label: Text(
-                schedule.canCreateReceipt
-                    ? 'Tạo phiếu mua từ lịch'
-                    : (schedule.blockedReason.isEmpty
-                        ? 'Không thể tạo phiếu'
-                        : schedule.blockedReason),
-              ),
-              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 42)),
             ),
-          ),
         ],
       ),
     );

@@ -68,30 +68,34 @@ class HomeTodayTab extends StatelessWidget {
   }
 
   Widget _shortcutGrid(BuildContext context) {
+    final session = AuthSessionStore.current;
+    if (session == null) return const SizedBox.shrink();
     const items = <_Shortcut>[
       _Shortcut('Thu mua', Icons.shopping_cart_outlined, AppColors.primary,
-          tabIndex: 1),
-      _Shortcut('Kho', Icons.warehouse_outlined, AppColors.info, tabIndex: 2),
+          menuCode: 'RICE_PURCHASE', tabIndex: 1),
+      _Shortcut('Kho', Icons.warehouse_outlined, AppColors.info,
+          menuCode: 'INBOUND_ORDERS', tabIndex: 2),
       _Shortcut('Đơn bán', Icons.receipt_long_outlined, AppColors.info,
-          route: AppRoutes.salesOrders),
-      _Shortcut(
-          'Xuất kho / giao', Icons.local_shipping_outlined, AppColors.accentPink,
-          tabIndex: 3),
-      _Shortcut('Xay xát', Icons.grain_outlined, AppColors.warning,
-          route: AppRoutes.milling),
+          menuCode: 'SALE_ORDERS', route: AppRoutes.salesOrders),
+      _Shortcut('Xuất kho / giao', Icons.local_shipping_outlined,
+          AppColors.accentPink,
+          menuCode: 'OUTBOUND_ORDERS', tabIndex: 3),
       _Shortcut('Kiểm kê', Icons.assignment_outlined, AppColors.accentPurple,
-          route: AppRoutes.stocktake),
-      _Shortcut('Lô & truy vết', Icons.account_tree_outlined,
-          AppColors.accentTeal,
-          route: AppRoutes.paddyLots),
+          menuCode: 'STOCKTAKE', route: AppRoutes.stocktake),
+      _Shortcut(
+          'Lô & truy vết', Icons.account_tree_outlined, AppColors.accentTeal,
+          menuCode: 'PADDY_LOTS', route: AppRoutes.paddyLots),
       _Shortcut(
           'Công nợ', Icons.account_balance_wallet_outlined, AppColors.warning,
-          route: AppRoutes.debts),
+          menuCode: 'DEBTS', route: AppRoutes.debts),
       _Shortcut('Chất lượng', Icons.science_outlined, AppColors.accentPurple,
-          route: AppRoutes.qualityInspections),
+          menuCode: 'QUALITY_INSPECTIONS', route: AppRoutes.qualityInspections),
       _Shortcut('Nhập kho', Icons.move_to_inbox_outlined, AppColors.primaryDark,
-          route: AppRoutes.inboundPutaway),
+          menuCode: 'INBOUND_ORDERS', route: AppRoutes.inboundPutaway),
     ];
+
+    final visibleItems =
+        items.where((item) => session.hasMenuAccess(item.menuCode)).toList();
 
     return GridView.builder(
       shrinkWrap: true,
@@ -102,9 +106,9 @@ class HomeTodayTab extends StatelessWidget {
         mainAxisSpacing: 12,
         childAspectRatio: 0.98,
       ),
-      itemCount: items.length,
+      itemCount: visibleItems.length,
       itemBuilder: (context, index) {
-        final item = items[index];
+        final item = visibleItems[index];
         return AppCard(
           key: ValueKey(item.route ?? item.label),
           radius: AppColors.radiusMd,
@@ -151,11 +155,12 @@ class HomeTodayTab extends StatelessWidget {
 
 class _Shortcut {
   const _Shortcut(this.label, this.icon, this.color,
-      {this.tabIndex, this.route});
+      {required this.menuCode, this.tabIndex, this.route});
 
   final String label;
   final IconData icon;
   final Color color;
+  final String menuCode;
   final int? tabIndex;
   final String? route;
 }

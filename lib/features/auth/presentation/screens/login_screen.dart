@@ -9,13 +9,29 @@ import '../../../../core/theme/app_colors.dart';
 import '../../data/api_auth_service.dart';
 import '../../data/auth_service.dart';
 import '../../data/auth_session_store.dart';
+import '../../models/auth_session.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({this.authService, super.key});
+  const LoginScreen({
+    this.authService,
+    this.saveSession,
+    this.startNotifications,
+    this.startRealtime,
+    super.key,
+  });
 
   /// Allows tests to replace the API implementation without changing
   /// production behavior.
   final AuthService? authService;
+
+  /// Allows widget tests to avoid platform storage while preserving the
+  /// production AuthSessionStore implementation by default.
+  final Future<void> Function(AuthSession session)? saveSession;
+
+  /// Injectable hooks keep widget tests isolated from Firebase/SignalR while
+  /// production continues to use the real background services by default.
+  final Future<void> Function()? startNotifications;
+  final Future<void> Function()? startRealtime;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -56,17 +72,29 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final session = await _authService.login(
+      final loginSession = await _authService.login(
         email: _emailController.text,
         password: _passwordController.text,
       );
+      // Login response có thể chỉ chứa profile/token. Nạp lại role + menu +
+      // permission từ Backend trước khi cho phép lưu session và mở Home.
+      final session = await _authService.fetchSession(loginSession);
+      if (session.user.isMobileBlocked) {
+        throw const AuthException(
+          'Tài khoản này không được phép sử dụng ứng dụng Mobile.',
+        );
+      }
       // Lưu phiên xuống bộ nhớ cục bộ để lần mở app sau không phải đăng nhập lại.
-      await AuthSessionStore.save(session);
+      await (widget.saveSession ?? AuthSessionStore.save)(session);
 
       // Bắt đầu nhận thông báo đẩy: xin quyền + đăng ký device token FCM cho
       // phiên này, và mở kết nối realtime dữ liệu (SignalR) để tự làm mới màn.
-      unawaited(FcmService.instance.startForUser());
-      unawaited(RealtimeService.instance.start());
+      unawaited(
+        (widget.startNotifications ?? FcmService.instance.startForUser)(),
+      );
+      unawaited(
+        (widget.startRealtime ?? RealtimeService.instance.start)(),
+      );
 
       if (!mounted) return;
       Navigator.of(context).pushReplacementNamed(AppRoutes.home);
