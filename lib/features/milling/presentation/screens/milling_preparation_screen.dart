@@ -10,8 +10,6 @@ import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
 import '../../models/milling_plan_args.dart';
 import '../widgets/milling_widgets.dart';
-import '../../../auth/data/auth_session_store.dart';
-import '../../../../core/widgets/permission_guard.dart';
 import 'milling_create_order_screen.dart';
 import 'milling_source_selection_screen.dart';
 import 'milling_result_confirmation_screen.dart';
@@ -216,18 +214,14 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  PermissionBuilder(
-                    menuCode: 'MILLING_ORDERS',
-                    action: 'CREATE',
-                    child: IconButton(
-                      tooltip: 'Tạo lệnh xay',
-                      constraints:
-                          const BoxConstraints.tightFor(width: 40, height: 40),
-                      padding: EdgeInsets.zero,
-                      onPressed: _openCreate,
-                      icon: const Icon(Icons.add_task_rounded,
-                          color: Colors.white),
-                    ),
+                  IconButton(
+                    tooltip: 'Tạo lệnh xay',
+                    constraints:
+                        const BoxConstraints.tightFor(width: 40, height: 40),
+                    padding: EdgeInsets.zero,
+                    onPressed: _openCreate,
+                    icon:
+                        const Icon(Icons.add_task_rounded, color: Colors.white),
                   ),
                   IconButton(
                     tooltip: 'Làm mới',
@@ -942,16 +936,13 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
     ];
 
     final Widget primary;
-    final session = AuthSessionStore.current;
-    final canUpdate = session == null || session.hasPermission('MILLING_ORDERS', 'UPDATE');
-
-    if (status.canStart && canUpdate) {
+    if (status.canStart) {
       primary = MillingPrimaryButton(
         label: 'Bắt đầu xay',
         isLoading: _actionBusy,
         onPressed: () => _start(order),
       );
-    } else if (status.canContinueWeighing && canUpdate) {
+    } else if (status.canContinueWeighing) {
       primary = MillingPrimaryButton(
         key: const Key('milling_enter_output_button'),
         label: 'Nhập kết quả xay',
@@ -964,7 +955,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
           ),
         ),
       );
-    } else if (_isDraft(order) && canUpdate) {
+    } else if (_isDraft(order)) {
       primary = MillingPrimaryButton(
         label: 'Giữ lúa',
         isLoading: _actionBusy,

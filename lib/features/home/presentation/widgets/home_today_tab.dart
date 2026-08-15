@@ -70,35 +70,28 @@ class HomeTodayTab extends StatelessWidget {
   Widget _shortcutGrid(BuildContext context) {
     const items = <_Shortcut>[
       _Shortcut('Thu mua', Icons.shopping_cart_outlined, AppColors.primary,
-          tabIndex: 1, menuCode: 'RICE_PURCHASE'),
-      _Shortcut('Kho', Icons.warehouse_outlined, AppColors.info,
-          tabIndex: 2, menuCode: 'WAREHOUSES'),
+          tabIndex: 1),
+      _Shortcut('Kho', Icons.warehouse_outlined, AppColors.info, tabIndex: 2),
       _Shortcut('Đơn bán', Icons.receipt_long_outlined, AppColors.info,
-          route: AppRoutes.salesOrders, menuCode: 'SALE_ORDERS'),
+          route: AppRoutes.salesOrders),
       _Shortcut(
           'Xuất kho / giao', Icons.local_shipping_outlined, AppColors.accentPink,
-          tabIndex: 3, menuCode: 'OUTBOUND_ORDERS'),
+          tabIndex: 3),
       _Shortcut('Xay xát', Icons.grain_outlined, AppColors.warning,
-          route: AppRoutes.milling, menuCode: 'MILLING_ORDERS'),
+          route: AppRoutes.milling),
       _Shortcut('Kiểm kê', Icons.assignment_outlined, AppColors.accentPurple,
-          route: AppRoutes.stocktake, menuCode: 'STOCKTAKE'),
+          route: AppRoutes.stocktake),
       _Shortcut('Lô & truy vết', Icons.account_tree_outlined,
           AppColors.accentTeal,
-          route: AppRoutes.paddyLots, menuCode: 'PADDY_LOTS'),
+          route: AppRoutes.paddyLots),
       _Shortcut(
           'Công nợ', Icons.account_balance_wallet_outlined, AppColors.warning,
-          route: AppRoutes.debts, menuCode: 'DEBTS'),
+          route: AppRoutes.debts),
       _Shortcut('Chất lượng', Icons.science_outlined, AppColors.accentPurple,
-          route: AppRoutes.qualityInspections, menuCode: 'QUALITY_INSPECTIONS'),
+          route: AppRoutes.qualityInspections),
       _Shortcut('Nhập kho', Icons.move_to_inbox_outlined, AppColors.primaryDark,
-          route: AppRoutes.inboundPutaway, menuCode: 'INBOUND_ORDERS'),
+          route: AppRoutes.inboundPutaway),
     ];
-
-    final session = AuthSessionStore.current;
-    final visibleItems = items.where((item) {
-      if (item.menuCode == null) return true;
-      return session == null || session.hasMenuAccess(item.menuCode!);
-    }).toList();
 
     return GridView.builder(
       shrinkWrap: true,
@@ -109,9 +102,9 @@ class HomeTodayTab extends StatelessWidget {
         mainAxisSpacing: 12,
         childAspectRatio: 0.98,
       ),
-      itemCount: visibleItems.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
-        final item = visibleItems[index];
+        final item = items[index];
         return AppCard(
           key: ValueKey(item.route ?? item.label),
           radius: AppColors.radiusMd,
@@ -158,12 +151,11 @@ class HomeTodayTab extends StatelessWidget {
 
 class _Shortcut {
   const _Shortcut(this.label, this.icon, this.color,
-      {this.tabIndex, this.route, this.menuCode});
+      {this.tabIndex, this.route});
 
   final String label;
   final IconData icon;
   final Color color;
   final int? tabIndex;
   final String? route;
-  final String? menuCode;
 }

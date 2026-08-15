@@ -238,15 +238,71 @@ class MillingSourceSuggestion {
   const MillingSourceSuggestion({
     required this.requiredWeightKg,
     required this.columns,
+    this.suggestedWeightKg = 0,
+    this.missingWeightKg = 0,
+    this.readOnly = false,
   });
 
   final double requiredWeightKg;
   final List<MillingSourceColumn> columns;
 
+  /// Khối lượng backend gợi ý lấy được ngay (tổng các bao đã chọn sẵn).
+  final double suggestedWeightKg;
+
+  /// Phần backend không tìm được nguồn lấy ngay — web cảnh báo "còn thiếu".
+  final double missingWeightKg;
+
+  /// Dựng từ nguồn ĐÃ GIỮ của lệnh (chỉ xem), không phải từ API gợi ý.
+  final bool readOnly;
+
+  bool get isComplete => missingWeightKg <= 0.0005;
+
   double get selectedWeightKg => columns.fold<double>(
         0,
         (sum, column) => sum + column.totalWeightKg,
       );
+
+  /// Nguồn lúa ĐÃ GIỮ của một lệnh, dựng từ `inputs` của chi tiết lệnh.
+  ///
+  /// Dùng cho lệnh đang xay: backend chỉ gợi ý nguồn cho lệnh Nháp/Đã giữ nên
+  /// gọi `source-suggestions` ở trạng thái này sẽ trả 422.
+  factory MillingSourceSuggestion.fromOrderInputs(MillingOrder order) {
+    final grouped = <int, List<MillingSourceBag>>{};
+    final codes = <int, String?>{};
+    for (final input in order.inputs) {
+      final locationId = input.locationId ?? 0;
+      codes[locationId] ??= input.locationCode ?? input.lotCode;
+      grouped.putIfAbsent(locationId, () => <MillingSourceBag>[]).addAll([
+        for (final bag in input.bags)
+          MillingSourceBag(
+            id: bag.bagId,
+            bagNo: bag.bagNo,
+            weightKg: bag.weightKg,
+            status: 'Stored',
+            selected: true,
+          ),
+      ]);
+    }
+    final columns = [
+      for (final entry in grouped.entries)
+        MillingSourceColumn(
+          locationId: entry.key,
+          locationCode: codes[entry.key],
+          bags: entry.value,
+        ),
+    ];
+    final total = columns.fold<double>(
+      0,
+      (sum, column) => sum + column.totalWeightKg,
+    );
+    return MillingSourceSuggestion(
+      requiredWeightKg:
+          order.computedPaddyKg > 0 ? order.computedPaddyKg : total,
+      columns: columns,
+      suggestedWeightKg: total,
+      readOnly: true,
+    );
+  }
 }
 
 /// Mobile-facing data required to finish and pack a milling order.

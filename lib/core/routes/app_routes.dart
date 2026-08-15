@@ -16,7 +16,8 @@ import '../../features/scan/presentation/screens/scan_qr_screen.dart';
 import '../../features/milling/presentation/screens/milling_preparation_screen.dart';
 import '../../features/paddy_lots/presentation/screens/paddy_lot_list_screen.dart';
 import '../../features/debts/presentation/screens/debt_screen.dart';
-import '../../features/quality_inspection/presentation/screens/quality_inspection_readonly_screen.dart';
+import '../../features/quality_inspection/presentation/screens/quality_inspection_screen.dart';
+import '../../features/inbound/presentation/screens/inbound_putaway_screen.dart';
 import '../../features/sales_orders/presentation/screens/sales_order_list_screen.dart';
 import '../../features/outbound_orders/presentation/screens/outbound_order_list_screen.dart';
 
@@ -47,6 +48,7 @@ class AppRoutes {
   static const paddyLots = '/paddy-lots';
   static const debts = '/debts';
   static const qualityInspections = '/quality-inspections';
+  static const inboundPutaway = '/nhap-kho'; // Nhập kho & xếp vị trí (put-away)
 
   /// Map liên kết các tên định danh của route với Widget Builder tương ứng.
   /// Được sử dụng trong MaterialApp ở file app.dart để cấu hình điều hướng.
@@ -84,7 +86,8 @@ class AppRoutes {
       milling: (_) => const MillingPreparationScreen(),
       paddyLots: (_) => const PaddyLotListScreen(),
       debts: (_) => const DebtScreen(),
-      qualityInspections: (_) => const QualityInspectionReadOnlyScreen(),
+      qualityInspections: (_) => const QualityInspectionScreen(),
+      inboundPutaway: (_) => const InboundPutawayScreen(),
       salesOrders: (_) => const SalesOrderListScreen(),
       outboundOrders: (_) => const OutboundOrderListScreen(),
     };

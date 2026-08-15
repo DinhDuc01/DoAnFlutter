@@ -221,6 +221,9 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
       arguments: MillingPlanArgs.forSalesOrder(
         salesOrderId: order.id,
         salesOrderCode: order.soCode,
+        // Gạo còn phải xay của chính đơn này — màn tạo lệnh dùng để điền sẵn
+        // sản lượng và để giữ đơn trong danh sách chọn dù đã trả hết tiền.
+        remainingRiceKg: order.remainingMillingRiceKg,
       ),
     );
   }
