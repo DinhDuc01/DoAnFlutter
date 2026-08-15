@@ -97,8 +97,36 @@ class AuthUser {
 
   /// Kiểm tra tài khoản có vai trò ADMIN hay không.
   bool get isAdmin {
-    return roles.any((r) => r.code == 'ADMIN' || r.code == '1001') ||
-        permissions.isEmpty; // Nếu backend không trả permissions (super admin)
+    return roles.any((r) => r.code == 'ADMIN' || r.code == '1001');
+  }
+
+  /// Mobile không phục vụ tài khoản quản trị, kiểm toán hoặc nhân viên xay xát.
+  /// Backend có thể trả role dưới dạng `code` hoặc chỉ có `name`,
+  /// vì vậy kiểm tra cả hai trường. OWNER/Chủ cơ sở không bị chặn.
+  bool get isMobileBlocked {
+    final roleCodes = roles.map((role) => role.code.trim().toUpperCase());
+    final roleNames = roles.map((role) => role.name.trim().toUpperCase());
+    final roleIds = roles.map((role) => role.id);
+    final values = {...roleCodes, ...roleNames};
+
+    return roleIds.contains(1001) ||
+        values.contains('ADMIN') ||
+        values.contains('QUẢN TRỊ VIÊN') ||
+        values.contains('MILLING') ||
+        values.contains('NHÂN VIÊN XAY XÁT') ||
+        values.contains('AUDITOR') ||
+        values.contains('KIỂM TOÁN VIÊN');
+  }
+
+  /// Nhân viên kho dùng Mobile cho nghiệp vụ kho và xuất/giao hàng, nhưng
+  /// Thu mua, Đơn bán và Chất lượng chỉ được xem. Đây là policy Mobile bổ
+  /// sung, không thay thế authorization của Backend.
+  bool get isWarehouseWorker {
+    return roles.any((role) {
+      final code = role.code.trim().toUpperCase();
+      final name = role.name.trim().toUpperCase();
+      return role.id == 1012 || code == 'WAREHOUSE' || name == 'NHÂN VIÊN KHO';
+    });
   }
 
   /// Kiểm tra có một vai trò cụ thể hay không.
@@ -173,6 +201,32 @@ class AuthUser {
     final rawPermissions = json['permissions'];
     final rawMenus = json['menus'];
 
+    // `/auth/me/session` trả menu theo cây (ví dụ Bán hàng -> Đơn bán,
+    // Trả hàng, Xuất kho). Permission chỉ mang menuId, nên phải làm phẳng cả
+    // menu con để ánh xạ menuId -> menuCode. Nếu chỉ đọc cấp gốc, role SALES
+    // vẫn đăng nhập được nhưng toàn bộ shortcut con sẽ bị ẩn.
+    final parsedMenus =
+        rawMenus is List ? _flattenMenus(rawMenus) : <UserMenu>[];
+    final menuCodesById = <int, String>{
+      for (final menu in parsedMenus)
+        if (menu.id > 0 && menu.code.isNotEmpty) menu.id: menu.code,
+    };
+    final parsedPermissions = rawPermissions is List
+        ? rawPermissions.whereType<Map>().map((p) {
+            final permission = UserPermission.fromJson(
+              p.cast<String, dynamic>(),
+            );
+            final menuCode = permission.menuCode.isNotEmpty
+                ? permission.menuCode
+                : menuCodesById[permission.menuId] ?? '';
+            return UserPermission(
+              menuId: permission.menuId,
+              menuCode: menuCode,
+              actions: permission.actions,
+            );
+          }).toList()
+        : <UserPermission>[];
+
     return AuthUser(
       id: (json['id'] as num?)?.toInt() ?? 0,
       fullName: json['fullName'] as String? ?? '',
@@ -183,17 +237,34 @@ class AuthUser {
               .map((r) => UserRole.fromJson((r as Map).cast<String, dynamic>()))
               .toList()
           : const [],
-      permissions: rawPermissions is List
-          ? rawPermissions
-              .map((p) =>
-                  UserPermission.fromJson((p as Map).cast<String, dynamic>()))
-              .toList()
-          : const [],
-      menus: rawMenus is List
-          ? rawMenus
-              .map((m) => UserMenu.fromJson((m as Map).cast<String, dynamic>()))
-              .toList()
-          : const [],
+      permissions: parsedPermissions,
+      menus: parsedMenus,
     );
   }
+}
+
+List<UserMenu> _flattenMenus(List<dynamic> rawMenus) {
+  final result = <UserMenu>[];
+  final seenIds = <int>{};
+
+  void visit(dynamic raw) {
+    if (raw is! Map) return;
+    final json = raw.cast<String, dynamic>();
+    final menu = UserMenu.fromJson(json);
+    if (menu.id > 0 && seenIds.add(menu.id)) {
+      result.add(menu);
+    }
+
+    final children = json['child'] ?? json['children'];
+    if (children is List) {
+      for (final child in children) {
+        visit(child);
+      }
+    }
+  }
+
+  for (final menu in rawMenus) {
+    visit(menu);
+  }
+  return result;
 }

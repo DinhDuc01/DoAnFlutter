@@ -49,7 +49,11 @@ class PermissionBuilder extends StatelessWidget {
     final currentSession = session ?? AuthSessionStore.current;
     final bool permitted;
 
-    if (currentSession == null) {
+    // Xay xát đang tạm khóa hoàn toàn trên Mobile cho mọi role.
+    // Không cho phép bypass bằng cách mở shortcut/route trực tiếp.
+    if (menuCode.trim().toUpperCase() == 'MILLING_ORDERS') {
+      permitted = false;
+    } else if (currentSession == null) {
       permitted = false;
     } else if (action != null && action!.trim().isNotEmpty) {
       permitted = currentSession.hasPermission(menuCode, action!);
@@ -93,7 +97,10 @@ class PermissionGuard extends StatelessWidget {
     final currentSession = session ?? AuthSessionStore.current;
     final bool permitted;
 
-    if (currentSession == null) {
+    // Xay xát đang tạm khóa hoàn toàn trên Mobile cho mọi role.
+    if (menuCode.trim().toUpperCase() == 'MILLING_ORDERS') {
+      permitted = false;
+    } else if (currentSession == null) {
       permitted = false;
     } else if (action != null && action!.trim().isNotEmpty) {
       permitted = currentSession.hasPermission(menuCode, action!);

@@ -39,7 +39,7 @@ void main() {
   );
 
   group('PermissionBuilder Widget Tests', () {
-    testWidgets('renders child when user has required action permission',
+    testWidgets('blocks disabled milling feature even with permission',
         (widgetTester) async {
       await widgetTester.pumpWidget(
         MaterialApp(
@@ -54,7 +54,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Nút Sửa Lệnh Xay'), findsOneWidget);
+      expect(find.text('Nút Sửa Lệnh Xay'), findsNothing);
     });
 
     testWidgets('renders fallback when user lacks required action permission',
@@ -97,7 +97,7 @@ void main() {
   });
 
   group('PermissionGuard & PermissionDeniedScreen Tests', () {
-    testWidgets('PermissionGuard renders child when permitted',
+    testWidgets('PermissionGuard blocks disabled milling route',
         (widgetTester) async {
       await widgetTester.pumpWidget(
         MaterialApp(
@@ -109,8 +109,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Màn hình Xay xát'), findsOneWidget);
-      expect(find.byType(PermissionDeniedScreen), findsNothing);
+      expect(find.text('Màn hình Xay xát'), findsNothing);
+      expect(find.byType(PermissionDeniedScreen), findsOneWidget);
     });
 
     testWidgets('PermissionGuard renders PermissionDeniedScreen when unpermitted',

@@ -6,7 +6,7 @@ import 'package:stocklite/features/sales_orders/models/sales_order.dart';
 
 import 'support/fake_api_client.dart';
 
-/// Mobile được tạo đơn bán và kiểm tra & giữ hàng; bước xác nhận đơn để web làm.
+/// Mobile được duyệt đơn NEW khi session có quyền, sau đó kiểm tra & giữ hàng.
 void main() {
   setUp(() => AuthSessionStore.current = _session());
   tearDown(() => AuthSessionStore.current = null);
@@ -16,7 +16,11 @@ void main() {
       final client = FakeApiClient(
         onPost: (_, __, ___) async => {
           'isSucceeded': true,
-          'resources': {'id': 12, 'soCode': 'SO-20260814-0001', 'totalAmount': 950000},
+          'resources': {
+            'id': 12,
+            'soCode': 'SO-20260814-0001',
+            'totalAmount': 950000
+          },
         },
       );
 
@@ -134,7 +138,37 @@ void main() {
     });
   });
 
+  group('ApiSalesOrderRepository.confirm', () {
+    test('gọi đúng endpoint duyệt đơn bán', () async {
+      final client = FakeApiClient(
+        onPost: (_, __, ___) async => {'isSucceeded': true},
+      );
+
+      await ApiSalesOrderRepository(apiClient: client).confirm(9);
+
+      expect(client.calls.single.path, '/api/v1/sales-orders/9/confirm');
+      expect(client.calls.single.method, 'POST');
+    });
+
+    test('không gọi API khi id không hợp lệ', () async {
+      final client = FakeApiClient();
+
+      await expectLater(
+        ApiSalesOrderRepository(apiClient: client).confirm(0),
+        throwsA(isA<SalesOrderException>()),
+      );
+      expect(client.calls, isEmpty);
+    });
+  });
+
   group('SalesOrderDetail — quyền thao tác trên mobile', () {
+    test('chỉ đơn NEW đủ điều kiện duyệt', () {
+      expect(_detail(SalesOrderStatusIds.newOrder).canConfirm, isTrue);
+      expect(_detail(SalesOrderStatusIds.pendingConfirm).canConfirm, isFalse);
+      expect(_detail(SalesOrderStatusIds.reserved).canConfirm, isFalse);
+      expect(_detail(SalesOrderStatusIds.cancelled).canConfirm, isFalse);
+    });
+
     test('chỉ giữ hàng được khi đơn đã ở Chờ xác nhận', () {
       expect(_detail(SalesOrderStatusIds.newOrder).canReserve, isFalse);
       expect(_detail(SalesOrderStatusIds.newOrder).waitingWebConfirm, isTrue);

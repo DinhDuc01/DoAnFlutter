@@ -88,7 +88,7 @@ class SalesOrderSummary {
 
   /// Tổng gạo đơn cần (kg) — dùng cho đơn phải xay.
   final double totalRiceRequiredKg;
-  
+
   /// Gạo đã được các lệnh xay phân bổ cho đơn này (kg).
   final double allocatedMillingRiceKg;
 
@@ -131,7 +131,8 @@ class SalesOrderSummary {
         hasUnconfiguredRiceVariety:
             JsonReader.boolean(json, 'hasUnconfiguredRiceVariety') ?? false,
         riceVarietyId: JsonReader.integer(json, 'riceVarietyId'),
-        totalRiceRequiredKg: JsonReader.decimal(json, 'totalRiceRequiredKg') ?? 0,
+        totalRiceRequiredKg:
+            JsonReader.decimal(json, 'totalRiceRequiredKg') ?? 0,
         allocatedMillingRiceKg:
             JsonReader.decimal(json, 'allocatedMillingRiceKg') ?? 0,
         remainingMillingRiceKg:
@@ -231,6 +232,9 @@ class SalesOrderDetail {
   /// chỉ làm trên web nên mobile không có nút xác nhận.
   bool get canReserve => statusId == SalesOrderStatusIds.pendingConfirm;
 
+  /// Backend chỉ cho xác nhận đơn đang ở trạng thái NEW.
+  bool get canConfirm => statusId == SalesOrderStatusIds.newOrder;
+
   /// Đơn vừa tạo, đang chờ được xác nhận trên web thì mới giữ hàng được.
   bool get waitingWebConfirm => statusId == SalesOrderStatusIds.newOrder;
 
@@ -260,7 +264,8 @@ class SalesOrderDetail {
   /// Phiếu xuất còn hiệu lực: bỏ qua phiếu đã HỦY và phiếu GIAO THẤT BẠI
   /// (hai trạng thái kết thúc này cho phép tạo phiếu xuất khác cho đơn).
   List<SalesOrderOutboundSummary> get activeOutbounds => outboundOrders
-      .where((o) => !_closedOutboundStatusCodes.contains(o.statusCode.toUpperCase()))
+      .where((o) =>
+          !_closedOutboundStatusCodes.contains(o.statusCode.toUpperCase()))
       .toList();
 
   factory SalesOrderDetail.fromJson(Map<String, dynamic> json) =>
@@ -287,7 +292,8 @@ class SalesOrderDetail {
         cancelReason: JsonReader.string(json, 'cancelReason'),
         createdDate: parseApiDate(json, 'createdDate'),
         riceVarietyId: JsonReader.integer(json, 'riceVarietyId'),
-        totalRiceRequiredKg: JsonReader.decimal(json, 'totalRiceRequiredKg') ?? 0,
+        totalRiceRequiredKg:
+            JsonReader.decimal(json, 'totalRiceRequiredKg') ?? 0,
         allocatedMillingRiceKg:
             JsonReader.decimal(json, 'allocatedMillingRiceKg') ?? 0,
         remainingMillingRiceKg:

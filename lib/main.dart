@@ -20,6 +20,9 @@ Future<void> main() async {
 
   // Nạp lại phiên đăng nhập đã lưu để không phải đăng nhập lại mỗi lần mở app.
   await AuthSessionStore.load();
+  if (AuthSessionStore.current?.user.isMobileBlocked ?? false) {
+    await AuthSessionStore.clear();
+  }
   final isLoggedIn = AuthSessionStore.current != null;
 
   // Khởi tạo Firebase + đăng ký handler thông báo đẩy khi app ở nền/đã tắt.

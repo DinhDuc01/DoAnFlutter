@@ -4,6 +4,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/sales_order_repository.dart';
 
 /// Màn tạo đơn bán trên mobile — đủ trường như web.
@@ -209,8 +210,8 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
     for (final line in _lines) {
       final quantity = parseDecimal(line.quantity.text);
       if (quantity == null || quantity <= 0) {
-        setState(() => _formError =
-            'Số lượng của "${line.product.name}" phải lớn hơn 0.');
+        setState(() =>
+            _formError = 'Số lượng của "${line.product.name}" phải lớn hơn 0.');
         return null;
       }
       final price = parseDecimal(line.price.text);
@@ -299,6 +300,15 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (AuthSessionStore.current?.user.isWarehouseWorker == true) {
+      return Scaffold(
+        backgroundColor: AppColors.backgroundFor(context),
+        appBar: AppBar(title: const Text('Đơn bán')),
+        body: const Center(
+          child: Text('Nhân viên kho chỉ được xem đơn bán.'),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(context),
       appBar: AppBar(
@@ -416,8 +426,9 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
                   ),
                 ),
             ],
-            onChanged:
-                _submitting ? null : (value) => setState(() => _warehouseId = value),
+            onChanged: _submitting
+                ? null
+                : (value) => setState(() => _warehouseId = value),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
