@@ -19,7 +19,7 @@ void main() {
       'Trang chủ',
       'Thu mua',
       'Kho',
-      'Xuất kho',
+      'Bán',
       'Thông báo',
       'Tôi',
     ]) {
@@ -47,34 +47,8 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Xuất kho'));
+    await tester.tap(find.text('Bán'));
 
     expect(selectedIndex, 3);
-  });
-
-  testWidgets('hides business tabs omitted by permission filtering',
-      (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          bottomNavigationBar: MainBottomNavigation(
-            currentIndex: 0,
-            sections: const [
-              HomeSection.home,
-              HomeSection.notifications,
-              HomeSection.account,
-            ],
-            onTap: (_) {},
-          ),
-        ),
-      ),
-    );
-
-    expect(find.text('Trang chủ'), findsOneWidget);
-    expect(find.text('Thông báo'), findsOneWidget);
-    expect(find.text('Tôi'), findsOneWidget);
-    expect(find.text('Thu mua'), findsNothing);
-    expect(find.text('Kho'), findsNothing);
-    expect(find.text('Xuất kho'), findsNothing);
   });
 }

@@ -274,8 +274,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     if (_unitCostController.text.isEmpty && receipt.unitCostPrice > 0) {
       _unitCostController.text = receipt.unitCostPrice.toStringAsFixed(0);
     }
-    if (_noteController.text.isEmpty &&
-        receipt.note?.trim().isNotEmpty == true) {
+    if (_noteController.text.isEmpty && receipt.note?.trim().isNotEmpty == true) {
       _noteController.text = receipt.note!.trim();
     }
     _initializeBagControllers(receipt);
@@ -297,8 +296,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     for (final weight in weights) {
       _bagWeightControllers.add(
         TextEditingController(
-          text:
-              weight > 0 ? formatQuantityInput(ceilKg(weight), digits: 1) : '',
+          text: weight > 0 ? formatQuantityInput(ceilKg(weight), digits: 1) : '',
         ),
       );
     }
@@ -380,7 +378,8 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
     if (index < 0 || index >= _bagWeightControllers.length) {
       index = _bagWeightControllers.length - 1;
     }
-    final appended = (parseDecimal(_bagWeightControllers[index].text) ?? 0) > 0;
+    final appended =
+        (parseDecimal(_bagWeightControllers[index].text) ?? 0) > 0;
 
     setState(() {
       if (appended) {
@@ -448,7 +447,8 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
         errors[i] = 'Khối lượng phải lớn hơn 0';
       } else {
         final rounded = ceilKg(value);
-        _bagWeightControllers[i].text = formatQuantityInput(rounded, digits: 1);
+        _bagWeightControllers[i].text =
+            formatQuantityInput(rounded, digits: 1);
         bags.add(ThuMuaBag(sequenceNumber: i + 1, weightKg: rounded));
       }
     }
@@ -954,8 +954,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
                 // Lookup giống lúa lỗi/rỗng: vẫn hiển thị giống đã lưu trên phiếu
                 // thay vì giấu luôn thông tin.
                 final saved = receipt.riceVarietyName?.trim();
-                if (saved == null || saved.isEmpty)
-                  return const SizedBox.shrink();
+                if (saved == null || saved.isEmpty) return const SizedBox.shrink();
                 return InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'Giống lúa',
@@ -1017,8 +1016,9 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
               final displayName = paddyProduct?.name ??
                   selectedProduct?.name ??
                   receipt.productName;
-              final displaySku =
-                  paddyProduct?.sku ?? selectedProduct?.sku ?? receipt.sku;
+              final displaySku = paddyProduct?.sku ??
+                  selectedProduct?.sku ??
+                  receipt.sku;
               // Khi mo lai draft, productVariantId/productName tu detail la
               // du lieu da luu. Lookup co the khong tra lai san pham da ngung
               // ban, nhung khong duoc lam mat san pham tren phieu.
@@ -1222,15 +1222,6 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (AuthSessionStore.current?.user.isWarehouseWorker == true) {
-      return Scaffold(
-        backgroundColor: AppColors.backgroundFor(context),
-        appBar: AppBar(title: const Text('Lịch thu mua')),
-        body: const Center(
-          child: Text('Nhân viên kho chỉ được xem lịch thu mua.'),
-        ),
-      );
-    }
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(context),
       body: SafeArea(
@@ -1649,7 +1640,8 @@ class _BagRow extends StatelessWidget {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: fromScale
                       ? AppColors.primary.withValues(alpha: 0.14)

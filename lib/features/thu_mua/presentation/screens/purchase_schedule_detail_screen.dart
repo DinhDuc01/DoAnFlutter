@@ -6,7 +6,6 @@ import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/state_widgets.dart';
-import '../../../auth/data/auth_session_store.dart';
 import '../../data/purchase_schedule_repository.dart';
 import '../../models/purchase_schedule.dart';
 
@@ -279,39 +278,38 @@ class _DetailContent extends StatelessWidget {
             ],
           ),
         ),
-        if (AuthSessionStore.current?.user.isWarehouseWorker != true)
-          SafeArea(
-            top: false,
-            minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            // Khóa nút khi lịch đã hủy / đã nhập kho / đã lập đủ phiếu theo khối lượng dự kiến.
-            child: FilledButton(
-              onPressed: !schedule.canCreateReceipt
-                  ? null
-                  : () => Navigator.of(context).pushNamed(
-                        AppRoutes.inbound,
-                        arguments: schedule,
-                      ),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                disabledBackgroundColor: AppColors.textTertiary,
-                minimumSize: const Size.fromHeight(52),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
-                ),
+        SafeArea(
+          top: false,
+          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          // Khóa nút khi lịch đã hủy / đã nhập kho / đã lập đủ phiếu theo khối lượng dự kiến.
+          child: FilledButton(
+            onPressed: !schedule.canCreateReceipt
+                ? null
+                : () => Navigator.of(context).pushNamed(
+                      AppRoutes.inbound,
+                      arguments: schedule,
+                    ),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              disabledBackgroundColor: AppColors.textTertiary,
+              minimumSize: const Size.fromHeight(52),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppColors.radiusMd),
               ),
-              child: Text(
-                schedule.canCreateReceipt
-                    ? 'Tạo phiếu mua từ lịch'
-                    : (schedule.blockedReason.isEmpty
-                        ? 'Không thể tạo phiếu'
-                        : schedule.blockedReason),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
-                ),
+            ),
+            child: Text(
+              schedule.canCreateReceipt
+                  ? 'Tạo phiếu mua từ lịch'
+                  : (schedule.blockedReason.isEmpty
+                      ? 'Không thể tạo phiếu'
+                      : schedule.blockedReason),
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
+        ),
       ],
     );
   }

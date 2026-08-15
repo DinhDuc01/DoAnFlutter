@@ -6,7 +6,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
-import '../../../auth/data/auth_session_store.dart';
 import '../../../scale/models/weight_reading.dart';
 import '../../../scale/presentation/widgets/scale_bar.dart';
 import '../../data/stock_take_repository.dart';
@@ -91,11 +90,9 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
   void _syncManualKgController() {
     final line = _line;
     if (line == null) return;
-    // Không gán sẵn "0": trên bàn phím số, người dùng gõ 10 sẽ thành "010".
-    final actualQuantity = line.actualQuantity;
-    final text = actualQuantity == null || actualQuantity == 0
-        ? ''
-        : formatQuantityInput(actualQuantity, digits: 1);
+    final text = line.actualQuantity == null
+        ? '0'
+        : formatQuantityInput(line.actualQuantity, digits: 1);
     if (_manualKgController.text != text) {
       _manualKgController.text = text;
     }
@@ -148,23 +145,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
     return null;
   }
 
-  bool get _canEdit {
-    final detail = _detail;
-    final session = AuthSessionStore.current;
-    return detail?.isDraft == true &&
-        session?.user.hasPermission('STOCKTAKE', 'UPDATE') == true;
-  }
-
-  bool get _canApprove {
-    final session = AuthSessionStore.current;
-    return _detail?.statusCode.trim().toUpperCase() == 'SUBMITTED' &&
-        session?.user.hasPermission('STOCKTAKE', 'APPROVE') == true;
-  }
-
-  bool get _canDelete =>
-      _detail?.statusCode.trim().toUpperCase() == 'DRAFT' &&
-      AuthSessionStore.current?.user.hasPermission('STOCKTAKE', 'DELETE') ==
-          true;
+  bool get _canEdit => _detail?.isDraft ?? false;
 
   void _snack(String message, {bool error = false}) {
     if (!mounted) return;
@@ -206,15 +187,13 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
       });
 
       if (!automatic) {
-        _snack(
-            'Bao #${bag.bagNo}: ${formatNumber(bag.countedWeightKg, digits: 1)} kg');
+        _snack('Bao #${bag.bagNo}: ${formatNumber(bag.countedWeightKg, digits: 1)} kg');
       } else {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(SnackBar(
             duration: const Duration(seconds: 4),
-            content: Text(
-                'Bao #${bag.bagNo}: ${formatNumber(bag.countedWeightKg, digits: 1)} kg'),
+            content: Text('Bao #${bag.bagNo}: ${formatNumber(bag.countedWeightKg, digits: 1)} kg'),
             action: SnackBarAction(
               label: 'Hoàn tác',
               onPressed: () {
@@ -230,8 +209,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
       // Dòng không quản lý theo bao: gán thẳng khối lượng cân vào actualQuantity!
       setState(() {
         line.actualQuantity = capturedWeight;
-        _manualKgController.text =
-            formatQuantityInput(capturedWeight, digits: 1);
+        _manualKgController.text = formatQuantityInput(capturedWeight, digits: 1);
       });
       _snack('Đã nhận số cân: ${formatNumber(capturedWeight, digits: 1)} kg');
     }
@@ -256,9 +234,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
 
       final target = _findBag(result.bagId);
       if (target == null) {
-        _snack(
-            'Bao thuộc phiếu nhưng không có trong danh sách đang mở. Tải lại phiếu.',
-            error: true);
+        _snack('Bao thuộc phiếu nhưng không có trong danh sách đang mở. Tải lại phiếu.', error: true);
         return;
       }
       setState(() {
@@ -308,36 +284,29 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
 
   Future<void> _submit() async {
     final detail = _detail;
-    if (detail == null || !_canEdit || _busy) return;
+    if (detail == null) return;
 
     final untouched = detail.lines.where((l) => !l.touched).toList();
     if (untouched.isNotEmpty) {
       _snack('Còn ${untouched.length} dòng chưa kiểm đếm.', error: true);
       return;
     }
-    final needReason = detail.lines.where((l) =>
-        (l.effectiveActualKg - l.systemQuantity).abs() >= 0.05 &&
-        (l.note ?? '').trim().isEmpty);
+    final needReason = detail.lines.where(
+        (l) => (l.effectiveActualKg - l.systemQuantity).abs() >= 0.05 && (l.note ?? '').trim().isEmpty);
     if (needReason.isNotEmpty) {
-      _snack(
-          'Dòng ${needReason.first.title} chênh lệch kg — bắt buộc nhập lý do.',
-          error: true);
+      _snack('Dòng ${needReason.first.title} chênh lệch kg — bắt buộc nhập lý do.', error: true);
       return;
     }
-    final needRecount = detail.lines.where((l) =>
-        (l.effectiveActualKg - l.systemQuantity).abs() >= 0.05 &&
-        !l.recountConfirmed);
+    final needRecount = detail.lines.where(
+        (l) => (l.effectiveActualKg - l.systemQuantity).abs() >= 0.05 && !l.recountConfirmed);
     if (needRecount.isNotEmpty) {
-      _snack(
-          'Dòng ${needRecount.first.title} chênh lệch kg — phải xác nhận đã đếm lại.',
+      _snack('Dòng ${needRecount.first.title} chênh lệch kg — phải xác nhận đã đếm lại.',
           error: true);
       return;
     }
 
-    final totalActualKg =
-        detail.lines.fold<double>(0, (s, l) => s + l.effectiveActualKg);
-    final totalSystemKg =
-        detail.lines.fold<double>(0, (s, l) => s + l.systemQuantity);
+    final totalActualKg = detail.lines.fold<double>(0, (s, l) => s + l.effectiveActualKg);
+    final totalSystemKg = detail.lines.fold<double>(0, (s, l) => s + l.systemQuantity);
     final netDiffKg = totalActualKg - totalSystemKg;
 
     final confirmed = await showDialog<bool>(
@@ -366,130 +335,8 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
     try {
       await _repository.submit(detail.id, note: detail.note);
       if (!mounted) return;
-      final refreshed = await _repository.getDetail(detail.id);
-      if (!mounted) return;
-      if (refreshed.statusCode.trim().toUpperCase() != 'SUBMITTED') {
-        _snack(
-            'Backend chưa xác nhận phiếu đã chuyển sang trạng thái Đã gửi duyệt.',
-            error: true);
-        setState(() {
-          _detail = refreshed;
-          _loading = false;
-        });
-        return;
-      }
       _snack('Đã gửi phiếu để duyệt.');
-      setState(() {
-        _detail = refreshed;
-        _loading = false;
-        _remoteChanged = false;
-      });
-    } catch (error) {
-      if (mounted) _snack('$error', error: true);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _approve() async {
-    final detail = _detail;
-    if (detail == null || !_canApprove || _busy) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Duyệt phiếu kiểm kê?'),
-        content:
-            Text('Phiếu ${detail.code} sẽ được chốt kết quả và không thể sửa.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Hủy')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Xác nhận duyệt')),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      await _repository.approve(detail.id);
-      final refreshed = await _repository.getDetail(detail.id);
-      if (!mounted) return;
-      if (refreshed.statusCode.trim().toUpperCase() != 'APPROVED') {
-        _snack('Backend chưa xác nhận phiếu đã được duyệt.', error: true);
-      }
-      setState(() => _detail = refreshed);
-    } catch (error) {
-      if (mounted) _snack('$error', error: true);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _reject() async {
-    final detail = _detail;
-    if (detail == null || !_canApprove || _busy) return;
-    final controller = TextEditingController();
-    final reason = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Từ chối phiếu kiểm kê?'),
-        content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'Lý do bắt buộc')),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Hủy')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, controller.text.trim()),
-              child: const Text('Xác nhận từ chối')),
-        ],
-      ),
-    );
-    WidgetsBinding.instance.addPostFrameCallback((_) => controller.dispose());
-    if (reason == null || reason.trim().isEmpty || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      await _repository.reject(detail.id, reason: reason.trim());
-      final refreshed = await _repository.getDetail(detail.id);
-      if (!mounted) return;
-      if (refreshed.statusCode.trim().toUpperCase() != 'REJECTED') {
-        _snack('Backend chưa xác nhận phiếu đã bị từ chối.', error: true);
-      }
-      setState(() => _detail = refreshed);
-    } catch (error) {
-      if (mounted) _snack('$error', error: true);
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
-  }
-
-  Future<void> _delete() async {
-    final detail = _detail;
-    if (detail == null || !_canDelete || _busy) return;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Xóa phiếu kiểm kê?'),
-        content: Text('Phiếu ${detail.code} sẽ được xóa khỏi danh sách.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Hủy')),
-          FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Xóa phiếu')),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) return;
-    setState(() => _busy = true);
-    try {
-      await _repository.delete(detail.id);
-      if (mounted) Navigator.of(context).pop(true);
+      await _load(showLoading: false);
     } catch (error) {
       if (mounted) _snack('$error', error: true);
     } finally {
@@ -518,8 +365,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
               ),
             ),
             Expanded(child: _body()),
-            if (detail != null && (detail.isDraft || _canApprove))
-              _bottomActions(),
+            if (detail != null && detail.isDraft) _bottomActions(),
           ],
         ),
       ),
@@ -529,8 +375,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
   Widget _body() {
     if (_loading && _detail == null) return const ListSkeleton();
     if (_error != null && _detail == null) {
-      return HErrorState(
-          message: 'Không tải được phiếu: $_error', onRetry: _load);
+      return HErrorState(message: 'Không tải được phiếu: $_error', onRetry: _load);
     }
     final detail = _detail!;
     if (detail.lines.isEmpty) {
@@ -549,8 +394,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
           AppInfoBanner(
             tone: AppTone.info,
             icon: Icons.lock_outline_rounded,
-            message:
-                'Phiếu đã ${detail.statusName.toLowerCase()} — số liệu được khoá.',
+            message: 'Phiếu đã ${detail.statusName.toLowerCase()} — số liệu được khoá.',
           ),
         // Có người sửa phiếu ở nơi khác. Không tự ghi đè vì số đếm đang dở có
         // thể chưa lưu — để người dùng tự chọn thời điểm tải lại.
@@ -590,14 +434,11 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
         if (_canEdit) ...[
           ScaleBar(
             key: _scaleBarKey,
-            enabled: _canEdit &&
-                (line != null && (line.hasBags ? _targetBag != null : true)),
+            enabled: _canEdit && (line != null && (line.hasBags ? _targetBag != null : true)),
             targetLabel: line == null
                 ? null
                 : (line.hasBags
-                    ? (_targetBag == null
-                        ? 'Bao chưa chọn'
-                        : 'bao #${_targetBag!.bagNo}')
+                    ? (_targetBag == null ? 'Bao chưa chọn' : 'bao #${_targetBag!.bagNo}')
                     : 'thực tế (kg)'),
             onCapture: _onScaleCapture,
           ),
@@ -615,7 +456,10 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
         ],
         _lineSummary(line),
         const SizedBox(height: 12),
-        if (line.hasBags) ..._bagCards(line) else _manualKgCard(line),
+        if (line.hasBags)
+          ..._bagCards(line)
+        else
+          _manualKgCard(line),
         const SizedBox(height: 12),
         _reasonCard(line),
       ],
@@ -663,8 +507,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
                 selected: selected,
                 selectedColor: const Color(0xFFE8F5E9),
                 side: BorderSide(
-                  color:
-                      selected ? const Color(0xFF00A76F) : Colors.grey.shade300,
+                  color: selected ? const Color(0xFF00A76F) : Colors.grey.shade300,
                   width: selected ? 1.5 : 1.0,
                 ),
                 label: Text(
@@ -676,8 +519,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
                   ),
                 ),
                 avatar: done
-                    ? const Icon(Icons.check_circle,
-                        size: 16, color: Color(0xFF00A76F))
+                    ? const Icon(Icons.check_circle, size: 16, color: Color(0xFF00A76F))
                     : null,
                 onSelected: (_) => setState(() {
                   _lineIndex = index;
@@ -733,13 +575,10 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(line.productVariantName ?? line.title,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w900)),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900)),
                     Text(
                       'Lô ${line.lotCode ?? '—'} · ${line.locationLabel}',
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondaryFor(context)),
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondaryFor(context)),
                     ),
                   ],
                 ),
@@ -792,9 +631,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
                       : '—',
                   tone: !line.touched
                       ? AppTone.neutral
-                      : (diffKg.abs() < 0.05
-                          ? AppTone.neutral
-                          : (diffKg < 0 ? AppTone.danger : AppTone.warning)),
+                      : (diffKg.abs() < 0.05 ? AppTone.neutral : (diffKg < 0 ? AppTone.danger : AppTone.warning)),
                 ),
               ),
             ],
@@ -836,8 +673,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
       for (final bag in line.bags)
         AppCard(
           margin: const EdgeInsets.only(bottom: 8),
-          color:
-              bag.id == _targetBagId ? AppColors.brandTintFor(context) : null,
+          color: bag.id == _targetBagId ? AppColors.brandTintFor(context) : null,
           onTap: _canEdit ? () => setState(() => _targetBagId = bag.id) : null,
           child: Row(
             children: [
@@ -852,8 +688,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
                     Row(
                       children: [
                         Text('Bao #${bag.bagNo}',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w800)),
+                            style: const TextStyle(fontWeight: FontWeight.w800)),
                         if (bag.scannedByQr) ...[
                           const SizedBox(width: 6),
                           const Icon(Icons.qr_code_2_rounded,
@@ -901,8 +736,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
         decoration: const InputDecoration(
           labelText: 'Khối lượng thực tế đếm được (kg) *',
           suffixText: 'kg',
-          hintText: 'Nhập số kg kiểm đếm thực tế',
-          helperText: 'Để trống nếu chưa kiểm đếm',
+          helperText: 'Vừa vào chọn mặt hàng mặc định là 0 — gõ số kg kiểm đếm thực tế',
         ),
         onChanged: (value) {
           line.actualQuantity = parseDecimal(value);
@@ -911,6 +745,8 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
       ),
     );
   }
+
+
 
   Widget _reasonCard(StockTakeLine line) {
     return AppCard(
@@ -932,8 +768,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
             controlAffinity: ListTileControlAffinity.leading,
             value: line.recountConfirmed,
             onChanged: _canEdit
-                ? (value) =>
-                    setState(() => line.recountConfirmed = value ?? false)
+                ? (value) => setState(() => line.recountConfirmed = value ?? false)
                 : null,
             title: const Text('Đã đếm lại lần hai',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
@@ -944,26 +779,6 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
   }
 
   Widget _bottomActions() {
-    if (_canApprove) {
-      return Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
-        decoration: BoxDecoration(
-            color: AppColors.surfaceFor(context),
-            border:
-                Border(top: BorderSide(color: AppColors.borderFor(context)))),
-        child: Row(children: [
-          Expanded(
-              child: OutlinedButton(
-                  onPressed: _busy ? null : _reject,
-                  child: const Text('Từ chối'))),
-          const SizedBox(width: 10),
-          Expanded(
-              child: FilledButton(
-                  onPressed: _busy ? null : _approve,
-                  child: const Text('Duyệt'))),
-        ]),
-      );
-    }
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       decoration: BoxDecoration(
@@ -972,16 +787,9 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
       ),
       child: Row(
         children: [
-          if (_canDelete) ...[
-            Expanded(
-                child: OutlinedButton(
-                    onPressed: _busy ? null : _delete,
-                    child: const Text('Xóa'))),
-            const SizedBox(width: 10),
-          ],
           Expanded(
             child: OutlinedButton(
-              onPressed: !_canEdit || _busy ? null : () => _save(),
+              onPressed: _busy ? null : () => _save(),
               style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(46)),
               child: const Text('Lưu nháp'),
@@ -990,7 +798,7 @@ class _StockTakeDetailScreenState extends State<StockTakeDetailScreen>
           const SizedBox(width: 10),
           Expanded(
             child: FilledButton(
-              onPressed: !_canEdit || _busy ? null : _submit,
+              onPressed: _busy ? null : _submit,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 minimumSize: const Size.fromHeight(46),

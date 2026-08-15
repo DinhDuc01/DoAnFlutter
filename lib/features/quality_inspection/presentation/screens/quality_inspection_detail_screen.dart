@@ -5,7 +5,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
-import '../../../auth/data/auth_session_store.dart';
 import '../../data/quality_inspection_repository.dart';
 import '../../models/quality_inspection.dart';
 import 'quality_inspection_edit_screen.dart';
@@ -79,8 +78,7 @@ class _QualityInspectionDetailScreenState
       final detail = await _repository.getDetail(widget.inspectionId);
       final lotId = detail.paddyLotId;
       final lot = lotId > 0 ? await _safeLot(lotId) : null;
-      final history =
-          lotId > 0 ? await _safeHistory(lotId) : const <QualityInspection>[];
+      final history = lotId > 0 ? await _safeHistory(lotId) : const <QualityInspection>[];
       if (!mounted) return;
       setState(() {
         // Bảng paged không trả affectedWeightKg/lotStatusCode đầy đủ nên chi
@@ -166,50 +164,49 @@ class _QualityInspectionDetailScreenState
   Widget build(BuildContext context) {
     final detail = _detail;
     return Scaffold(
-      backgroundColor: AppColors.backgroundFor(context),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppGradientHeader(
-              overline: 'Chi tiết xử lý',
-              title: detail?.lotLabel ?? 'Phiếu kiểm định',
-              subtitle: detail == null
-                  ? 'Đang tải dữ liệu…'
-                  : '${detail.statusText} · ${formatDate(detail.inspectedAt, withTime: true)}',
-              leading: IconButton(
-                color: Colors.white,
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.of(context).pop(_changed),
+        backgroundColor: AppColors.backgroundFor(context),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppGradientHeader(
+                overline: 'Chi tiết xử lý',
+                title: detail?.lotLabel ?? 'Phiếu kiểm định',
+                subtitle: detail == null
+                    ? 'Đang tải dữ liệu…'
+                    : '${detail.statusText} · ${formatDate(detail.inspectedAt, withTime: true)}',
+                leading: IconButton(
+                  color: Colors.white,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => Navigator.of(context).pop(_changed),
+                ),
+                trailing: IconButton(
+                  color: Colors.white,
+                  tooltip: 'Tải lại',
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: () => _load(showLoading: false),
+                ),
               ),
-              trailing: IconButton(
-                color: Colors.white,
-                tooltip: 'Tải lại',
-                icon: const Icon(Icons.refresh_rounded),
-                onPressed: () => _load(showLoading: false),
-              ),
-            ),
-            Expanded(child: _body(detail)),
-          ],
+              Expanded(child: _body(detail)),
+            ],
+          ),
         ),
-      ),
-      bottomNavigationBar: detail == null ||
-              AuthSessionStore.current?.user.isWarehouseWorker == true
-          ? null
-          : SafeArea(
-              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: FilledButton.icon(
-                onPressed: _openEdit,
-                icon: const Icon(Icons.fact_check_outlined),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                label: Text(
-                  detail.isDraft ? 'Kiểm định ngay' : 'Cập nhật phiếu',
+        bottomNavigationBar: detail == null
+            ? null
+            : SafeArea(
+                minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: FilledButton.icon(
+                  onPressed: _openEdit,
+                  icon: const Icon(Icons.fact_check_outlined),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                  label: Text(
+                    detail.isDraft ? 'Kiểm định ngay' : 'Cập nhật phiếu',
+                  ),
                 ),
               ),
-            ),
     );
   }
 
@@ -253,18 +250,15 @@ class _QualityInspectionDetailScreenState
             _field('Rủi ro chính', detail.riskText),
             _chipField('Mức độ', detail.severity.label,
                 qualitySeverityTone(detail.severity)),
-            _chipField(
-                'Trạng thái', detail.statusText, qualityStatusTone(detail)),
+            _chipField('Trạng thái', detail.statusText, qualityStatusTone(detail)),
             _field('Hướng xử lý', _dash(detail.handling)),
             _field('Ghi chú', _dash(detail.note)),
           ]),
           _section('Thông tin thực hiện', [
             _field('Người kiểm', _dash(detail.inspectorName)),
-            _field('Thời gian kiểm',
-                formatDate(detail.inspectedAt, withTime: true)),
+            _field('Thời gian kiểm', formatDate(detail.inspectedAt, withTime: true)),
             _field('Ngày tạo', formatDate(detail.createdDate, withTime: true)),
-            _field('Cập nhật',
-                formatDate(detail.lastModifiedDate, withTime: true)),
+            _field('Cập nhật', formatDate(detail.lastModifiedDate, withTime: true)),
           ]),
           if (detail.wasSplit)
             const Padding(
@@ -380,8 +374,7 @@ class _QualityInspectionDetailScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(value,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
                   if (sub != null)
                     Text(
                       sub,

@@ -126,7 +126,12 @@ class ApiAuthService implements AuthService {
       return AuthSession(
         accessToken: accessToken,
         refreshToken: refreshToken,
-        user: AuthUser.fromJson(userInfo),
+        user: AuthUser(
+          id: JsonReader.integer(userInfo, 'id') ?? 0,
+          fullName: JsonReader.string(userInfo, 'fullName') ?? '',
+          email: JsonReader.string(userInfo, 'email') ?? email.trim(),
+          avatarUrl: JsonReader.string(userInfo, 'avatarUrl'),
+        ),
       );
     } on AuthException {
       rethrow;
@@ -136,41 +141,6 @@ class ApiAuthService implements AuthService {
     } catch (error) {
       // Xử lý các lỗi hệ thống không xác định khác
       throw AuthException('Không đăng nhập được: $error');
-    }
-  }
-
-  @override
-  Future<AuthSession> fetchSession(AuthSession session) async {
-    if (session.accessToken.isEmpty) {
-      throw const AuthException('Phiên đăng nhập không hợp lệ');
-    }
-
-    try {
-      final json = await _apiClient.get(
-        '/api/v1/auth/me/session',
-        token: session.accessToken,
-      );
-
-      final isSucceeded = JsonReader.boolean(json, 'isSucceeded') ?? false;
-      if (!isSucceeded) {
-        throw AuthException(
-          JsonReader.string(json, 'message') ?? 'Không tải được thông tin phân quyền',
-        );
-      }
-
-      final resources = JsonReader.map(json, 'resources');
-      if (resources == null) {
-        throw const AuthException('API nạp phiên không trả dữ liệu');
-      }
-
-      final updatedUser = AuthUser.fromJson(resources);
-      return session.copyWith(user: updatedUser);
-    } on AuthException {
-      rethrow;
-    } on ApiException catch (error) {
-      throw AuthException(error.message);
-    } catch (error) {
-      throw AuthException('Không tải được phân quyền: $error');
     }
   }
 }

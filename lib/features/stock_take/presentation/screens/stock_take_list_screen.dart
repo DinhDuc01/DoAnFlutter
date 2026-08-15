@@ -8,7 +8,6 @@ import '../../../../core/api/api_client.dart';
 import '../widgets/stock_take_card.dart';
 import 'package:stocklite/features/kho/models/inventory_stock.dart' show WarehouseOption;
 import 'package:stocklite/features/kho/data/stock_take_repository.dart' as legacy_repo;
-import '../../../../core/widgets/permission_guard.dart';
 
 class StockTakeListScreen extends StatefulWidget {
   const StockTakeListScreen({this.repository, this.legacyRepository, super.key});
@@ -202,15 +201,11 @@ class _StockTakeListScreenState extends State<StockTakeListScreen> {
           ),
         ],
       ),
-      floatingActionButton: PermissionBuilder(
-        menuCode: 'STOCKTAKE',
-        action: 'CREATE',
-        child: FloatingActionButton.extended(
-          onPressed: _createStockTake,
-          backgroundColor: const Color(0xFF00A76F),
-          icon: const Icon(Icons.add),
-          label: const Text('Phiếu mới'),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _createStockTake,
+        backgroundColor: const Color(0xFF00A76F),
+        icon: const Icon(Icons.add),
+        label: const Text('Phiếu mới'),
       ),
     );
   }

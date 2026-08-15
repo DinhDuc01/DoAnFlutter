@@ -6,7 +6,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
-import '../../../auth/data/auth_session_store.dart';
 import '../../../milling/models/milling_plan_args.dart';
 import '../../../outbound_orders/models/outbound_order.dart';
 import '../../../outbound_orders/presentation/screens/outbound_order_detail_screen.dart';
@@ -103,49 +102,6 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
         content: Text(message),
         backgroundColor: success ? AppColors.primaryDark : null,
       ));
-  }
-
-  Future<void> _confirmOrder(SalesOrderDetail order) async {
-    final accepted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Duyệt đơn bán?'),
-        content: Text(
-          'Xác nhận duyệt đơn ${order.soCode}. Sau khi duyệt, đơn sẽ chuyển '
-          'sang trạng thái Chờ xác nhận để tiếp tục kiểm tra và giữ hàng.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Hủy'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Duyệt đơn'),
-          ),
-        ],
-      ),
-    );
-    if (accepted != true || !mounted || _busy) return;
-
-    setState(() => _busy = true);
-    try {
-      await _repository.confirm(order.id);
-      _changed = true;
-      if (!mounted) return;
-      setState(() => _busy = false);
-      await _load(showLoading: false);
-      if (!mounted) return;
-      if (_order?.statusId != SalesOrderStatusIds.pendingConfirm) {
-        _snack('Đơn đã được gửi duyệt nhưng trạng thái chưa được cập nhật.');
-        return;
-      }
-      _snack('Đã duyệt đơn bán ${order.soCode}.', success: true);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _busy = false);
-      _snack('$error');
-    }
   }
 
   // ── Hủy đơn kèm lý do ────────────────────────────────────────────────
@@ -281,7 +237,8 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
         child: Column(
           children: [
             AppGradientHeader(
-              overline: order == null ? null : salesChannelLabel(order.channel),
+              overline:
+                  order == null ? null : salesChannelLabel(order.channel),
               title: order?.soCode ?? 'Chi tiết đơn bán',
               subtitle: order?.customerName ?? 'Đang tải dữ liệu…',
               leading: IconButton(
@@ -365,7 +322,8 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
           if (order.waitingWebConfirm) ...[
             const SizedBox(height: 12),
             const AppInfoBanner(
-              message: 'Đơn cần được xác nhận trên web trước khi giữ hàng. '
+              message:
+                  'Đơn cần được xác nhận trên web trước khi giữ hàng. '
                   'Sau khi web xác nhận, quay lại đây bấm "Kiểm tra & giữ hàng".',
               tone: AppTone.info,
               icon: Icons.desktop_windows_outlined,
@@ -510,27 +468,10 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
   }
 
   Widget? _actionBar(SalesOrderDetail order) {
-    // Đơn bán là màn tra cứu đối với WAREHOUSE. Xuất/Giao là phân hệ riêng.
-    if (AuthSessionStore.current?.user.isWarehouseWorker == true) return null;
     final draft = order.draftOutbound;
     final buttons = <Widget>[];
-    final session = AuthSessionStore.current;
-    final canApprove = order.canConfirm &&
-        session?.hasPermission('SALE_ORDERS', 'APPROVE') == true &&
-        session?.hasPermission('SALE_ORDERS', 'UPDATE') == true;
 
-    if (canApprove) {
-      buttons.add(
-        FilledButton.icon(
-          key: const Key('sales_order_approve'),
-          onPressed: _busy ? null : () => _confirmOrder(order),
-          icon: const Icon(Icons.verified_outlined),
-          label: const Text('Duyệt đơn'),
-        ),
-      );
-    }
-
-    if (false && order.needsMilling) {
+    if (order.needsMilling) {
       buttons.add(
         OutlinedButton.icon(
           onPressed: _busy ? null : () => _openMilling(order),

@@ -7,8 +7,6 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_pagination.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
-import '../../../../core/widgets/permission_guard.dart';
-import '../../../auth/data/auth_session_store.dart';
 import '../../data/sales_order_repository.dart';
 import '../../models/sales_order.dart';
 import '../widgets/sales_order_card.dart';
@@ -25,8 +23,7 @@ import 'sales_order_detail_screen.dart';
 /// Mỗi lần đổi từ khóa hoặc bộ lọc đều quay về trang 1 để không rơi vào trang
 /// không tồn tại của tập kết quả mới.
 class SalesOrderListScreen extends StatefulWidget {
-  const SalesOrderListScreen(
-      {this.repository, this.embedded = false, super.key});
+  const SalesOrderListScreen({this.repository, this.embedded = false, super.key});
 
   final SalesOrderRepository? repository;
 
@@ -191,8 +188,7 @@ class _SalesOrderListScreenState extends State<SalesOrderListScreen>
     _load();
   }
 
-  Future<void> _openDetail(SalesOrderSummary order) =>
-      _openDetailById(order.id);
+  Future<void> _openDetail(SalesOrderSummary order) => _openDetailById(order.id);
 
   Future<void> _openDetailById(int salesOrderId) async {
     final changed = await Navigator.of(context).push<bool>(
@@ -245,18 +241,11 @@ class _SalesOrderListScreenState extends State<SalesOrderListScreen>
       ],
     );
 
-    final createButton =
-        AuthSessionStore.current?.user.isWarehouseWorker == true
-            ? const SizedBox.shrink()
-            : PermissionBuilder(
-                menuCode: 'SALE_ORDERS',
-                action: 'CREATE',
-                child: FloatingActionButton.extended(
-                  onPressed: _createOrder,
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tạo đơn bán'),
-                ),
-              );
+    final createButton = FloatingActionButton.extended(
+      onPressed: _createOrder,
+      icon: const Icon(Icons.add),
+      label: const Text('Tạo đơn bán'),
+    );
 
     if (widget.embedded) {
       // Khi nhúng làm tab, Scaffold cha không nhận FAB nên đặt nút nổi bằng Stack.

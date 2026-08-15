@@ -24,11 +24,7 @@ void main() {
       'Abc@123456',
     );
     await tester.tap(find.byKey(const ValueKey('login_submit')));
-    // The production app starts background services after navigation. Keep
-    // this test deterministic by advancing only the finite route transition;
-    // the services themselves are injected as no-ops above.
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
 
     expect(find.text('Tài khoản không tồn tại'), findsOneWidget);
     expect(authService.receivedUsername, 'wrong-user');
@@ -71,23 +67,13 @@ void main() {
       ),
     );
     final authService = _AcceptingAuthService(session);
-    final observer = _RecordingNavigatorObserver();
 
     await tester.pumpWidget(
       MaterialApp(
         routes: {
-          AppRoutes.home: (_) => const Scaffold(
-                key: ValueKey('home_screen'),
-                body: Text('Home screen'),
-              ),
+          AppRoutes.home: (_) => const Scaffold(body: Text('Home screen')),
         },
-        navigatorObservers: [observer],
-        home: LoginScreen(
-          authService: authService,
-          saveSession: (value) async => AuthSessionStore.current = value,
-          startNotifications: () async {},
-          startRealtime: () async {},
-        ),
+        home: LoginScreen(authService: authService),
       ),
     );
     await tester.enterText(
@@ -99,17 +85,12 @@ void main() {
       'Abc@123456',
     );
     await tester.tap(find.byKey(const ValueKey('login_submit')));
-    // Advance only the finite route transition; background services are
-    // injected as no-ops for this widget test.
-    await tester.pump(const Duration(milliseconds: 100));
-    await tester.pump(const Duration(seconds: 1));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
     expect(authService.receivedUsername, 'admin');
     expect(authService.receivedPassword, 'Abc@123456');
     expect(AuthSessionStore.current, same(session));
-    expect(observer.replacedRouteNames, contains(AppRoutes.home));
-    expect(find.byKey(const ValueKey('home_screen')), findsOneWidget);
+    expect(find.text('Home screen'), findsOneWidget);
   });
 }
 
@@ -141,9 +122,6 @@ class _RejectingAuthService implements AuthService {
 
   @override
   Future<AuthSession> refresh(AuthSession session) async => session;
-
-  @override
-  Future<AuthSession> fetchSession(AuthSession session) async => session;
 }
 
 class _AcceptingAuthService implements AuthService {
@@ -165,24 +143,4 @@ class _AcceptingAuthService implements AuthService {
 
   @override
   Future<AuthSession> refresh(AuthSession session) async => session;
-
-  @override
-  Future<AuthSession> fetchSession(AuthSession session) async => session;
-}
-
-class _RecordingNavigatorObserver extends NavigatorObserver {
-  final List<String?> pushedRouteNames = <String?>[];
-  final List<String?> replacedRouteNames = <String?>[];
-
-  @override
-  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    pushedRouteNames.add(route.settings.name);
-    super.didPush(route, previousRoute);
-  }
-
-  @override
-  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    replacedRouteNames.add(newRoute?.settings.name);
-    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-  }
 }
