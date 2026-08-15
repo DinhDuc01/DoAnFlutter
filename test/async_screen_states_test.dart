@@ -182,48 +182,44 @@ void main() {
     testWidgets('shows empty state', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: QualityInspectionScreen(
-            repository: _InspectionRepository(inspections: Future.value([])),
-          ),
+          home: QualityInspectionScreen(repository: _InspectionRepository()),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Chưa có phiếu kiểm chất'), findsOneWidget);
+      expect(find.text('Chưa có phiếu kiểm định'), findsOneWidget);
     });
 
     testWidgets('shows error state', (tester) async {
-      final completer = Completer<List<QualityInspection>>();
       await tester.pumpWidget(
         MaterialApp(
           home: QualityInspectionScreen(
-            repository: _InspectionRepository(
-              inspections: completer.future,
-            ),
+            repository: _InspectionRepository(failing: true),
           ),
         ),
       );
-      completer.completeError('inspection failed');
       await tester.pumpAndSettle();
 
       expect(find.text('Đã xảy ra lỗi'), findsOneWidget);
     });
 
-    testWidgets('renders an inspection result', (tester) async {
+    testWidgets('renders an inspection row without create action',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: QualityInspectionScreen(
             repository: _InspectionRepository(
-              inspections: Future.value([
+              items: [
                 QualityInspection(
                   id: 1,
                   paddyLotId: 2,
                   lotCode: 'LOT-01',
+                  lotStatusCode: 'IN_STOCK',
                   inspectedAt: DateTime(2026, 7, 22),
-                  passed: true,
+                  passedInspection: true,
                   moisturePercent: 13.5,
                 ),
-              ]),
+              ],
             ),
           ),
         ),
@@ -231,62 +227,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('LOT-01'), findsOneWidget);
-      expect(find.textContaining('Đạt chất lượng'), findsOneWidget);
-    });
-
-    testWidgets('create action warns when no paddy lots exist', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: QualityInspectionScreen(
-            repository: _InspectionRepository(
-              inspections: Future.value([]),
-              lots: Future.value([]),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Tạo phiếu kiểm chất'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('Chưa có lô lúa/gạo để kiểm chất.'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('quality form rejects empty measurement fields',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: QualityInspectionScreen(
-            repository: _InspectionRepository(
-              inspections: Future.value([]),
-              lots: Future.value(
-                const [
-                  PaddyLotOption(
-                    id: 1,
-                    code: 'LOT-01',
-                    lotType: 'PADDY',
-                    remainingWeightKg: 1000,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Tạo phiếu kiểm chất'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Lưu kiểm chất'));
-      await tester.pump();
-
-      expect(find.text('Vui lòng nhập Độ ẩm (%)'), findsOneWidget);
-      expect(find.text('Vui lòng nhập Tạp chất (%)'), findsOneWidget);
+      expect(find.text('Đạt'), findsOneWidget);
+      // Mobile không được tạo phiếu kiểm định — chỉ web mới có luồng này.
+      expect(find.textContaining('Tạo phiếu'), findsNothing);
+      expect(find.byType(FloatingActionButton), findsNothing);
     });
   });
 }
@@ -312,22 +256,42 @@ class _NotificationRepository implements NotificationsRepository {
 }
 
 class _InspectionRepository implements QualityInspectionRepository {
-  _InspectionRepository({
-    required this.inspections,
-    Future<List<PaddyLotOption>>? lots,
-  }) : lots = lots ?? Future.value(const []);
+  _InspectionRepository({this.items = const <QualityInspection>[], this.failing = false});
 
-  final Future<List<QualityInspection>> inspections;
-  final Future<List<PaddyLotOption>> lots;
+  final List<QualityInspection> items;
+  final bool failing;
 
   @override
-  Future<List<QualityInspection>> getInspections() => inspections;
+  Future<QualityInspectionPage> loadPage({
+    int page = 1,
+    int pageSize = 20,
+    String search = '',
+    bool? passedInspection,
+  }) async {
+    if (failing) throw const QualityInspectionException('inspection failed');
+    return QualityInspectionPage(
+      items: items,
+      recordsTotal: items.length,
+      recordsFiltered: items.length,
+    );
+  }
 
   @override
-  Future<List<PaddyLotOption>> getPaddyLots() => lots;
+  Future<QualityInspection> getDetail(int id) async => items.first;
 
   @override
-  Future<int> createInspection(QualityInspectionDraft draft) async => 1;
+  Future<List<QualityInspection>> getHistory(int paddyLotId) async => items;
+
+  @override
+  Future<QualityLot> getLot(int paddyLotId) async =>
+      const QualityLot(id: 1, lotCode: 'LOT-01');
+
+  @override
+  Future<Map<int, QualityLot>> loadLotMap() async => const <int, QualityLot>{};
+
+  @override
+  Future<void> update(QualityInspectionUpdate payload) async =>
+      throw StateError('Test không được phép ghi dữ liệu.');
 }
 
 WarehouseReport _report() {

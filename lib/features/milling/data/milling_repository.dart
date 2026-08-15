@@ -23,6 +23,14 @@ abstract class MillingRepository {
   Future<MillingSourceSuggestion> getSourceSuggestion(int orderId) async =>
       const MillingSourceSuggestion(requiredWeightKg: 0, columns: []);
 
+  /// Nguồn lúa ĐÃ GIỮ của lệnh, dùng cho chế độ chỉ xem khi lệnh đang xay.
+  /// KHÔNG gọi `source-suggestions` vì backend chỉ gợi ý cho lệnh Nháp/Đã giữ
+  /// (trạng thái khác trả 422) — đọc thẳng `inputs` của chi tiết lệnh.
+  Future<MillingSourceSuggestion> getReservedSource(int orderId) async {
+    final order = await getMillingOrderDetail(orderId);
+    return MillingSourceSuggestion.fromOrderInputs(order);
+  }
+
   Future<void> reserveOrder(
     int orderId,
     List<MillingSourceColumn> columns,
@@ -32,6 +40,11 @@ abstract class MillingRepository {
 
   Future<void> startOrder(int orderId) async {
     throw UnsupportedError('Milling repository chưa hỗ trợ bắt đầu xay.');
+  }
+
+  /// Hủy lệnh xay (chỉ Nháp hoặc Đã giữ lúa) — lúa đã giữ được giải phóng.
+  Future<void> cancelOrder(int orderId) async {
+    throw UnsupportedError('Milling repository chưa hỗ trợ hủy lệnh.');
   }
 
   Future<int> createOrder({
@@ -129,11 +142,20 @@ class MockMillingRepository implements MillingRepository {
       const MillingSourceSuggestion(requiredWeightKg: 0, columns: []);
 
   @override
+  Future<MillingSourceSuggestion> getReservedSource(int orderId) async {
+    final order = await getMillingOrderDetail(orderId);
+    return MillingSourceSuggestion.fromOrderInputs(order);
+  }
+
+  @override
   Future<void> reserveOrder(
       int orderId, List<MillingSourceColumn> columns) async {}
 
   @override
   Future<void> startOrder(int orderId) async {}
+
+  @override
+  Future<void> cancelOrder(int orderId) async {}
 
   @override
   Future<List<MillingPaddyLotOption>> getPaddyLots() async => const [];

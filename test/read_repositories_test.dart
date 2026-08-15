@@ -11,6 +11,7 @@ import 'package:stocklite/features/milling/models/milling_output_form.dart';
 import 'package:stocklite/features/notifications/data/api_notifications_repository.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
 import 'package:stocklite/features/quality_inspection/data/quality_inspection_repository.dart';
+import 'package:stocklite/features/quality_inspection/models/quality_inspection.dart';
 import 'package:stocklite/features/thu_mua/data/purchase_schedule_repository.dart';
 import 'package:stocklite/features/thu_mua/models/purchase_schedule.dart';
 
@@ -386,248 +387,123 @@ void main() {
       AuthSessionStore.current = null;
 
       await expectLater(
-        ApiQualityInspectionRepository(apiClient: FakeApiClient())
-            .getInspections(),
+        ApiQualityInspectionRepository(apiClient: FakeApiClient()).loadPage(),
         throwsA(isA<QualityInspectionException>()),
       );
     });
 
-    test('parses inspections and sorts newest first', () async {
+    test('sends the same column map as web and parses the page', () async {
       final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': [
-            {
-              'id': 1,
-              'paddyLotId': 10,
-              'lotCode': 'OLD',
-              'inspectedAt': '2026-07-20T00:00:00Z',
-              'passedInspection': false,
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/quality-inspections/paged-advanced');
+          expect(body!['start'], 20);
+          expect(body['length'], 20);
+          expect((body['search'] as Map)['value'], 'LOT-02');
+          final columns = body['columns'] as List;
+          expect(columns.length, 11);
+          expect(columns[8]['data'], 'passedInspection');
+          expect(columns[8]['search']['value'], 'true');
+          expect((body['order'] as List).single['column'], 2);
+          return {
+            'isSucceeded': true,
+            'resources': {
+              'data': [
+                {
+                  'id': 2,
+                  'paddyLotId': 4,
+                  'lotCode': 'LOT-02',
+                  'lotStatusCode': 'AWAITING_QC',
+                  'passedInspection': true,
+                  'inspectedAt': '2026-08-02T00:00:00Z',
+                },
+              ],
+              'recordsTotal': 41,
+              'recordsFiltered': 21,
             },
-            {
-              'id': 2,
-              'paddyLotId': 20,
-              'lotCode': 'NEW',
-              'inspectedAt': '2026-07-22T00:00:00Z',
-              'moisturePercent': '13.5',
-              'passedInspection': true,
-            },
-          ],
+          };
         },
       );
 
-      final results = await ApiQualityInspectionRepository(apiClient: client)
-          .getInspections();
+      final page = await ApiQualityInspectionRepository(apiClient: client)
+          .loadPage(page: 2, pageSize: 20, search: 'LOT-02', passedInspection: true);
 
-      expect(results.map((item) => item.lotCode), ['NEW', 'OLD']);
-      expect(results.first.moisturePercent, 13.5);
-      expect(results.first.passed, isTrue);
+      expect(page.items.single.lotCode, 'LOT-02');
+      expect(page.items.single.isDraft, isTrue);
+      expect(page.recordsTotal, 41);
+      expect(page.recordsFiltered, 21);
     });
 
-    test('loads valid paddy lots and creates fallback codes', () async {
+    test('parses detail, lot bags and newest-first history', () async {
       final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': [
-            {
-              'id': 1,
-              'lotCode': 'LOT-01',
-              'lotType': 'PADDY',
-              'remainingWeightKg': 1200,
-            },
-            {'id': 2},
-            {'id': 0, 'lotCode': 'INVALID'},
-            {'id': 3, 'lotCode': 'BRAN-01', 'lotType': 'BYPRODUCT'},
-          ],
+        onGet: (path, _, __) async {
+          if (path.contains('/by-lot/')) {
+            return {
+              'isSucceeded': true,
+              'resources': [
+                {'id': 1, 'inspectedAt': '2026-07-01T00:00:00Z', 'passedInspection': false},
+                {'id': 2, 'inspectedAt': '2026-08-01T00:00:00Z', 'passedInspection': true},
+              ],
+            };
+          }
+          if (path.startsWith('/api/v1/paddy-lots/')) {
+            return {
+              'isSucceeded': true,
+              'resources': {
+                'id': 3,
+                'lotCode': 'LOT-01',
+                'warehouseName': 'Kho A',
+                'initialWeightKg': 1000,
+                'remainingWeightKg': 0,
+                'bags': [
+                  {'id': 11, 'bagNo': 1, 'weightKg': 50, 'status': 'Pending'},
+                ],
+              },
+            };
+          }
+          return {
+            'isSucceeded': true,
+            'resources': {'id': 9, 'paddyLotId': 3, 'affectedWeightKg': 120},
+          };
         },
       );
-
-      final lots = await ApiQualityInspectionRepository(apiClient: client)
-          .getPaddyLots();
-
-      expect(lots, hasLength(2));
-      expect(lots[0].code, 'Lô #2');
-      expect(lots[1].code, 'LOT-01');
-      expect(lots[1].label, 'LOT-01 · Lúa · 1200 kg');
-    });
-
-    test('posts every draft field and returns created id', () async {
-      final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'isSucceeded': true,
-          'resources': {'id': 99},
-        },
-      );
-      const draft = QualityInspectionDraft(
-        paddyLotId: 7,
-        passed: true,
-        moisturePercent: 13,
-        impurityPercent: 2,
-        moldLevel: 'Không',
-        pestLevel: 'Thấp',
-        packagingStatus: 'Tốt',
-        handling: 'Nhập kho',
-        note: 'Đạt',
-      );
-
-      final id = await ApiQualityInspectionRepository(apiClient: client)
-          .createInspection(draft);
-
-      expect(id, 99);
-      final call = client.calls.single;
-      expect(call.path, '/api/v1/quality-inspections');
-      expect(call.body?['paddyLotId'], 7);
-      expect(call.body?['passedInspection'], isTrue);
-      expect(call.body?['moisturePercent'], 13);
-      expect(call.body?['note'], 'Đạt');
-    });
-
-    test('uses the backend failure message when creation is rejected',
-        () async {
-      final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'isSucceeded': false,
-          'message': 'Lô đã bị khóa',
-        },
-      );
-
-      await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).createInspection(
-          const QualityInspectionDraft(
-            paddyLotId: 7,
-            passed: false,
-            moisturePercent: 15,
-            impurityPercent: 3,
-          ),
-        ),
-        throwsA(
-          isA<QualityInspectionException>().having(
-            (error) => error.message,
-            'message',
-            'Lô đã bị khóa',
-          ),
-        ),
-      );
-    });
-
-    test('validates required quality measurements before posting', () async {
-      final client = FakeApiClient();
-
-      await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).createInspection(
-          const QualityInspectionDraft(paddyLotId: 7, passed: true),
-        ),
-        throwsA(isA<QualityInspectionException>()),
-      );
-      expect(client.calls, isEmpty);
-    });
-
-    test('rejects an invalid paddy lot before posting', () async {
-      final client = FakeApiClient();
-
-      await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).createInspection(
-          const QualityInspectionDraft(
-            paddyLotId: 0,
-            passed: false,
-            moisturePercent: 13,
-            impurityPercent: 2,
-          ),
-        ),
-        throwsA(
-          isA<QualityInspectionException>().having(
-            (error) => error.message,
-            'message',
-            contains('không hợp lệ'),
-          ),
-        ),
-      );
-      expect(client.calls, isEmpty);
-    });
-
-    test('rejects percentage measurements outside zero to one hundred',
-        () async {
-      final client = FakeApiClient();
       final repository = ApiQualityInspectionRepository(apiClient: client);
 
-      for (final draft in const [
-        QualityInspectionDraft(
-          paddyLotId: 7,
-          passed: false,
-          moisturePercent: -0.1,
-          impurityPercent: 2,
-        ),
-        QualityInspectionDraft(
-          paddyLotId: 7,
-          passed: false,
-          moisturePercent: 13,
-          impurityPercent: 100.1,
-        ),
-      ]) {
-        await expectLater(
-          repository.createInspection(draft),
-          throwsA(
-            isA<QualityInspectionException>().having(
-              (error) => error.message,
-              'message',
-              contains('0 đến 100%'),
-            ),
-          ),
-        );
-      }
-      expect(client.calls, isEmpty);
+      final detail = await repository.getDetail(9);
+      final lot = await repository.getLot(3);
+      final history = await repository.getHistory(3);
+
+      expect(detail.affectedWeightKg, 120);
+      expect(lot.basisWeightKg, 1000);
+      expect(lot.bags.single.bagNo, 1);
+      expect(history.first.id, 2);
+      expect(client.calls.every((call) => call.method == 'GET'), isTrue);
     });
 
-    test('rejects a successful create response without a valid id', () async {
+    test('updates a inspection with the logged-in user as inspector', () async {
       final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'isSucceeded': true,
-          'resources': {'id': 0},
-        },
+        onPut: (_, __, ___) async => {'isSucceeded': true},
       );
 
-      await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).createInspection(
-          const QualityInspectionDraft(
-            paddyLotId: 7,
-            passed: true,
-            moisturePercent: 13,
-            impurityPercent: 2,
-          ),
-        ),
-        throwsA(
-          isA<QualityInspectionException>().having(
-            (error) => error.message,
-            'message',
-            contains('không trả về mã phiếu'),
-          ),
+      await ApiQualityInspectionRepository(apiClient: client).update(
+        QualityInspectionUpdate(
+          id: 5,
+          paddyLotId: 3,
+          inspectorId: 42,
+          inspectedAt: DateTime.utc(2026, 8, 2, 7),
+          passedInspection: false,
+          affectedWeightKg: 120,
+          affectedBagIds: const [11, 12],
+          moldLevel: '  ',
         ),
       );
-      expect(client.calls, hasLength(1));
-    });
 
-    test('loads paginated rice lots and formats their labels', () async {
-      final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'isSucceeded': true,
-          'resources': {
-            'items': [
-              {
-                'id': 9,
-                'lotCode': 'RICE-09',
-                'lotType': 'rice',
-                'remainingWeightKg': '125.5',
-              },
-            ],
-          },
-        },
-      );
-
-      final lots = await ApiQualityInspectionRepository(apiClient: client)
-          .getPaddyLots();
-
-      expect(lots.single.id, 9);
-      expect(lots.single.lotType, 'rice');
-      expect(lots.single.remainingWeightKg, 125.5);
-      expect(lots.single.label, 'RICE-09 · Gạo · 126 kg');
+      final call = client.calls.single;
+      expect(call.method, 'PUT');
+      expect(call.path, '/api/v1/quality-inspections');
+      expect(call.body!['inspectorId'], 42);
+      expect(call.body!['passedInspection'], isFalse);
+      expect(call.body!['affectedBagIds'], [11, 12]);
+      expect(call.body!['moldLevel'], isNull);
     });
 
     test('converts API errors into quality inspection errors', () async {
@@ -637,7 +513,7 @@ void main() {
       );
 
       await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).getInspections(),
+        ApiQualityInspectionRepository(apiClient: client).getDetail(1),
         throwsA(
           isA<QualityInspectionException>().having(
             (error) => error.message,

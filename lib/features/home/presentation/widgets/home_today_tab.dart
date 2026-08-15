@@ -89,6 +89,8 @@ class HomeTodayTab extends StatelessWidget {
           route: AppRoutes.debts),
       _Shortcut('Chất lượng', Icons.science_outlined, AppColors.accentPurple,
           route: AppRoutes.qualityInspections),
+      _Shortcut('Nhập kho', Icons.move_to_inbox_outlined, AppColors.primaryDark,
+          route: AppRoutes.inboundPutaway),
     ];
 
     return GridView.builder(

@@ -3,226 +3,211 @@ import '../../../core/api/json_reader.dart';
 import '../../auth/data/auth_session_store.dart';
 import '../models/quality_inspection.dart';
 
+/// Truy cập API màn "Chất lượng & cách ly".
+///
+/// Mobile chỉ dùng 5 trong 7 API QualityInspection của backend: paged-advanced,
+/// GET {id}, GET by-lot/{paddyLotId}, PUT (cập nhật) và GET /paddy-lots/{id} để
+/// lấy thông tin lô + danh sách bao. Hai API còn lại (POST tạo phiếu, POST
+/// recheck) CỐ Ý không nối: tạo phiếu kiểm định chỉ làm trên web.
 abstract class QualityInspectionRepository {
-  Future<List<QualityInspection>> getInspections();
-  Future<List<PaddyLotOption>> getPaddyLots();
-  Future<int> createInspection(QualityInspectionDraft draft);
+  Future<QualityInspectionPage> loadPage({
+    int page,
+    int pageSize,
+    String search,
+    bool? passedInspection,
+  });
+
+  Future<QualityInspection> getDetail(int id);
+
+  Future<List<QualityInspection>> getHistory(int paddyLotId);
+
+  Future<QualityLot> getLot(int paddyLotId);
+
+  /// Bản đồ lô để bảng hiện đúng "Loại hàng / Vị trí / Tổng tồn" như web.
+  Future<Map<int, QualityLot>> loadLotMap();
+
+  Future<void> update(QualityInspectionUpdate payload);
 }
 
 class ApiQualityInspectionRepository implements QualityInspectionRepository {
   ApiQualityInspectionRepository({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+      : _api = apiClient ?? ApiClient();
 
-  final ApiClient _apiClient;
+  final ApiClient _api;
 
-  @override
-  Future<List<QualityInspection>> getInspections() async {
+  /// Thứ tự cột phải khớp bản web để backend hiểu đúng lọc/sắp xếp.
+  static const List<String> _columns = <String>[
+    'lotCode',
+    'inspectorName',
+    'inspectedAt',
+    'moisturePercent',
+    'impurityPercent',
+    'moldLevel',
+    'pestLevel',
+    'packagingStatus',
+    'passedInspection',
+    'handling',
+    'id',
+  ];
+
+  static const int _sortColumn = 2; // inspectedAt
+  static const int _passedColumn = 8;
+
+  String get _token {
     final token = AuthSessionStore.current?.accessToken;
     if (token == null || token.isEmpty) {
       throw const QualityInspectionException(
-        'Bạn cần đăng nhập để xem phiếu kiểm chất.',
+        'Bạn cần đăng nhập để xem dữ liệu chất lượng.',
+        statusCode: 401,
       );
-    }
-    try {
-      final response = await _apiClient.get(
-        '/api/v1/quality-inspections',
-        token: token,
-      );
-      _ensureSucceeded(response, 'Không tải được phiếu kiểm chất.');
-      final data = _resourceList(response);
-      return [
-        for (final item in data)
-          if (item is Map<String, dynamic>) _fromJson(item),
-      ]..sort((a, b) => b.inspectedAt.compareTo(a.inspectedAt));
-    } on ApiException catch (error) {
-      throw QualityInspectionException(error.message);
-    }
-  }
-
-  @override
-  Future<List<PaddyLotOption>> getPaddyLots() async {
-    final token = _token();
-    try {
-      final response = await _apiClient.get('/api/v1/paddy-lots', token: token);
-      _ensureSucceeded(response, 'Không tải được danh sách lô lúa/gạo.');
-      final data = _resourceList(response);
-      return [
-        for (final item in data)
-          if (item is Map<String, dynamic> && _isInspectableLot(item))
-            PaddyLotOption(
-              id: JsonReader.integer(item, 'id') ?? 0,
-              code: JsonReader.string(item, 'lotCode') ??
-                  'Lô #${JsonReader.integer(item, 'id') ?? 0}',
-              lotType: JsonReader.string(item, 'lotType'),
-              remainingWeightKg:
-                  JsonReader.decimal(item, 'remainingWeightKg') ?? 0,
-            ),
-      ].where((lot) => lot.id > 0).toList()
-        ..sort((a, b) => b.id.compareTo(a.id));
-    } on ApiException catch (error) {
-      throw QualityInspectionException(error.message);
-    }
-  }
-
-  @override
-  Future<int> createInspection(QualityInspectionDraft draft) async {
-    _validateDraft(draft);
-    try {
-      final response = await _apiClient.post(
-        '/api/v1/quality-inspections',
-        token: _token(),
-        body: {
-          'paddyLotId': draft.paddyLotId,
-          'inspectedAt': DateTime.now().toUtc().toIso8601String(),
-          'moisturePercent': draft.moisturePercent,
-          'impurityPercent': draft.impurityPercent,
-          'moldLevel': draft.moldLevel,
-          'pestLevel': draft.pestLevel,
-          'packagingStatus': draft.packagingStatus,
-          'passedInspection': draft.passed,
-          'handling': draft.handling,
-          'note': draft.note,
-        },
-      );
-      _ensureSucceeded(response, 'Không tạo được phiếu kiểm chất.');
-      final resources = JsonReader.value(response, 'resources');
-      final id = switch (resources) {
-        num value => value.toInt(),
-        Map<String, dynamic> value => JsonReader.integer(value, 'id') ?? 0,
-        _ => 0,
-      };
-      if (id <= 0) {
-        throw const QualityInspectionException(
-          'Backend không trả về mã phiếu kiểm chất vừa tạo.',
-        );
-      }
-      return id;
-    } on ApiException catch (error) {
-      throw QualityInspectionException(error.message);
-    }
-  }
-
-  String _token() {
-    final token = AuthSessionStore.current?.accessToken;
-    if (token == null || token.isEmpty) {
-      throw const QualityInspectionException('Bạn cần đăng nhập để kiểm chất.');
     }
     return token;
   }
 
-  QualityInspection _fromJson(Map<String, dynamic> json) {
-    return QualityInspection(
-      id: JsonReader.integer(json, 'id') ?? 0,
-      paddyLotId: JsonReader.integer(json, 'paddyLotId') ?? 0,
-      lotCode: JsonReader.string(json, 'lotCode') ?? 'Lô chưa xác định',
-      inspectorName: JsonReader.string(json, 'inspectorName'),
-      inspectedAt:
-          DateTime.tryParse(JsonReader.string(json, 'inspectedAt') ?? '')
-                  ?.toLocal() ??
-              DateTime.fromMillisecondsSinceEpoch(0),
-      moisturePercent: JsonReader.decimal(json, 'moisturePercent'),
-      impurityPercent: JsonReader.decimal(json, 'impurityPercent'),
-      moldLevel: JsonReader.string(json, 'moldLevel'),
-      pestLevel: JsonReader.string(json, 'pestLevel'),
-      packagingStatus: JsonReader.string(json, 'packagingStatus'),
-      passed: JsonReader.boolean(json, 'passedInspection') ?? false,
-      handling: JsonReader.string(json, 'handling'),
-      note: JsonReader.string(json, 'note'),
+  @override
+  Future<QualityInspectionPage> loadPage({
+    int page = 1,
+    int pageSize = 20,
+    String search = '',
+    bool? passedInspection,
+  }) async {
+    final safePage = page < 1 ? 1 : page;
+    final body = <String, dynamic>{
+      'draw': safePage,
+      'start': (safePage - 1) * pageSize,
+      'length': pageSize,
+      'search': {'value': search.trim(), 'regex': false, 'fixed': const <dynamic>[]},
+      'columns': [
+        for (var index = 0; index < _columns.length; index++)
+          _column(
+            _columns[index],
+            index == _passedColumn && passedInspection != null
+                ? '$passedInspection'
+                : '',
+          ),
+      ],
+      'order': [
+        {'column': _sortColumn, 'dir': 'desc', 'name': 'inspectedAt'},
+      ],
+    };
+
+    final json = await _post('/api/v1/quality-inspections/paged-advanced', body);
+    final resources = JsonReader.map(json, 'resources') ?? json;
+    final rows = JsonReader.list(resources, 'data') ??
+        JsonReader.list(resources, 'dataSource') ??
+        const <dynamic>[];
+    return QualityInspectionPage(
+      items: [
+        for (final row in rows)
+          if (row is Map<String, dynamic>) QualityInspection.fromJson(row),
+      ],
+      recordsTotal: JsonReader.integer(resources, 'recordsTotal') ?? 0,
+      recordsFiltered: JsonReader.integer(resources, 'recordsFiltered') ??
+          JsonReader.integer(resources, 'recordsTotal') ??
+          0,
     );
   }
 
-  List<dynamic> _resourceList(Map<String, dynamic> response) {
-    final resources = JsonReader.value(response, 'resources');
-    return switch (resources) {
-      List<dynamic> items => items,
-      Map<String, dynamic> page => JsonReader.list(page, 'dataSource') ??
-          JsonReader.list(page, 'items') ??
-          const <dynamic>[],
-      _ => const <dynamic>[],
-    };
+  @override
+  Future<QualityInspection> getDetail(int id) async {
+    final json = await _get('/api/v1/quality-inspections/$id');
+    return QualityInspection.fromJson(_resourceMap(json));
   }
 
-  void _ensureSucceeded(Map<String, dynamic> response, String fallback) {
-    if (JsonReader.boolean(response, 'isSucceeded') == false) {
+  @override
+  Future<List<QualityInspection>> getHistory(int paddyLotId) async {
+    final json = await _get('/api/v1/quality-inspections/by-lot/$paddyLotId');
+    final value = JsonReader.value(json, 'resources');
+    final rows = value is List ? value : const <dynamic>[];
+    final items = [
+      for (final row in rows)
+        if (row is Map<String, dynamic>) QualityInspection.fromJson(row),
+    ];
+    items.sort(
+      (a, b) => (b.inspectedAt ?? DateTime(0)).compareTo(a.inspectedAt ?? DateTime(0)),
+    );
+    return items;
+  }
+
+  @override
+  Future<QualityLot> getLot(int paddyLotId) async {
+    final json = await _get('/api/v1/paddy-lots/$paddyLotId');
+    return QualityLot.fromJson(_resourceMap(json));
+  }
+
+  /// Nạp một lần danh sách lô (giống `lotsQuery` của web dùng pageSize 1000)
+  /// để bảng phiếu kiểm định hiện được loại hàng, vị trí và tổng tồn của lô.
+  @override
+  Future<Map<int, QualityLot>> loadLotMap() async {
+    final json = await _post('/api/v1/paddy-lots/paged-advanced', {
+      'draw': 1,
+      'start': 0,
+      'length': 1000,
+      'search': {'value': '', 'regex': false},
+      'columns': [
+        _column('lotType', ''),
+        _column('warehouseId', ''),
+        _column('statusId', ''),
+      ],
+      'order': const <dynamic>[],
+    });
+    final resources = JsonReader.map(json, 'resources') ?? json;
+    final rows = JsonReader.list(resources, 'data') ??
+        JsonReader.list(resources, 'dataSource') ??
+        const <dynamic>[];
+    final map = <int, QualityLot>{};
+    for (final row in rows) {
+      if (row is! Map<String, dynamic>) continue;
+      final lot = QualityLot.fromJson(row);
+      if (lot.id > 0) map[lot.id] = lot;
+    }
+    return map;
+  }
+
+  @override
+  Future<void> update(QualityInspectionUpdate payload) async {
+    await _put('/api/v1/quality-inspections', payload.toJson());
+  }
+
+  static Map<String, dynamic> _column(String data, String search) => {
+        'data': data,
+        'name': data,
+        'searchable': true,
+        'orderable': true,
+        'search': {'value': search, 'regex': false, 'fixed': const <dynamic>[]},
+      };
+
+  Map<String, dynamic> _resourceMap(Map<String, dynamic> json) {
+    final value = JsonReader.value(json, 'resources');
+    return value is Map<String, dynamic> ? value : json;
+  }
+
+  Future<Map<String, dynamic>> _get(String path) =>
+      _guard(() => _api.get(path, token: _token));
+
+  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) =>
+      _guard(() => _api.post(path, token: _token, body: body));
+
+  Future<Map<String, dynamic>> _put(String path, Map<String, dynamic> body) =>
+      _guard(() => _api.put(path, token: _token, body: body));
+
+  Future<Map<String, dynamic>> _guard(
+    Future<Map<String, dynamic>> Function() request,
+  ) async {
+    try {
+      final json = await request();
+      if (JsonReader.boolean(json, 'isSucceeded') == false) {
+        throw QualityInspectionException(
+          JsonReader.string(json, 'message') ??
+              'Không thực hiện được thao tác chất lượng.',
+        );
+      }
+      return json;
+    } on ApiException catch (error) {
       throw QualityInspectionException(
-        JsonReader.string(response, 'message') ?? fallback,
+        error.message,
+        statusCode: error.statusCode,
       );
     }
   }
-
-  bool _isInspectableLot(Map<String, dynamic> json) {
-    final type = JsonReader.string(json, 'lotType')?.toUpperCase();
-    return type == null || type == 'PADDY' || type == 'RICE';
-  }
-
-  void _validateDraft(QualityInspectionDraft draft) {
-    if (draft.paddyLotId <= 0) {
-      throw const QualityInspectionException('Lô lúa/gạo không hợp lệ.');
-    }
-    for (final entry in {
-      'Độ ẩm': draft.moisturePercent,
-      'Tạp chất': draft.impurityPercent,
-    }.entries) {
-      final value = entry.value;
-      if (value == null) {
-        throw QualityInspectionException('${entry.key} không được để trống.');
-      }
-      if (value < 0 || value > 100) {
-        throw QualityInspectionException(
-          '${entry.key} phải nằm trong khoảng từ 0 đến 100%.',
-        );
-      }
-    }
-  }
-}
-
-class PaddyLotOption {
-  const PaddyLotOption({
-    required this.id,
-    required this.code,
-    this.lotType,
-    this.remainingWeightKg = 0,
-  });
-
-  final int id;
-  final String code;
-  final String? lotType;
-  final double remainingWeightKg;
-
-  String get label {
-    final typeLabel = lotType?.toUpperCase() == 'RICE' ? 'Gạo' : 'Lúa';
-    return '$code · $typeLabel · ${remainingWeightKg.toStringAsFixed(0)} kg';
-  }
-}
-
-class QualityInspectionDraft {
-  const QualityInspectionDraft({
-    required this.paddyLotId,
-    required this.passed,
-    this.moisturePercent,
-    this.impurityPercent,
-    this.moldLevel,
-    this.pestLevel,
-    this.packagingStatus,
-    this.handling,
-    this.note,
-  });
-  final int paddyLotId;
-  final bool passed;
-  final double? moisturePercent;
-  final double? impurityPercent;
-  final String? moldLevel;
-  final String? pestLevel;
-  final String? packagingStatus;
-  final String? handling;
-  final String? note;
-}
-
-class QualityInspectionException implements Exception {
-  const QualityInspectionException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
 }

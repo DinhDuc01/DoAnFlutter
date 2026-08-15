@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/api/api_client.dart';
@@ -38,9 +40,16 @@ class _MillingResultConfirmationScreenState
   List<MillingProductOption> _products = const [];
   String? _productsError;
 
+  /// Vị trí nhập kho backend gợi ý cho từng dòng đầu ra (khóa theo `form.type`).
+  final Map<String, List<MillingPutawaySuggestion>> _formSuggestions = {};
+  final Map<String, MillingLocation> _pickedLocations = {};
+  final Set<String> _suggestingTypes = <String>{};
+  final Map<String, Timer> _suggestDebounce = {};
+
   @override
   void dispose() {
     _noteController.dispose();
+    for (final timer in _suggestDebounce.values) timer.cancel();
     for (final form in _outputForms) form.dispose();
     super.dispose();
   }
@@ -61,10 +70,82 @@ class _MillingResultConfirmationScreenState
   Future<void> _loadProducts() async {
     try {
       final products = await widget.repository.getOutputProducts();
-      if (mounted) setState(() => _products = products);
+      if (!mounted) return;
+      setState(() => _products = products);
+      // Dòng đã có sẵn SKU (mở lại từ bước cân) thì lấy gợi ý vị trí ngay.
+      for (final form in _outputForms) {
+        if (form.productVariantId != null) _refreshOutputLocation(form);
+      }
     } catch (error) {
       if (mounted) setState(() => _productsError = 'Không tải được SKU: $error');
     }
+  }
+
+  /// Gọi API gợi ý vị trí nhập kho cho một dòng đầu ra rồi TỰ chọn vị trí tốt
+  /// nhất — giống web: đổi SKU hoặc đổi khối lượng là `locationId` được gán lại
+  /// bằng vị trí phù hợp đầu tiên, và bỏ chọn nếu vị trí cũ không còn hợp lệ.
+  Future<void> _refreshOutputLocation(_MillingOutputForm form) async {
+    final variantId = form.productVariantId;
+    final weight = form.outputWeightKg ?? 0;
+    if (variantId == null || variantId <= 0 || weight <= 0) {
+      if (mounted) {
+        setState(() {
+          _formSuggestions.remove(form.type);
+          if (variantId == null) {
+            form.locationId = null;
+            _pickedLocations.remove(form.type);
+          }
+        });
+      }
+      return;
+    }
+    if (_suggestingTypes.contains(form.type)) return;
+    setState(() => _suggestingTypes.add(form.type));
+    try {
+      final suggestions = await widget.repository.getPutawaySuggestions(
+        warehouseId: widget.order.warehouseId,
+        productVariantId: variantId,
+        requiredWeightKg: weight,
+      );
+      if (!mounted) return;
+      setState(() {
+        _formSuggestions[form.type] = suggestions;
+        final ids = suggestions.map((item) => item.locationId).toSet();
+        if (suggestions.isNotEmpty &&
+            (form.locationId == null || !ids.contains(form.locationId))) {
+          form.locationId = suggestions.first.locationId;
+          _pickedLocations.remove(form.type);
+        }
+      });
+    } catch (_) {
+      // Không lấy được gợi ý thì vẫn cho chọn tay ở bảng vị trí bên dưới.
+      if (mounted) setState(() => _formSuggestions.remove(form.type));
+    } finally {
+      if (mounted) setState(() => _suggestingTypes.remove(form.type));
+    }
+  }
+
+  /// Gõ khối lượng thì chờ ngắt nhịp rồi mới gọi API, tránh gọi mỗi ký tự.
+  void _scheduleLocationRefresh(_MillingOutputForm form) {
+    _suggestDebounce[form.type]?.cancel();
+    _suggestDebounce[form.type] = Timer(
+      const Duration(milliseconds: 450),
+      () {
+        if (mounted) _refreshOutputLocation(form);
+      },
+    );
+  }
+
+  /// Nhãn vị trí đang chọn: ưu tiên tên từ gợi ý, sau đó tên đã chọn tay.
+  String _locationLabel(_MillingOutputForm form) {
+    final id = form.locationId;
+    if (id == null) return 'Chọn vị trí nhập kho *';
+    for (final suggestion in _formSuggestions[form.type] ?? const []) {
+      if (suggestion.locationId == id) return 'Vị trí: ${suggestion.displayName}';
+    }
+    final picked = _pickedLocations[form.type];
+    if (picked != null && picked.id == id) return 'Vị trí: ${picked.displayName}';
+    return 'Vị trí #$id';
   }
 
   void _addOutput(String type, String label) {
@@ -271,30 +352,69 @@ class _MillingResultConfirmationScreenState
                   ),
                 ),
             ],
-            onChanged: (value) => setState(() => form.productVariantId = value),
+            onChanged: (value) {
+              setState(() {
+                form.productVariantId = value;
+                form.locationId = null;
+                _pickedLocations.remove(form.type);
+              });
+              // Đổi SKU là lấy lại gợi ý và tự chọn vị trí phù hợp, như web.
+              _refreshOutputLocation(form);
+            },
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () async {
-              final locations = await widget.repository.getLocations();
-              if (!mounted) return;
-              final selected = await showModalBottomSheet<int>(
-                context: context,
-                builder: (_) => _LocationPickerSheet(
-                  outputLabel: form.label,
-                  suggestions: const [],
-                  locations: locations.where((item) =>
-                    item.warehouseId == widget.order.warehouseId && item.isActive && !item.isQuarantine).toList(),
-                ),
-              );
-              if (selected != null && mounted) setState(() => form.locationId = selected);
-            },
-            icon: const Icon(Icons.warehouse_outlined),
-            label: Text(form.locationId == null ? 'Chọn vị trí nhập kho *' : 'Vị trí #${form.locationId}'),
+            onPressed: _suggestingTypes.contains(form.type)
+                ? null
+                : () async {
+                    final suggestions =
+                        _formSuggestions[form.type] ?? const <MillingPutawaySuggestion>[];
+                    // Chỉ tải danh sách vị trí thô khi backend không gợi ý được.
+                    var locations = const <MillingLocation>[];
+                    if (suggestions.isEmpty) {
+                      locations = (await widget.repository.getLocations())
+                          .where((item) =>
+                              item.warehouseId == widget.order.warehouseId &&
+                              item.isActive &&
+                              !item.isQuarantine)
+                          .toList();
+                    }
+                    if (!mounted) return;
+                    final selected = await showModalBottomSheet<int>(
+                      context: context,
+                      isScrollControlled: true,
+                      builder: (_) => _LocationPickerSheet(
+                        outputLabel: form.label,
+                        suggestions: suggestions,
+                        locations: locations,
+                      ),
+                    );
+                    if (selected != null && mounted) {
+                      setState(() {
+                        form.locationId = selected;
+                        for (final location in locations) {
+                          if (location.id == selected) {
+                            _pickedLocations[form.type] = location;
+                          }
+                        }
+                      });
+                    }
+                  },
+            icon: _suggestingTypes.contains(form.type)
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.warehouse_outlined),
+            label: Text(
+              _suggestingTypes.contains(form.type)
+                  ? 'Đang tìm vị trí phù hợp...'
+                  : _locationLabel(form),
+            ),
           ),
-          TextField(controller: form.bagController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Số bao *'), onChanged: (_) => setState(() {})),
-          TextField(controller: form.kgPerBagController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Kg/bao *'), onChanged: (_) => setState(() {})),
-          TextField(controller: form.weightController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Khối lượng thực tế (kg) *'), onChanged: (_) => setState(() {})),
+          TextField(controller: form.bagController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Số bao *'), onChanged: (_) { setState(() {}); _scheduleLocationRefresh(form); }),
+          TextField(controller: form.kgPerBagController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Kg/bao *'), onChanged: (_) { setState(() {}); _scheduleLocationRefresh(form); }),
+          TextField(controller: form.weightController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Khối lượng thực tế (kg) *'), onChanged: (_) { setState(() {}); _scheduleLocationRefresh(form); }),
           if (form.bagCount != null && form.kgPerBag != null)
             Text('Theo bao: ${(form.bagCount! * form.kgPerBag!).toStringAsFixed(2)} kg', style: const TextStyle(color: Color(0xFF64748B))),
         ]),

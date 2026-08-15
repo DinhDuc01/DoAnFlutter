@@ -389,11 +389,16 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                       channel: detailSo.channel,
                       warehouseId: detailSo.warehouseId,
                       warehouseName: detailSo.warehouseName,
+                      riceVarietyId: detailSo.riceVarietyId,
                       orderDate: detailSo.orderDate,
                       expectedDeliveryDate: detailSo.expectedDeliveryDate,
                       requiresMilling: detailSo.requiresMilling,
-                      totalRiceRequiredKg: detailSo.items.fold(0.0, (sum, item) => sum + item.quantityOrdered),
-                      remainingMillingRiceKg: detailSo.remainingAmount,
+                      // Phải dùng KHỐI LƯỢNG gạo còn phải xay, không phải
+                      // remainingAmount (số tiền còn phải thu) — dùng nhầm làm
+                      // đơn bị loại khỏi danh sách và không tự gắn được.
+                      totalRiceRequiredKg: detailSo.totalRiceRequiredKg,
+                      allocatedMillingRiceKg: detailSo.allocatedMillingRiceKg,
+                      remainingMillingRiceKg: detailSo.remainingMillingRiceKg,
                       totalAmount: detailSo.totalAmount,
                     ));
                   }
@@ -405,7 +410,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                       final matchingSo = salesOrders[index];
                       _selectedWarehouseId ??= matchingSo.warehouseId;
                       _selectedRiceVarietyId ??= matchingSo.riceVarietyId;
-                      if (_inputController.text.isEmpty) {
+                      if (_inputController.text.isEmpty &&
+                          matchingSo.remainingMillingRiceKg > 0) {
                         _inputController.text = matchingSo.remainingMillingRiceKg.toStringAsFixed(1);
                       }
                       _initialAutoFilled = true;
@@ -440,10 +446,13 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
     final isEditing = widget.order != null;
     final isSalesOrderLocked = _millingSource == 'sales_order' && _selectedSalesOrderId != null;
     final filteredLots = _filteredLots(lots);
+    // Luôn giữ đơn đang được gắn trong danh sách: mở màn xay xát từ một đơn
+    // bán thì đơn đó phải hiện và được chọn sẵn, kể cả khi đơn không còn nằm
+    // trong 100 đơn tải về hoặc phần gạo còn thiếu đã về 0.
     final filteredSalesOrders = uniqueSalesOrders
         .where((so) =>
             (so.requiresMilling && so.remainingMillingRiceKg > 0) ||
-            (isEditing && so.id == _selectedSalesOrderId))
+            so.id == _selectedSalesOrderId)
         .toList();
 
     return Form(

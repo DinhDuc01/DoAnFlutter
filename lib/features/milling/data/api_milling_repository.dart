@@ -55,6 +55,11 @@ class ApiMillingRepository implements MillingRepository {
     ];
   }
 
+  /// Gợi ý nguồn lúa. Backend trả `columns[].bagIds` chính là CÁC BAO NÊN LẤY
+  /// (chọn từ đỉnh cột), nên toàn bộ bao trong đó phải được tick sẵn — đó mới là
+  /// "tự động chọn nguồn phù hợp" như web. Trước đây mobile chỉ tick các bao có
+  /// trong `inputs` và lấy nhầm theo lô đầu tiên của cột, nên lệnh Nháp mở lên
+  /// không có bao nào được chọn và luôn báo "còn thiếu".
   @override
   Future<MillingSourceSuggestion> getSourceSuggestion(int orderId) async {
     final json = await _apiClient.get(
@@ -66,12 +71,17 @@ class ApiMillingRepository implements MillingRepository {
       throw const MillingApiException('Backend không trả về nguồn lúa.');
     }
     final required = JsonReader.decimal(resources, 'requiredWeightKg') ?? 0;
+    final suggested = JsonReader.decimal(resources, 'suggestedWeightKg') ?? 0;
+    final missing = JsonReader.decimal(resources, 'missingWeightKg') ?? 0;
     final rawColumns = JsonReader.list(resources, 'columns') ?? const [];
     final rawInputs = JsonReader.list(resources, 'inputs') ?? const [];
+
+    // Nạp chi tiết bao theo từng lô có trong gợi ý (mỗi lô chỉ gọi một lần).
     final bagDetailsById = <int, MillingSourceBag>{};
+    final loadedLotIds = <int>{};
     for (final input in rawInputs.whereType<Map<String, dynamic>>()) {
       final lotId = JsonReader.integer(input, 'paddyLotId') ?? 0;
-      if (lotId <= 0) continue;
+      if (lotId <= 0 || !loadedLotIds.add(lotId)) continue;
       final lotJson = await _apiClient.get(
         '/api/v1/paddy-lots/$lotId',
         token: _currentToken(),
@@ -90,6 +100,8 @@ class ApiMillingRepository implements MillingRepository {
         );
       }
     }
+
+    // Khối lượng dự phòng khi không đọc được chi tiết bao: chia đều theo cột.
     final columns = <MillingSourceColumn>[];
     for (final raw in rawColumns.whereType<Map<String, dynamic>>()) {
       final locationId = JsonReader.integer(raw, 'locationId') ?? 0;
@@ -97,14 +109,9 @@ class ApiMillingRepository implements MillingRepository {
           .map((id) => id is num ? id.toInt() : int.tryParse('$id') ?? 0)
           .where((id) => id > 0)
           .toList();
-      final input = rawInputs.whereType<Map<String, dynamic>>().firstWhere(
-            (item) => JsonReader.integer(item, 'locationId') == locationId,
-            orElse: () => <String, dynamic>{},
-          );
-      final inputBagIds = (JsonReader.list(input, 'bagIds') ?? const [])
-          .map((id) => id is num ? id.toInt() : int.tryParse('$id') ?? 0)
-          .where((id) => id > 0)
-          .toSet();
+      final columnWeight = JsonReader.decimal(raw, 'suggestedWeightKg') ?? 0;
+      final fallbackWeight =
+          bagIds.isEmpty ? 0.0 : columnWeight / bagIds.length;
       columns.add(
         MillingSourceColumn(
           locationId: locationId,
@@ -114,9 +121,11 @@ class ApiMillingRepository implements MillingRepository {
               MillingSourceBag(
                 id: id,
                 bagNo: bagDetailsById[id]?.bagNo ?? id,
-                weightKg: bagDetailsById[id]?.weightKg ?? 0,
-                status: bagDetailsById[id]?.status ?? 'UNKNOWN',
-                selected: inputBagIds.contains(id),
+                weightKg: bagDetailsById[id]?.weightKg ?? fallbackWeight,
+                // Backend đã lọc sẵn bao lấy được ngay nên mặc định coi là
+                // Stored để người dùng còn bỏ tick được nếu muốn.
+                status: bagDetailsById[id]?.status ?? 'Stored',
+                selected: true,
               ),
           ],
         ),
@@ -125,7 +134,15 @@ class ApiMillingRepository implements MillingRepository {
     return MillingSourceSuggestion(
       requiredWeightKg: required,
       columns: columns,
+      suggestedWeightKg: suggested,
+      missingWeightKg: missing,
     );
+  }
+
+  @override
+  Future<MillingSourceSuggestion> getReservedSource(int orderId) async {
+    final order = await getMillingOrderDetail(orderId);
+    return MillingSourceSuggestion.fromOrderInputs(order);
   }
 
   @override
@@ -158,6 +175,16 @@ class ApiMillingRepository implements MillingRepository {
       body: const {},
     );
     _ensureSucceeded(response, 'Không bắt đầu được lệnh xay.');
+  }
+
+  @override
+  Future<void> cancelOrder(int orderId) async {
+    final response = await _apiClient.post(
+      '/api/v1/milling-orders/$orderId/cancel',
+      token: _currentToken(),
+      body: const {},
+    );
+    _ensureSucceeded(response, 'Không hủy được lệnh xay.');
   }
 
   @override

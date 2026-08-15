@@ -170,6 +170,11 @@ class SalesOrderDetail {
     this.note,
     this.cancelReason,
     this.createdDate,
+    this.riceVarietyId,
+    this.totalRiceRequiredKg = 0,
+    this.allocatedMillingRiceKg = 0,
+    this.remainingMillingRiceKg = 0,
+    this.millingOrderCount = 0,
   });
 
   final int id;
@@ -195,6 +200,21 @@ class SalesOrderDetail {
   final DateTime? createdDate;
   final List<SalesOrderItem> items;
   final List<SalesOrderOutboundSummary> outboundOrders;
+
+  final int? riceVarietyId;
+
+  /// Tổng gạo (kg) đơn yêu cầu, bỏ qua dòng phụ phẩm.
+  final double totalRiceRequiredKg;
+
+  /// Gạo (kg) đã được các lệnh xay còn hiệu lực nhận.
+  final double allocatedMillingRiceKg;
+
+  /// Gạo (kg) CÒN PHẢI XAY — dùng để gợi ý sản lượng khi mở màn xay xát.
+  /// Trường này khác hẳn [remainingAmount] (số tiền còn phải thu).
+  final double remainingMillingRiceKg;
+
+  /// Số lệnh xay còn hiệu lực đang gắn với đơn.
+  final int millingOrderCount;
 
   String get statusLabel => salesOrderStatusLabel(statusId, statusName);
 
@@ -266,6 +286,13 @@ class SalesOrderDetail {
         note: JsonReader.string(json, 'note'),
         cancelReason: JsonReader.string(json, 'cancelReason'),
         createdDate: parseApiDate(json, 'createdDate'),
+        riceVarietyId: JsonReader.integer(json, 'riceVarietyId'),
+        totalRiceRequiredKg: JsonReader.decimal(json, 'totalRiceRequiredKg') ?? 0,
+        allocatedMillingRiceKg:
+            JsonReader.decimal(json, 'allocatedMillingRiceKg') ?? 0,
+        remainingMillingRiceKg:
+            JsonReader.decimal(json, 'remainingMillingRiceKg') ?? 0,
+        millingOrderCount: JsonReader.integer(json, 'millingOrderCount') ?? 0,
         items: [
           for (final row in JsonReader.list(json, 'items') ?? const [])
             if (row is Map<String, dynamic>) SalesOrderItem.fromJson(row),
