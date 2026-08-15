@@ -278,17 +278,13 @@ class _FakeSalesOrderRepository implements SalesOrderRepository {
     return 0;
   }
 
-  // Màn xay xát chỉ đọc danh sách đơn bán; các API tạo/giữ hàng bên dưới thuộc
-  // luồng tạo đơn trên mobile nên fake này không cần chạy thật.
   @override
   Future<CreatedSalesOrder> create(CreateSalesOrderInput input) async {
-    throw UnimplementedError();
+    return const CreatedSalesOrder(id: 1, soCode: 'SO-01', totalAmount: 0);
   }
 
   @override
-  Future<void> reserve(int id) async {
-    throw UnimplementedError();
-  }
+  Future<void> reserve(int id) async {}
 
   @override
   Future<List<SalesCustomerOption>> getCustomers() async => const [];

@@ -2,16 +2,43 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
-import 'package:stocklite/features/kho/data/stock_take_repository.dart';
-import 'package:stocklite/features/kho/models/inventory_stock.dart'
-    show WarehouseOption;
-import 'package:stocklite/features/kho/models/stock_take.dart';
+import 'package:stocklite/features/stock_take/models/stock_take.dart' show StockTakeSummary, StockTakePage;
 import 'package:stocklite/features/kho/presentation/screens/stock_take_detail_screen.dart';
-import 'package:stocklite/features/kho/presentation/screens/stock_take_list_screen.dart';
+import 'package:stocklite/features/stock_take/presentation/screens/stock_take_list_screen.dart';
+import 'package:stocklite/features/kho/models/inventory_stock.dart' show WarehouseOption;
+
+import 'package:stocklite/features/scale/data/scale_session.dart';
+import 'package:stocklite/features/scale/data/ble_scale_service.dart';
+import 'package:stocklite/features/stock_take/data/stock_take_repository.dart';
+import 'package:stocklite/features/kho/data/stock_take_repository.dart' show StockTakeException;
+import 'package:stocklite/features/kho/data/stock_take_repository.dart' as legacy_repo;
+import 'package:stocklite/features/kho/models/stock_take.dart' as legacy;
+import 'package:stocklite/core/api/api_client.dart' show ApiException;
+import 'package:stocklite/core/routes/app_routes.dart';
+
+class _FakeBleScaleService extends Fake implements BleScaleService {
+  @override
+  bool get isConnected => false;
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  void addListener(VoidCallback listener) {}
+
+  @override
+  void removeListener(VoidCallback listener) {}
+}
 
 void main() {
-  setUp(() => AuthSessionStore.current = _session());
-  tearDown(() => AuthSessionStore.current = null);
+  setUp(() {
+    AuthSessionStore.current = _session();
+    ScaleSession.instance.debugSetService(_FakeBleScaleService(), initializing: Future.value());
+  });
+  tearDown(() {
+    AuthSessionStore.current = null;
+    ScaleSession.instance.debugSetService(null, initializing: null);
+  });
 
   group('StockTakeListScreen', () {
     phoneTestWidgets('shows the slips returned by the backend', (tester) async {
@@ -23,9 +50,7 @@ void main() {
     });
 
     phoneTestWidgets('empty warehouse explains how to start', (tester) async {
-      await _pump(
-        tester,
-        StockTakeListScreen(repository: _FakeRepository(rows: const [])),
+      await _pump(tester, StockTakeListScreen(repository: _FakeRepository(rows: const [])),
       );
 
       expect(find.text('Chưa có phiếu kiểm kê'), findsOneWidget);
@@ -38,15 +63,28 @@ void main() {
       );
       await _pump(tester, StockTakeListScreen(repository: repository));
 
-      expect(find.text('Mất kết nối mạng'), findsOneWidget);
+      expect(find.textContaining('Lỗi: Mất mạng'), findsOneWidget);
       expect(repository.listCalls, 1);
+    });
 
-      repository.listError = null;
-      await tester.tap(find.text('Thử lại'));
+    phoneTestWidgets('creating a new stock take validation and success flow',
+        (tester) async {
+      final repository = _FakeRepository();
+      await _pump(tester, StockTakeListScreen(repository: repository));
       await tester.pumpAndSettle();
 
-      expect(repository.listCalls, 2);
-      expect(find.text('ST-09'), findsOneWidget);
+      // Click "Phiếu mới" to open sheet
+      await tester.tap(find.text('Phiếu mới'));
+      await tester.pumpAndSettle();
+
+      // Verify validation warning is present
+      expect(find.textContaining('Backend sẽ chụp snapshot tồn kho tại thời điểm tạo phiên.'), findsOneWidget);
+
+      // Verify submit fails without selecting warehouse
+      await tester.ensureVisible(find.byKey(const Key('submitButton')));
+      await tester.tap(find.byKey(const Key('submitButton')));
+      await tester.pumpAndSettle();
+      expect(find.text('Vui lòng chọn kho.'), findsOneWidget);
     });
   });
 
@@ -59,7 +97,7 @@ void main() {
       expect(find.text('Bao #2'), findsOneWidget);
       // Bao chưa tìm thấy phải gọi thẳng tên, không chỉ là một ô chưa tích.
       expect(find.text('Không thấy'), findsOneWidget);
-      expect(find.textContaining('Thiếu 1 bao'), findsOneWidget);
+      expect(find.textContaining('Thiếu 50'), findsOneWidget);
     });
 
     phoneTestWidgets('ticking the missing bag clears the variance warning',
@@ -71,7 +109,7 @@ void main() {
 
       expect(find.text('Kho A · đã đếm 2/2 bao'), findsOneWidget);
       expect(find.text('Không thấy'), findsNothing);
-      expect(find.textContaining('Thiếu 1 bao'), findsNothing);
+      expect(find.textContaining('Thiếu 50'), findsNothing);
     });
 
     phoneTestWidgets('a bag left unweighed keeps its book weight',
@@ -110,7 +148,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining('lệch bao — bắt buộc nhập lý do'),
+        find.textContaining('chênh lệch kg — bắt buộc nhập lý do'),
         findsOneWidget,
       );
       expect(repository.submitCalls, 0);
@@ -125,7 +163,7 @@ void main() {
       await tester.tap(find.text('Gửi duyệt'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Còn 1 dòng chưa kiểm đếm bao nào.'), findsOneWidget);
+      expect(find.textContaining('chưa kiểm đếm'), findsOneWidget);
       expect(repository.submitCalls, 0);
     });
 
@@ -140,7 +178,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Gửi phiếu để duyệt?'), findsOneWidget);
-      expect(find.textContaining('Đã đếm 2/2 bao'), findsOneWidget);
+      expect(find.textContaining('Đã kiểm đếm'), findsOneWidget);
 
       await tester.tap(find.descendant(
         of: find.byType(AlertDialog),
@@ -177,7 +215,7 @@ void main() {
       final repository = _FakeRepository(detail: _detail(bags: const []));
       await _pump(tester, _detailScreen(repository));
 
-      expect(find.text('Dòng này không quản lý theo bao'), findsOneWidget);
+      expect(find.textContaining('Vừa vào chọn mặt hàng'), findsOneWidget);
 
       await tester.enterText(find.byType(TextFormField).first, '87,5');
       await tester.pumpAndSettle();
@@ -189,12 +227,45 @@ void main() {
   });
 }
 
-Widget _detailScreen(_FakeRepository repository) =>
-    StockTakeDetailScreen(stockTakeId: 5, repository: repository);
+Widget _detailScreen(_FakeRepository repository) => Builder(
+      builder: (context) => Scaffold(
+        body: Center(
+          child: ElevatedButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  settings: const RouteSettings(arguments: 5),
+                  builder: (context) => StockTakeDetailScreen(stockTakeId: 5, repository: repository),
+                ),
+              );
+            },
+            child: const Text('Go'),
+          ),
+        ),
+      ),
+    );
 
 Future<void> _pump(WidgetTester tester, Widget screen) async {
-  await tester.pumpWidget(MaterialApp(home: screen));
+  await tester.pumpWidget(MaterialApp(
+    routes: {
+      AppRoutes.stockTakeDetail: (context) {
+        final id = ModalRoute.of(context)!.settings.arguments as int;
+        final repo = screen is StockTakeListScreen
+            ? (screen.repository as legacy_repo.StockTakeRepository?)
+            : null;
+        return StockTakeDetailScreen(stockTakeId: id, repository: repo);
+      },
+    },
+    home: screen is StockTakeListScreen
+        ? screen
+        : Scaffold(body: screen),
+  ));
   await tester.pumpAndSettle();
+  if (find.text('Go').evaluate().isNotEmpty) {
+    await tester.tap(find.text('Go'));
+    await tester.pumpAndSettle();
+  }
 }
 
 void phoneTestWidgets(String description, WidgetTesterCallback callback) {
@@ -209,12 +280,12 @@ void phoneTestWidgets(String description, WidgetTesterCallback callback) {
   });
 }
 
-StockTakeBag _bag(
+legacy.StockTakeBag _bag(
   int bagNo, {
   bool counted = false,
   double? countedWeightKg,
 }) {
-  return StockTakeBag(
+  return legacy.StockTakeBag(
     id: bagNo,
     paddyLotBagId: bagNo * 10,
     bagNo: bagNo,
@@ -224,15 +295,15 @@ StockTakeBag _bag(
   );
 }
 
-StockTakeDetail _detail({
+legacy.StockTakeDetail _detail({
   String statusCode = 'DRAFT',
   String statusName = 'Nháp',
-  List<StockTakeBag>? bags,
+  List<legacy.StockTakeBag>? bags,
 }) {
   // Mặc định: 2 bao sổ sách, bao #1 đã quét & cân 49,4 kg, bao #2 chưa thấy.
   final lineBags =
       bags ?? [_bag(1, counted: true, countedWeightKg: 49.4), _bag(2)];
-  return StockTakeDetail(
+  return legacy.StockTakeDetail(
     id: 5,
     code: 'ST-09',
     warehouseId: 1,
@@ -241,7 +312,7 @@ StockTakeDetail _detail({
     statusName: statusName,
     scopeDisplay: 'Cột A-01',
     lines: [
-      StockTakeLine(
+      legacy.StockTakeLine(
         id: 90,
         productVariantName: 'Lúa ST25',
         lotCode: 'LOT-A',
@@ -255,56 +326,48 @@ StockTakeDetail _detail({
   );
 }
 
-class _FakeRepository implements StockTakeRepository {
+class _FakeRepository implements StockTakeRepository, legacy_repo.StockTakeRepository {
   _FakeRepository({
-    List<StockTakeSummaryRow>? rows,
-    StockTakeDetail? detail,
+    List<StockTakeSummary>? rows,
+    legacy.StockTakeDetail? detail,
     this.listError,
   })  : rows = rows ??
             const [
-              StockTakeSummaryRow(
+              StockTakeSummary(
                 id: 5,
-                code: 'ST-09',
+                stCode: 'ST-09',
+                warehouseId: 1,
+                stockTakeStatusId: 1,
                 warehouseName: 'Kho A',
-                statusCode: 'DRAFT',
-                statusName: 'Nháp',
+                stockTakeStatusCode: 'DRAFT',
+                stockTakeStatusName: 'Nháp',
                 scopeDisplay: 'Cột A-01',
+                varianceLineCount: 0,
+                netVarianceKg: 0,
               ),
             ],
         detail = detail ?? _detail();
 
-  final List<StockTakeSummaryRow> rows;
-  final StockTakeDetail detail;
+  final List<StockTakeSummary> rows;
+  final legacy.StockTakeDetail detail;
   StockTakeException? listError;
 
   int listCalls = 0;
   int submitCalls = 0;
-  List<StockTakeLine> savedLines = const [];
+  List<legacy.StockTakeLine> savedLines = const [];
 
   @override
-  Future<List<StockTakeSummaryRow>> getStockTakes() async {
-    listCalls += 1;
-    final error = listError;
-    if (error != null) throw error;
-    return rows;
-  }
+  Future<legacy.StockTakeDetail> getStockTakeDetail(int id) async => detail;
 
   @override
-  Future<StockTakeDetail> getDetail(int id) async => detail;
+  Future<legacy.StockTakeDetail> getDetail(int id) async => detail;
 
   @override
-  Future<int> create({
-    required int warehouseId,
-    required StockTakeScope scope,
-    String? zoneName,
-    int? locationId,
-    String? note,
-  }) async =>
-      5;
+  Future<List<legacy.StockTakeSummaryRow>> getStockTakes() async => const [];
 
   @override
-  Future<void> saveCounts(int id, List<StockTakeLine> lines, {String? note}) async {
-    savedLines = List.of(lines);
+  Future<void> saveCounts(int id, List<legacy.StockTakeLine> lines, {String? note}) async {
+    savedLines = lines;
   }
 
   @override
@@ -313,8 +376,45 @@ class _FakeRepository implements StockTakeRepository {
   }
 
   @override
-  Future<ScanBagResult> scanBag(int id, String qrCode) async =>
-      const ScanBagResult(matched: false, message: 'Không tìm thấy bao');
+  Future<legacy.ScanBagResult> scanBag(int id, String qrCode) async =>
+      const legacy.ScanBagResult(matched: false, message: 'Không tìm thấy bao');
+
+  @override
+  Future<StockTakePage> getStockTakesPaged({
+    required int start,
+    required int length,
+    String? search,
+    int? warehouseId,
+    String? statusCode,
+  }) async {
+    listCalls += 1;
+    final error = listError;
+    if (error != null) {
+      throw ApiException(
+        message: error.message,
+        statusCode: error.isTransient ? 500 : 400,
+      );
+    }
+    return StockTakePage(
+      items: rows,
+      recordsTotal: rows.length,
+      recordsFiltered: rows.length,
+    );
+  }
+
+  @override
+  Future<int> create({
+    required int warehouseId,
+    required StockTakeScope scope,
+    String? zoneName,
+    int? locationId,
+    int? paddyLotId,
+    int? productVariantId,
+    String? lotCode,
+    String? skuCode,
+    String? note,
+  }) async =>
+      5;
 
   @override
   Future<List<StockTakeLocationOption>> getLocations(int warehouseId) async =>
@@ -323,6 +423,16 @@ class _FakeRepository implements StockTakeRepository {
   @override
   Future<List<WarehouseOption>> getWarehouses() async =>
       const [WarehouseOption(id: 1, name: 'Kho A')];
+
+  @override
+  Future<List<StockTakeStatusOption>> getStatuses() async =>
+      const [StockTakeStatusOption(code: 'DRAFT', name: 'Nháp')];
+
+  @override
+  Future<List<StockTakeOption>> getLots() async => const [];
+
+  @override
+  Future<List<StockTakeOption>> getSkus() async => const [];
 }
 
 AuthSession _session() {

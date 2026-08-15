@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:meta/meta.dart';
 
 import 'ble_scale_service.dart';
 
@@ -13,11 +14,17 @@ import 'ble_scale_service.dart';
 /// khi cân xong.
 class ScaleSession {
   ScaleSession._();
-
+  
   static final ScaleSession instance = ScaleSession._();
 
   BleScaleService? _service;
   Future<void>? _initializing;
+
+  @visibleForTesting
+  void debugSetService(BleScaleService? service, {Future<void>? initializing}) {
+    _service = service;
+    _initializing = initializing;
+  }
 
   /// Service dùng chung (chưa chắc đã initialize). Null khi chưa ai dùng cân.
   BleScaleService? get serviceOrNull => _service;

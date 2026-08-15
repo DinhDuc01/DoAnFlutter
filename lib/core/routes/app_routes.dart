@@ -8,7 +8,8 @@ import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_scr
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/thu_mua/presentation/screens/thu_mua_screen.dart';
 import '../../features/thu_mua/models/purchase_schedule.dart';
-import '../../features/kho/presentation/screens/stock_take_list_screen.dart';
+import '../../features/stock_take/presentation/screens/stock_take_list_screen.dart';
+import '../../features/kho/presentation/screens/stock_take_detail_screen.dart';
 import '../../features/products/presentation/screens/product_detail_screen.dart';
 import '../../features/reports/presentation/screens/reports_screen.dart';
 import '../../features/scan/presentation/screens/scan_qr_screen.dart';
@@ -35,6 +36,8 @@ class AppRoutes {
   static const outboundOrders =
       '/outbound-orders'; // Phiếu xuất kho & giao hàng
   static const stocktake = '/stocktake'; // Kiểm kê kho theo BAO
+  static const stockTakeList = '/stocktake-list';
+  static const stockTakeDetail = '/stocktake-detail';
   static const productDetail = '/products/detail'; // Màn hình Chi tiết sản phẩm
   static const scanQr = '/scan-qr'; // Màn hình Quét mã QR/Barcode
   static const reports = '/reports'; // Màn hình Báo cáo & Biểu đồ
@@ -67,6 +70,12 @@ class AppRoutes {
       // Kiểm kê theo BAO: quét QR từng bao + cân, thay cho cách nhập tay số kg
       // vốn không phản ánh được việc kho gạo lưu hàng theo bao.
       stocktake: (_) => const StockTakeListScreen(),
+      stockTakeList: (_) => const StockTakeListScreen(),
+      stockTakeDetail: (context) {
+        final arguments = ModalRoute.of(context)?.settings.arguments;
+        final id = arguments is int ? arguments : (arguments as Map)['id'] as int;
+        return StockTakeDetailScreen(stockTakeId: id);
+      },
       productDetail: (_) => const ProductDetailScreen(),
       scanQr: (_) => const ScanQrScreen(),
       reports: (_) => const ReportsScreen(),
