@@ -7,7 +7,6 @@ import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../../auth/data/auth_session_store.dart';
-import '../../../milling/models/milling_plan_args.dart';
 import '../../../outbound_orders/models/outbound_order.dart';
 import '../../../outbound_orders/presentation/screens/outbound_order_detail_screen.dart';
 import '../../data/sales_order_repository.dart';
@@ -258,20 +257,6 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
     }
   }
 
-  /// Mở màn xay xát với loại kế hoạch đặt sẵn là "đơn bán cần xay".
-  void _openMilling(SalesOrderDetail order) {
-    Navigator.of(context).pushNamed(
-      AppRoutes.milling,
-      arguments: MillingPlanArgs.forSalesOrder(
-        salesOrderId: order.id,
-        salesOrderCode: order.soCode,
-        // Gạo còn phải xay của chính đơn này — màn tạo lệnh dùng để điền sẵn
-        // sản lượng và để giữ đơn trong danh sách chọn dù đã trả hết tiền.
-        remainingRiceKg: order.remainingMillingRiceKg,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final order = _order;
@@ -373,12 +358,11 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
           ],
           if (order.needsMilling) ...[
             const SizedBox(height: 12),
-            AppInfoBanner(
+            const AppInfoBanner(
               message:
-                  'Đơn này phải xay xát trước khi giữ hàng. Nhấn để mở màn Xay xát với loại kế hoạch "Đơn bán cần xay".',
+                  'Đơn này cần xay xát trước khi giữ hàng. Chức năng xay xát được xử lý trên Web.',
               tone: AppTone.warning,
               icon: Icons.grain_outlined,
-              onTap: () => _openMilling(order),
             ),
           ],
         ],
@@ -530,15 +514,6 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
       );
     }
 
-    if (false && order.needsMilling) {
-      buttons.add(
-        OutlinedButton.icon(
-          onPressed: _busy ? null : () => _openMilling(order),
-          icon: const Icon(Icons.grain_outlined),
-          label: const Text('Xay xát'),
-        ),
-      );
-    }
     // Mobile chỉ có "Kiểm tra & giữ hàng"; bước xác nhận đơn để web làm.
     if (order.canReserve) {
       buttons.add(

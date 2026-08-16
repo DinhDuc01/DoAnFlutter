@@ -9,6 +9,7 @@ import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../../products/presentation/screens/product_detail_screen.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/inventory_stock_repository.dart';
 import '../../models/inventory_stock.dart';
 
@@ -496,19 +497,22 @@ class _KhoTabState extends State<KhoTab> {
               ),
           ],
           const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.paddyLots),
-            icon: const Icon(Icons.account_tree_outlined),
-            label: const Text('Lô & truy vết'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.stocktake),
-            icon: const Icon(Icons.fact_check_outlined),
-            label: const Text('Kiểm kê kho'),
-          ),
+          if (AuthSessionStore.current?.user.hasMenuAccess('PADDY_LOTS') == true)
+            OutlinedButton.icon(
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.paddyLots),
+              icon: const Icon(Icons.account_tree_outlined),
+              label: const Text('Lô & truy vết'),
+            ),
+          if (AuthSessionStore.current?.user.hasMenuAccess('PADDY_LOTS') == true)
+            const SizedBox(height: 8),
+          if (AuthSessionStore.current?.user.hasMenuAccess('STOCKTAKE') == true)
+            OutlinedButton.icon(
+              onPressed: () =>
+                  Navigator.of(context).pushNamed(AppRoutes.stocktake),
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('Kiểm kê kho'),
+            ),
         ],
       ),
     );
