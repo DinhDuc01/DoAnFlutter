@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
+import '../../models/milling_output_form.dart';
 import '../../../scale/models/weight_reading.dart';
 import '../../../scale/presentation/screens/scale_screen.dart';
 import '../widgets/milling_widgets.dart';
@@ -12,11 +13,15 @@ class RiceWeighingScreen extends StatefulWidget {
   const RiceWeighingScreen({
     required this.order,
     required this.repository,
+    this.includeBroken = false,
+    this.initialOutputForms = const [],
     super.key,
   });
 
   final MillingOrder order;
   final MillingRepository repository;
+  final bool includeBroken;
+  final List<MillingOutputFormValue> initialOutputForms;
 
   @override
   State<RiceWeighingScreen> createState() => _RiceWeighingScreenState();
@@ -26,42 +31,67 @@ class _RiceWeighingScreenState extends State<RiceWeighingScreen> {
   bool _isSaving = false;
   late List<MillingBag> _bags;
   double? _latestWeightKg;
+  late MillingScaleMode _scaleMode;
+  late List<MillingOutputFormValue> _outputForms;
 
   @override
   void initState() {
     super.initState();
     _bags = List<MillingBag>.of(widget.order.riceBags);
+    _scaleMode = widget.order.scaleMode;
+    _outputForms = List.unmodifiable(widget.initialOutputForms);
   }
 
-  MillingOrder get _currentOrder => widget.order.copyWith(riceBags: _bags);
+  MillingOrder get _currentOrder => widget.order.copyWith(
+        riceBags: _bags,
+        scaleMode: _scaleMode,
+      );
 
   Future<void> _captureWeight() async {
-    final reading = await Navigator.of(context).push<WeightReading>(
-      MaterialPageRoute(builder: (_) => const ScaleScreen()),
-    );
-    if (!mounted || reading == null) return;
+    final double? weight;
+    if (_scaleMode == MillingScaleMode.iot) {
+      final reading = await Navigator.of(context).push<WeightReading>(
+        MaterialPageRoute(builder: (_) => const ScaleScreen()),
+      );
+      weight = reading?.weight;
+    } else {
+      weight = await showManualWeightDialog(context, productLabel: 'gạo');
+    }
+    if (!mounted || weight == null || !weight.isFinite || weight <= 0) return;
+    final capturedWeight = weight;
     setState(() {
-      _latestWeightKg = reading.weight;
+      _latestWeightKg = capturedWeight;
       _bags = [
         ..._bags,
-        MillingBag(index: _bags.length + 1, weightKg: reading.weight),
+        MillingBag(index: _bags.length + 1, weightKg: capturedWeight),
       ];
     });
   }
 
   Future<void> _continue() async {
+    if (_isSaving) return;
     setState(() => _isSaving = true);
-    await widget.repository.saveRiceBags(_currentOrder);
     if (!mounted) return;
-    setState(() => _isSaving = false);
-    Navigator.of(context).push(
+    await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => BranWeighingScreen(
           order: _currentOrder,
           repository: widget.repository,
+          includeBroken: widget.includeBroken,
+          initialOutputForms: upsertMillingOutput(
+            _outputForms,
+            adaptLegacyMillingOutputs([
+              LegacyMillingOutputInput(
+                type: MillingOutputType.rice,
+                productVariantId: _currentOrder.riceProductVariantId,
+                bagWeightsKg: _bags.map((bag) => bag.weightKg).toList(),
+              ),
+            ]).single,
+          ),
         ),
       ),
     );
+    if (mounted) setState(() => _isSaving = false);
   }
 
   @override
@@ -79,6 +109,10 @@ class _RiceWeighingScreenState extends State<RiceWeighingScreen> {
             latestWeightKg: _latestWeightKg,
             instruction: 'Đặt bao gạo thành phẩm lên cân rồi nhận số ổn định.',
             onCapture: _captureWeight,
+            manualMode: _scaleMode == MillingScaleMode.manual,
+            onModeChanged: (manual) => setState(() {
+              _scaleMode = manual ? MillingScaleMode.manual : MillingScaleMode.iot;
+            }),
           ),
           const SizedBox(height: 10),
           WeighingSummary(

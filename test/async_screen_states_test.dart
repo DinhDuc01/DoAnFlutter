@@ -2,12 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:stocklite/features/history/data/operation_history_repository.dart';
-import 'package:stocklite/features/history/models/operation_history.dart';
-import 'package:stocklite/features/history/presentation/screens/operation_history_screen.dart';
+import 'package:stocklite/core/widgets/state_widgets.dart';
 import 'package:stocklite/features/notifications/data/notifications_repository.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
-import 'package:stocklite/features/notifications/presentation/screens/notifications_screen.dart';
+import 'package:stocklite/features/notifications/presentation/widgets/notifications_tab.dart';
 import 'package:stocklite/features/quality_inspection/data/quality_inspection_repository.dart';
 import 'package:stocklite/features/quality_inspection/models/quality_inspection.dart';
 import 'package:stocklite/features/quality_inspection/presentation/screens/quality_inspection_screen.dart';
@@ -60,106 +58,33 @@ void main() {
     });
   });
 
-  group('OperationHistoryScreen states', () {
-    testWidgets('shows loading with zero count while history is pending',
-        (tester) async {
-      final completer = Completer<List<OperationHistory>>();
+  group('NotificationsTab states and actions', () {
+    // Màn NotificationsScreen đứng riêng đã bị xoá vì trùng với tab này; toàn
+    // bộ hành vi (lọc, đọc tất cả, xoá) nay nằm ở NotificationsTab.
+    Widget host(NotificationsRepository repository) => MaterialApp(
+          home: Scaffold(body: NotificationsTab(repository: repository)),
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OperationHistoryScreen(
-            repository: _HistoryRepository(completer.future),
-          ),
-        ),
-      );
-
-      expect(find.text('0 giao dịch'), findsOneWidget);
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    });
-
-    testWidgets('shows error when history loading fails', (tester) async {
-      final completer = Completer<List<OperationHistory>>();
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OperationHistoryScreen(
-            repository: _HistoryRepository(completer.future),
-          ),
-        ),
-      );
-      completer.completeError('history failed');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Không tải được lịch sử thao tác'), findsOneWidget);
-    });
-
-    testWidgets('shows empty state when no histories exist', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OperationHistoryScreen(
-            repository: _HistoryRepository(Future.value(const [])),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Chưa có giao dịch'), findsOneWidget);
-    });
-
-    testWidgets('renders history count and record', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: OperationHistoryScreen(
-            repository: _HistoryRepository(
-              Future.value([
-                OperationHistory(
-                  type: OperationHistoryType.inbound,
-                  productName: 'Gạo thơm',
-                  sku: 'GAO',
-                  referenceCode: 'PN-01',
-                  quantityChange: 10,
-                  createdAt: DateTime(2026, 7, 22),
-                ),
-              ]),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('1 giao dịch'), findsOneWidget);
-      expect(find.text('Gạo thơm'), findsOneWidget);
-      expect(find.text('GAO • PN-01'), findsOneWidget);
-    });
-  });
-
-  group('NotificationsScreen states and actions', () {
     testWidgets('shows loading while notifications are pending',
         (tester) async {
       final completer = Completer<List<AppNotification>>();
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationsScreen(
-            repository: _NotificationRepository([completer.future]),
-          ),
-        ),
+        host(_NotificationRepository([completer.future])),
       );
+      await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(ListSkeleton), findsOneWidget);
     });
 
     testWidgets('shows empty state when there are no notifications',
         (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationsScreen(
-            repository: _NotificationRepository([Future.value(const [])]),
-          ),
-        ),
+        host(_NotificationRepository([Future.value(const [])])),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Không có thông báo phù hợp'), findsOneWidget);
+      expect(find.text('Không có thông báo mới'), findsOneWidget);
     });
 
     testWidgets('shows error and retries notification loading', (tester) async {
@@ -168,13 +93,12 @@ void main() {
         firstLoad.future,
         Future.value([_notification('1', 'Đã tải lại')]),
       ]);
-      await tester.pumpWidget(
-        MaterialApp(home: NotificationsScreen(repository: repository)),
-      );
+      await tester.pumpWidget(host(repository));
       firstLoad.completeError('network failed');
       await tester.pumpAndSettle();
 
-      expect(find.text('Không tải được thông báo'), findsOneWidget);
+      // HErrorState thay message chi tiết bằng nhãn chung.
+      expect(find.text('Đã xảy ra lỗi'), findsOneWidget);
       await tester.tap(find.text('Thử lại'));
       await tester.pumpAndSettle();
 
@@ -190,13 +114,7 @@ void main() {
         _notification('3', 'Đã đọc', isRead: true),
       ];
       await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationsScreen(
-            repository: _NotificationRepository([
-              Future.value(notifications),
-            ]),
-          ),
-        ),
+        host(_NotificationRepository([Future.value(notifications)])),
       );
       await tester.pumpAndSettle();
 
@@ -208,18 +126,14 @@ void main() {
 
       await tester.tap(find.text('Đọc tất cả'));
       await tester.pump();
-      expect(find.text('0 thông báo chưa đọc'), findsOneWidget);
+      expect(find.text('Đã đọc hết thông báo'), findsOneWidget);
     });
 
     testWidgets('dismisses a notification card', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: NotificationsScreen(
-            repository: _NotificationRepository([
-              Future.value([_notification('1', 'Có thể đóng')]),
-            ]),
-          ),
-        ),
+        host(_NotificationRepository([
+          Future.value([_notification('1', 'Có thể đóng')]),
+        ])),
       );
       await tester.pumpAndSettle();
 
@@ -227,7 +141,40 @@ void main() {
       await tester.pump();
 
       expect(find.text('Có thể đóng'), findsNothing);
-      expect(find.text('Không có thông báo phù hợp'), findsOneWidget);
+      expect(find.text('Không có thông báo mới'), findsOneWidget);
+    });
+
+    testWidgets('tap only shows notification detail and does not navigate',
+        (tester) async {
+      const notification = AppNotification(
+        id: '9',
+        type: AppNotificationType.info,
+        title: 'Chi tiết thông báo',
+        message: 'Nội dung cần xem',
+        timeAgo: 'Vừa xong',
+        isRead: false,
+        directionId: '/admin/milling-orders',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          routes: {
+            '/admin/milling-orders': (_) => const Text('Màn nghiệp vụ'),
+          },
+          home: NotificationsScreen(
+            repository: _NotificationRepository([
+              Future.value(const [notification]),
+            ]),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Chi tiết thông báo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Nội dung cần xem'), findsWidgets);
+      expect(find.text('Đóng'), findsOneWidget);
+      expect(find.text('Màn nghiệp vụ'), findsNothing);
     });
   });
 
@@ -235,48 +182,44 @@ void main() {
     testWidgets('shows empty state', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: QualityInspectionScreen(
-            repository: _InspectionRepository(inspections: Future.value([])),
-          ),
+          home: QualityInspectionScreen(repository: _InspectionRepository()),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Chưa có phiếu kiểm chất'), findsOneWidget);
+      expect(find.text('Chưa có phiếu kiểm định'), findsOneWidget);
     });
 
     testWidgets('shows error state', (tester) async {
-      final completer = Completer<List<QualityInspection>>();
       await tester.pumpWidget(
         MaterialApp(
           home: QualityInspectionScreen(
-            repository: _InspectionRepository(
-              inspections: completer.future,
-            ),
+            repository: _InspectionRepository(failing: true),
           ),
         ),
       );
-      completer.completeError('inspection failed');
       await tester.pumpAndSettle();
 
       expect(find.text('Đã xảy ra lỗi'), findsOneWidget);
     });
 
-    testWidgets('renders an inspection result', (tester) async {
+    testWidgets('renders an inspection row without create action',
+        (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: QualityInspectionScreen(
             repository: _InspectionRepository(
-              inspections: Future.value([
+              items: [
                 QualityInspection(
                   id: 1,
                   paddyLotId: 2,
                   lotCode: 'LOT-01',
+                  lotStatusCode: 'IN_STOCK',
                   inspectedAt: DateTime(2026, 7, 22),
-                  passed: true,
+                  passedInspection: true,
                   moisturePercent: 13.5,
                 ),
-              ]),
+              ],
             ),
           ),
         ),
@@ -284,62 +227,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('LOT-01'), findsOneWidget);
-      expect(find.textContaining('Đạt chất lượng'), findsOneWidget);
-    });
-
-    testWidgets('create action warns when no paddy lots exist', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: QualityInspectionScreen(
-            repository: _InspectionRepository(
-              inspections: Future.value([]),
-              lots: Future.value([]),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Tạo phiếu kiểm chất'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.text('Chưa có lô lúa/gạo để kiểm chất.'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('quality form rejects empty measurement fields',
-        (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: QualityInspectionScreen(
-            repository: _InspectionRepository(
-              inspections: Future.value([]),
-              lots: Future.value(
-                const [
-                  PaddyLotOption(
-                    id: 1,
-                    code: 'LOT-01',
-                    lotType: 'PADDY',
-                    remainingWeightKg: 1000,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Tạo phiếu kiểm chất'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Lưu kiểm chất'));
-      await tester.pump();
-
-      expect(find.text('Vui lòng nhập Độ ẩm (%)'), findsOneWidget);
-      expect(find.text('Vui lòng nhập Tạp chất (%)'), findsOneWidget);
+      expect(find.text('Đạt'), findsOneWidget);
+      // Mobile không được tạo phiếu kiểm định — chỉ web mới có luồng này.
+      expect(find.textContaining('Tạo phiếu'), findsNothing);
+      expect(find.byType(FloatingActionButton), findsNothing);
     });
   });
 }
@@ -349,13 +240,6 @@ class _ReportRepository implements WarehouseReportRepository {
   final Future<WarehouseReport> result;
   @override
   Future<WarehouseReport> getWarehouseReport() => result;
-}
-
-class _HistoryRepository implements OperationHistoryRepository {
-  _HistoryRepository(this.result);
-  final Future<List<OperationHistory>> result;
-  @override
-  Future<List<OperationHistory>> getHistories() => result;
 }
 
 class _NotificationRepository implements NotificationsRepository {
@@ -372,22 +256,42 @@ class _NotificationRepository implements NotificationsRepository {
 }
 
 class _InspectionRepository implements QualityInspectionRepository {
-  _InspectionRepository({
-    required this.inspections,
-    Future<List<PaddyLotOption>>? lots,
-  }) : lots = lots ?? Future.value(const []);
+  _InspectionRepository({this.items = const <QualityInspection>[], this.failing = false});
 
-  final Future<List<QualityInspection>> inspections;
-  final Future<List<PaddyLotOption>> lots;
+  final List<QualityInspection> items;
+  final bool failing;
 
   @override
-  Future<List<QualityInspection>> getInspections() => inspections;
+  Future<QualityInspectionPage> loadPage({
+    int page = 1,
+    int pageSize = 20,
+    String search = '',
+    bool? passedInspection,
+  }) async {
+    if (failing) throw const QualityInspectionException('inspection failed');
+    return QualityInspectionPage(
+      items: items,
+      recordsTotal: items.length,
+      recordsFiltered: items.length,
+    );
+  }
 
   @override
-  Future<List<PaddyLotOption>> getPaddyLots() => lots;
+  Future<QualityInspection> getDetail(int id) async => items.first;
 
   @override
-  Future<int> createInspection(QualityInspectionDraft draft) async => 1;
+  Future<List<QualityInspection>> getHistory(int paddyLotId) async => items;
+
+  @override
+  Future<QualityLot> getLot(int paddyLotId) async =>
+      const QualityLot(id: 1, lotCode: 'LOT-01');
+
+  @override
+  Future<Map<int, QualityLot>> loadLotMap() async => const <int, QualityLot>{};
+
+  @override
+  Future<void> update(QualityInspectionUpdate payload) async =>
+      throw StateError('Test không được phép ghi dữ liệu.');
 }
 
 WarehouseReport _report() {

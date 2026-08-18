@@ -7,12 +7,16 @@ environment:
   sdk: ">=3.4.0 <4.0.0"
 
 dependencies:
+  firebase_core: ^4.12.1
+  firebase_messaging: ^16.3.0
   flutter:
     sdk: flutter
   flutter_blue_plus: 2.3.10
+  image_picker: ^1.1.2
   mobile_scanner: ^7.2.0
   permission_handler: 12.0.3
   shared_preferences: ^2.5.4
+  signalr_netcore: ^1.4.4
 
 dev_dependencies:
   flutter_test:

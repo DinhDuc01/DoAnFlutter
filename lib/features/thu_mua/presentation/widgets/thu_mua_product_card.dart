@@ -16,7 +16,9 @@ class ThuMuaProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
-      onTap: () => Navigator.of(context).pushNamed(AppRoutes.productDetail),
+      onTap: receipt.productVariantId <= 0
+          ? null
+          : () => Navigator.of(context).pushNamed(AppRoutes.productDetail),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),
@@ -29,7 +31,7 @@ class ThuMuaProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'SẢN PHẨM NHẬP',
+              'SẢN PHẨM THU MUA',
               style: TextStyle(
                 color: AppColors.textSecondaryFor(context),
                 fontSize: 11,
@@ -38,7 +40,9 @@ class ThuMuaProductCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              receipt.productName,
+              receipt.productName.trim().isEmpty
+                  ? 'Chưa xác định sản phẩm'
+                  : receipt.productName,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -46,17 +50,19 @@ class ThuMuaProductCard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              '${receipt.sku} • Tồn hiện tại: ${receipt.currentStock} bao',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: AppColors.primaryDark,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+            if (receipt.sku.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                '${receipt.sku} · Lúa nguyên liệu',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: AppColors.primaryDark,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

@@ -25,6 +25,54 @@ class ApiAuthService implements AuthService {
   }
 
   @override
+  Future<AuthSession> refresh(AuthSession session) async {
+    if (session.refreshToken.isEmpty) {
+      throw const AuthException('Phiên đăng nhập đã hết hạn');
+    }
+
+    try {
+      // Backend nhận accessToken (cũ) + refreshToken, trả về cặp token mới.
+      final json = await _apiClient.post(
+        '/api/v1/auth/refresh-token',
+        body: {
+          'accessToken': session.accessToken,
+          'refreshToken': session.refreshToken,
+        },
+      );
+
+      final isSucceeded = JsonReader.boolean(json, 'isSucceeded') ?? false;
+      if (!isSucceeded) {
+        throw AuthException(
+          JsonReader.string(json, 'message') ?? 'Làm mới phiên thất bại',
+        );
+      }
+
+      final resources = JsonReader.map(json, 'resources');
+      if (resources == null) {
+        throw const AuthException('API làm mới token không trả dữ liệu');
+      }
+
+      final accessToken = JsonReader.string(resources, 'accessToken') ?? '';
+      final refreshToken = JsonReader.string(resources, 'refreshToken') ?? '';
+      if (accessToken.isEmpty) {
+        throw const AuthException('API làm mới token không hợp lệ');
+      }
+
+      return session.copyWith(
+        accessToken: accessToken,
+        // Giữ refresh token cũ nếu backend không cấp lại token mới.
+        refreshToken: refreshToken.isEmpty ? session.refreshToken : refreshToken,
+      );
+    } on AuthException {
+      rethrow;
+    } on ApiException catch (error) {
+      throw AuthException(error.message);
+    } catch (error) {
+      throw AuthException('Không làm mới được phiên: $error');
+    }
+  }
+
+  @override
   Future<AuthSession> login({
     required String email,
     required String password,
@@ -65,16 +113,20 @@ class ApiAuthService implements AuthService {
             'API đăng nhập không trả thông tin người dùng');
       }
 
+      final accessToken = JsonReader.string(resources, 'accessToken');
+      final refreshToken = JsonReader.string(resources, 'refreshToken');
+      if (accessToken == null || accessToken.isEmpty ||
+          refreshToken == null || refreshToken.isEmpty) {
+        throw const AuthException(
+          'API đăng nhập không trả đủ thông tin token phiên',
+        );
+      }
+
       // Khởi tạo và trả về đối tượng AuthSession từ dữ liệu API đã parse thành công
       return AuthSession(
-        accessToken: JsonReader.string(resources, 'accessToken') ?? '',
-        refreshToken: JsonReader.string(resources, 'refreshToken') ?? '',
-        user: AuthUser(
-          id: JsonReader.integer(userInfo, 'id') ?? 0,
-          fullName: JsonReader.string(userInfo, 'fullName') ?? '',
-          email: JsonReader.string(userInfo, 'email') ?? email.trim(),
-          avatarUrl: JsonReader.string(userInfo, 'avatarUrl'),
-        ),
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        user: AuthUser.fromJson(userInfo),
       );
     } on AuthException {
       rethrow;
@@ -84,6 +136,41 @@ class ApiAuthService implements AuthService {
     } catch (error) {
       // Xử lý các lỗi hệ thống không xác định khác
       throw AuthException('Không đăng nhập được: $error');
+    }
+  }
+
+  @override
+  Future<AuthSession> fetchSession(AuthSession session) async {
+    if (session.accessToken.isEmpty) {
+      throw const AuthException('Phiên đăng nhập không hợp lệ');
+    }
+
+    try {
+      final json = await _apiClient.get(
+        '/api/v1/auth/me/session',
+        token: session.accessToken,
+      );
+
+      final isSucceeded = JsonReader.boolean(json, 'isSucceeded') ?? false;
+      if (!isSucceeded) {
+        throw AuthException(
+          JsonReader.string(json, 'message') ?? 'Không tải được thông tin phân quyền',
+        );
+      }
+
+      final resources = JsonReader.map(json, 'resources');
+      if (resources == null) {
+        throw const AuthException('API nạp phiên không trả dữ liệu');
+      }
+
+      final updatedUser = AuthUser.fromJson(resources);
+      return session.copyWith(user: updatedUser);
+    } on AuthException {
+      rethrow;
+    } on ApiException catch (error) {
+      throw AuthException(error.message);
+    } catch (error) {
+      throw AuthException('Không tải được phân quyền: $error');
     }
   }
 }

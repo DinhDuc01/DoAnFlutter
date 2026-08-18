@@ -5,15 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/core/routes/app_routes.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
-import 'package:stocklite/features/giao_hang/data/giao_hang_repository.dart';
-import 'package:stocklite/features/giao_hang/models/giao_hang_receipt.dart';
-import 'package:stocklite/features/giao_hang/presentation/screens/giao_hang_screen.dart';
-import 'package:stocklite/features/kho/data/kho_check_repository.dart';
-import 'package:stocklite/features/kho/models/kho_check.dart';
-import 'package:stocklite/features/kho/presentation/screens/kho_screen.dart';
 import 'package:stocklite/features/products/data/product_variant_api.dart';
 import 'package:stocklite/features/thu_mua/data/thu_mua_repository.dart';
 import 'package:stocklite/features/thu_mua/models/thu_mua_receipt.dart';
+import 'package:stocklite/features/thu_mua/models/purchase_schedule.dart';
 import 'package:stocklite/features/thu_mua/presentation/screens/thu_mua_screen.dart';
 
 void main() {
@@ -43,22 +38,25 @@ void main() {
       completer.completeError('draft failed');
       await tester.pumpAndSettle();
 
-      expect(find.text('Không tải được phiếu nhập kho'), findsOneWidget);
+      expect(find.text('Không tải được phiếu mua lúa'), findsOneWidget);
     });
 
-    phoneTestWidgets('rejects zero inbound quantity', (tester) async {
+    phoneTestWidgets('rejects zero bag weight', (tester) async {
       final repository = _ThuMuaRepository(Future.value(_inboundReceipt()));
       await tester.pumpWidget(
         MaterialApp(home: ThuMuaScreen(repository: repository)),
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.remove));
-      await tester.ensureVisible(find.text('Tạo phiếu chờ xác nhận'));
-      await tester.tap(find.text('Tạo phiếu chờ xác nhận'));
+      await tester.enterText(
+        find.byKey(const ValueKey('thu_mua_bag_weight_0')),
+        '0',
+      );
+      await tester.ensureVisible(find.text('Lưu phiếu mua'));
+      await tester.tap(find.text('Lưu phiếu mua'));
       await tester.pump();
 
-      expect(find.text('Số lượng nhập phải lớn hơn 0'), findsOneWidget);
+      expect(find.text('Khối lượng phải lớn hơn 0'), findsOneWidget);
       expect(repository.confirmCount, 0);
     });
 
@@ -82,13 +80,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.add));
-      await tester.ensureVisible(find.text('Tạo phiếu chờ xác nhận'));
-      await tester.tap(find.text('Tạo phiếu chờ xác nhận'));
+      await _enterBagWeights(tester, const ['25', '25']);
+      await tester.ensureVisible(find.text('Lưu phiếu mua'));
+      await tester.tap(find.text('Lưu phiếu mua'));
       await tester.pumpAndSettle();
 
       expect(repository.confirmCount, 1);
       expect(repository.lastQuantity, 2);
+      expect(repository.lastReceipt?.actualWeightKg, 50);
+      expect(repository.lastReceipt?.bags.length, 2);
       expect(routeArguments, isA<ThuMuaSuccessResult>());
       expect(find.text('Inbound success'), findsOneWidget);
     });
@@ -141,88 +141,52 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Lúa thơm'), findsWidgets);
-      await tester.tap(find.byIcon(Icons.add));
+      await _enterBagWeights(tester, const ['50', '50']);
       final noteField = find.byWidgetPredicate(
         (widget) =>
             widget is TextField && widget.decoration?.labelText == 'Ghi chú',
       );
       await tester.enterText(noteField, '  Lúa mới về  ');
-      await tester.ensureVisible(find.text('Tạo phiếu chờ xác nhận'));
-      await tester.tap(find.text('Tạo phiếu chờ xác nhận'));
+      await tester.ensureVisible(find.text('Lưu phiếu mua'));
+      await tester.tap(find.text('Lưu phiếu mua'));
       await tester.pumpAndSettle();
 
       expect(repository.lastReceipt?.productVariantId, 2);
       expect(repository.lastQuantity, 2);
+      expect(repository.lastReceipt?.actualWeightKg, 100);
+      expect(repository.lastReceipt?.bags.length, 2);
       expect(repository.lastNote, '  Lúa mới về  ');
       expect(find.text('Saved inbound'), findsOneWidget);
     });
-  });
 
-  group('GiaoHangScreen', () {
-    phoneTestWidgets('shows loading and repository error states',
+    phoneTestWidgets('opens purchase draft from schedule without fake actuals',
         (tester) async {
-      final receiptCompleter = Completer<GiaoHangReceipt>();
-      final repository = _GiaoHangRepository(
-        receipt: receiptCompleter.future,
-        customers: Future.value(const []),
+      final repository = _ThuMuaRepository(
+        Future.value(_inboundReceipt()),
       );
-      await tester.pumpWidget(
-        MaterialApp(home: GiaoHangScreen(repository: repository)),
+      final schedule = PurchaseSchedule(
+        id: 42,
+        farmerId: 1,
+        riceVarietyId: 7,
+        warehouseId: 9,
+        warehouseName: 'Kho lúa 9',
+        code: 'SCH-42',
+        farmerName: 'Nông dân A',
+        status: 'Đã xác nhận',
+        riceVariety: 'ST25',
+        scheduledAt: DateTime(2026, 8, 9),
+        estimatedWeightKg: 120,
+        expectedPrice: 6500,
+        location: 'Ruộng A',
       );
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-      receiptCompleter.completeError('delivery failed');
-      await tester.pumpAndSettle();
-      expect(
-        find.textContaining('Không tải được màn bán hàng'),
-        findsOneWidget,
-      );
-    });
-
-    phoneTestWidgets('requires customer before confirmation', (tester) async {
-      final repository = _GiaoHangRepository(
-        receipt: Future.value(_deliveryReceipt()),
-        customers: Future.value(const []),
-      );
-      await tester.pumpWidget(
-        MaterialApp(home: GiaoHangScreen(repository: repository)),
-      );
-      await tester.pumpAndSettle();
-      final confirmButton = find.text('Tạo đơn chờ xác nhận');
-      await tester.scrollUntilVisible(
-        confirmButton,
-        300,
-        scrollable: find
-            .descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
-      );
-      await tester.tap(confirmButton);
-      await tester.pump();
-
-      expect(find.text('Vui lòng chọn khách hàng nhận hàng.'), findsOneWidget);
-      expect(repository.confirmCount, 0);
-    });
-
-    phoneTestWidgets('submits delivery and passes result to success route',
-        (tester) async {
-      final repository = _GiaoHangRepository(
-        receipt: Future.value(_deliveryReceipt()),
-        customers: Future.value(const [
-          GiaoHangCustomer(id: 1, code: 'KH-01', name: 'Khách A'),
-        ]),
-      );
-      Object? routeArguments;
       await tester.pumpWidget(
         MaterialApp(
-          home: GiaoHangScreen(repository: repository),
+          home: ThuMuaScreen(repository: repository, schedule: schedule),
           onGenerateRoute: (settings) {
-            if (settings.name == AppRoutes.giaoHangSuccess) {
-              routeArguments = settings.arguments;
+            if (settings.name == AppRoutes.thuMuaSuccess) {
               return MaterialPageRoute<void>(
-                builder: (_) => const Scaffold(body: Text('Delivery success')),
+                builder: (_) => const Scaffold(body: Text('Schedule saved')),
               );
             }
             return null;
@@ -230,81 +194,172 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      final confirmButton = find.text('Tạo đơn chờ xác nhận');
-      await tester.scrollUntilVisible(
-        confirmButton,
-        300,
-        scrollable: find
-            .descendant(
-              of: find.byType(ListView),
-              matching: find.byType(Scrollable),
-            )
-            .first,
+
+      expect(find.text('Tạo phiếu mua lúa'), findsOneWidget);
+      expect(find.text('Phiếu nhập kho'), findsNothing);
+      expect(find.text('Từ lịch SCH-42'), findsOneWidget);
+      expect(find.text('6500'), findsOneWidget);
+      expect(find.textContaining('Dự kiến theo lịch: 120 kg'), findsOneWidget);
+      expect(find.text('120.0'), findsNothing);
+      expect(find.text('Chưa xác định sản phẩm'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const ValueKey('thu_mua_bag_weight_0')),
+        '120',
       );
-      await tester.tap(confirmButton);
-      await tester.pumpAndSettle();
-
-      expect(repository.confirmCount, 1);
-      expect(repository.lastQuantity, 1);
-      expect(routeArguments, isA<GiaoHangSuccessResult>());
-      expect(find.text('Delivery success'), findsOneWidget);
-    });
-  });
-
-  group('KhoScreen', () {
-    phoneTestWidgets('shows loading and repository error states',
-        (tester) async {
-      final completer = Completer<KhoCheck>();
-      await tester.pumpWidget(
-        MaterialApp(
-            home: KhoScreen(repository: _KhoRepository(completer.future))),
-      );
-      expect(find.text('Đang tải phiếu kiểm kê...'), findsOneWidget);
-
-      completer.completeError('stocktake failed');
-      await tester.pumpAndSettle();
-      expect(find.text('Không tải được dữ liệu tồn kho'), findsOneWidget);
-    });
-
-    phoneTestWidgets('requires actual quantity for every product',
-        (tester) async {
-      final repository = _KhoRepository(Future.value(_stockCheck()));
-      await tester.pumpWidget(
-        MaterialApp(home: KhoScreen(repository: repository)),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Tạo phiếu kiểm kê'));
+      await tester.ensureVisible(find.text('Lưu phiếu mua'));
+      await tester.tap(find.text('Lưu phiếu mua'));
       await tester.pump();
 
-      expect(
-        find.text('Vui lòng nhập số lượng thực tế cho tất cả sản phẩm.'),
-        findsOneWidget,
-      );
-      expect(repository.createCount, 0);
+      expect(repository.confirmCount, 0);
+      expect(repository.defaultDraftCalls, 0);
+      expect(find.textContaining('Vui lòng chọn sản phẩm'), findsOneWidget);
     });
 
-    phoneTestWidgets('submits entered stocktake quantity', (tester) async {
-      final repository = _KhoRepository(Future.value(_stockCheck()));
+    phoneTestWidgets('selects warehouse without default fallback',
+        (tester) async {
+      final repository = _ThuMuaRepository(
+        Future.value(
+          _inboundReceipt().copyWith(warehouseId: 0, warehouseName: ''),
+        ),
+        warehouses: const [
+          ThuMuaWarehouse(id: 8, code: 'WH-8', name: 'Kho lúa'),
+        ],
+      );
       await tester.pumpWidget(
-        MaterialApp(home: KhoScreen(repository: repository)),
+        MaterialApp(
+          home: ThuMuaScreen(repository: repository),
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRoutes.thuMuaSuccess) {
+              return MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('Warehouse saved')),
+              );
+            }
+            return null;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('thu_mua_warehouse')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Kho lúa').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Lưu phiếu mua'));
+      await tester.tap(find.text('Lưu phiếu mua'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastReceipt?.warehouseId, 8);
+      expect(repository.lastReceipt?.warehouseName, 'Kho lúa');
+      expect(find.text('Warehouse saved'), findsOneWidget);
+    });
+
+    phoneTestWidgets('changing product preserves independent form fields',
+        (tester) async {
+      final repository = _ThuMuaRepository(
+        Future.value(_inboundReceipt()),
+        products: const [
+          ProductVariantStock(
+            id: 1,
+            name: 'Gạo',
+            sku: 'GAO',
+            weightKg: 25,
+            quantityOnHand: 5,
+            quantityReserved: 0,
+            quantityAvailable: 5,
+          ),
+          ProductVariantStock(
+            id: 2,
+            name: 'Lúa thơm',
+            sku: 'LUA-THOM',
+            weightKg: 50,
+            quantityOnHand: 8,
+            quantityReserved: 0,
+            quantityAvailable: 8,
+            costPrice: 9000,
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ThuMuaScreen(repository: repository),
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRoutes.thuMuaSuccess) {
+              return MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('Product saved')),
+              );
+            }
+            return null;
+          },
+        ),
       );
       await tester.pumpAndSettle();
 
       await tester.enterText(
-        find.byKey(const ValueKey('actual_1_3')),
-        '15',
+        find.byKey(const ValueKey('thu_mua_unit_price')),
+        '12345',
       );
-      await tester.tap(find.text('Tạo phiếu kiểm kê'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+      await _enterBagWeights(tester, const ['20', '20', '20', '20']);
+      await tester.enterText(
+        find.byKey(const ValueKey('thu_mua_paid_amount')),
+        '1000',
+      );
+      final noteField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == 'Ghi chú',
+      );
+      await tester.enterText(noteField, 'Giữ ghi chú');
 
-      expect(repository.createCount, 1);
-      expect(repository.lastItems.single.actualQuantity, 15);
-      expect(find.text('Đã tạo phiếu kiểm kê'), findsOneWidget);
-      expect(find.text('Mã phiếu backend: #77'), findsOneWidget);
+      await tester
+          .ensureVisible(find.byKey(const ValueKey('inbound_product_1')));
+      await tester.tap(find.byKey(const ValueKey('inbound_product_1')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('Lúa thơm').last);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Lưu phiếu mua'));
+      await tester.tap(find.text('Lưu phiếu mua'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastReceipt?.productVariantId, 2);
+      expect(repository.lastReceipt?.supplier?.id, 1);
+      expect(repository.lastReceipt?.warehouseId, 2);
+      expect(repository.lastReceipt?.actualWeightKg, 80);
+      expect(repository.lastReceipt?.bags.length, 4);
+      expect(repository.lastReceipt?.paidAmount, 1000);
+      expect(repository.lastQuantity, 4);
+      expect(repository.lastUnitCostPrice, 12345);
+      expect(repository.lastNote, 'Giữ ghi chú');
+      expect(find.text('Product saved'), findsOneWidget);
+    });
+
+    phoneTestWidgets('edit draft keeps receipt id and uses update action',
+        (tester) async {
+      final repository = _ThuMuaRepository(Future.value(_editReceipt()));
+      await tester.pumpWidget(
+        MaterialApp(
+            home: ThuMuaScreen(repository: repository, draft: _editReceipt())),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Chỉnh sửa phiếu mua lúa'), findsOneWidget);
+      final noteField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.labelText == 'Ghi chú',
+      );
+      expect(tester.widget<TextField>(noteField).controller?.text,
+          'Ghi chú draft');
+      await tester.ensureVisible(find.text('Cập nhật phiếu mua'));
+      await tester.tap(find.text('Cập nhật phiếu mua'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lưu thay đổi'));
+      await tester.pumpAndSettle();
+
+      expect(repository.confirmCount, 1);
+      expect(repository.lastReceipt?.id, 55);
     });
   });
+
+  // Màn kiểm kê nay là StockTakeListScreen/StockTakeDetailScreen (kiểm theo
+  // BAO) — test nằm ở stock_take_screen_test.dart.
 }
 
 void phoneTestWidgets(String description, WidgetTesterCallback callback) {
@@ -319,20 +374,54 @@ void phoneTestWidgets(String description, WidgetTesterCallback callback) {
   });
 }
 
+Future<void> _enterBagWeights(
+  WidgetTester tester,
+  List<String> weights,
+) async {
+  for (var index = 0; index < weights.length; index += 1) {
+    if (index > 0) {
+      final addButton = find.widgetWithText(OutlinedButton, 'Thêm bao');
+      await tester.ensureVisible(addButton);
+      tester.widget<OutlinedButton>(addButton).onPressed?.call();
+      await tester.pump();
+    }
+    final field = find.byKey(ValueKey('thu_mua_bag_weight_$index'));
+    await tester.ensureVisible(field);
+    await tester.enterText(field, weights[index]);
+    await tester.pump();
+  }
+}
+
 class _ThuMuaRepository implements ThuMuaRepository {
-  _ThuMuaRepository(this.receipt, {this.products = const []});
+  _ThuMuaRepository(
+    this.receipt, {
+    this.products = const [],
+    this.warehouses = const [
+      ThuMuaWarehouse(id: 2, code: 'WH-2', name: 'Kho A'),
+    ],
+  });
+
   final Future<ThuMuaReceipt> receipt;
   final List<ProductVariantStock> products;
+  final List<ThuMuaWarehouse> warehouses;
+  int defaultDraftCalls = 0;
   int confirmCount = 0;
   int? lastQuantity;
+  double? lastUnitCostPrice;
   String? lastNote;
   ThuMuaReceipt? lastReceipt;
 
   @override
-  Future<ThuMuaReceipt> getDraftReceipt() => receipt;
+  Future<ThuMuaReceipt> getDraftReceipt() {
+    defaultDraftCalls += 1;
+    return receipt;
+  }
 
   @override
   Future<List<ProductVariantStock>> getSelectableProducts() async => products;
+
+  @override
+  Future<List<ThuMuaWarehouse>> getWarehouses() async => warehouses;
 
   @override
   Future<ThuMuaReceipt> getDraftReceiptForProduct(
@@ -372,6 +461,7 @@ class _ThuMuaRepository implements ThuMuaRepository {
     confirmCount++;
     lastReceipt = receipt;
     lastQuantity = quantity;
+    lastUnitCostPrice = unitCostPrice;
     lastNote = note;
     return const ThuMuaOrderSubmission(
       id: 10,
@@ -382,62 +472,6 @@ class _ThuMuaRepository implements ThuMuaRepository {
 
   @override
   Future<void> confirmPurchaseOrder(int orderId) async {}
-}
-
-class _GiaoHangRepository implements GiaoHangRepository {
-  _GiaoHangRepository({required this.receipt, required this.customers});
-  final Future<GiaoHangReceipt> receipt;
-  final Future<List<GiaoHangCustomer>> customers;
-  int confirmCount = 0;
-  int? lastQuantity;
-
-  @override
-  Future<List<GiaoHangReceipt>> getAvailableReceipts() async => [await receipt];
-  @override
-  Future<GiaoHangReceipt> getDraftReceipt() => receipt;
-  @override
-  Future<List<GiaoHangCustomer>> getCustomers() => customers;
-  @override
-  Future<SalesOrderSubmission> confirmOutbound({
-    required GiaoHangReceipt receipt,
-    required int quantity,
-    required double unitSalePrice,
-    required DateTime? expectedDeliveryDate,
-    required String shippingAddress,
-    required String note,
-  }) async {
-    confirmCount++;
-    lastQuantity = quantity;
-    return const SalesOrderSubmission(
-      id: 20,
-      code: 'SO-20',
-      status: 'Chờ xác nhận',
-    );
-  }
-
-  @override
-  Future<void> confirmSalesOrder(int orderId) async {}
-}
-
-class _KhoRepository implements KhoCheckRepository {
-  _KhoRepository(this.check);
-  final Future<KhoCheck> check;
-  int createCount = 0;
-  List<KhoCheckItem> lastItems = const [];
-
-  @override
-  Future<KhoCheck> getDraftCheck() => check;
-
-  @override
-  Future<int> createStockTake({
-    required KhoCheck check,
-    required List<KhoCheckItem> items,
-    String? note,
-  }) async {
-    createCount++;
-    lastItems = items;
-    return 77;
-  }
 }
 
 ThuMuaReceipt _inboundReceipt() {
@@ -460,43 +494,34 @@ ThuMuaReceipt _inboundReceipt() {
       name: 'Nhà cung cấp A',
     ),
     expectedDate: DateTime(2026, 7, 30),
+    actualWeightKg: 25,
+    moisturePercent: 14,
   );
 }
 
-GiaoHangReceipt _deliveryReceipt() {
-  return GiaoHangReceipt(
+ThuMuaReceipt _editReceipt() {
+  return const ThuMuaReceipt(
+    id: 55,
     productVariantId: 1,
     warehouseId: 2,
     warehouseName: 'Kho A',
-    status: 'Sẵn sàng giao',
+    status: 'Phiếu nháp',
     productName: 'Gạo',
     sku: 'GAO',
     currentStock: 5,
-    receiptCode: 'GH-01',
+    receiptCode: 'PPR-55',
+    weightKg: 25,
     quantity: 1,
     noteHint: '',
-    unitSalePrice: 15000,
-    expectedDeliveryDate: DateTime(2026, 7, 30),
-    shippingAddress: 'Cần Thơ',
-  );
-}
-
-KhoCheck _stockCheck() {
-  return KhoCheck(
-    warehouseId: 1,
-    checkCode: 'ST-01',
-    warehouseName: 'Kho A',
-    noteHint: '',
-    checkedAt: DateTime(2026),
-    items: const [
-      KhoCheckItem(
-        productVariantId: 1,
-        productName: 'Gạo',
-        sku: 'GAO',
-        systemQuantity: 10,
-        locationId: 3,
-      ),
-    ],
+    note: 'Ghi chú draft',
+    unitCostPrice: 10000,
+    supplier: ThuMuaSupplier(
+      id: 1,
+      code: 'SUP-01',
+      name: 'Nhà cung cấp A',
+    ),
+    actualWeightKg: 25,
+    moisturePercent: 14,
   );
 }
 

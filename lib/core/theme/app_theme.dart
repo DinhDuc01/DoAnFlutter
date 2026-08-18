@@ -2,97 +2,297 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Lớp cấu hình Theme (giao diện) tổng thể cho ứng dụng bao gồm giao diện sáng (Light) và giao diện tối (Dark).
-/// Chứa thiết lập về màu sắc, kiểu dáng của trường nhập liệu (TextField) và các nút bấm (Button).
+/// Theme tổng của ứng dụng (Light + Dark).
+///
+/// Đợt này được làm giàu để nâng đồng loạt mọi màn hình: thang typography rõ
+/// ràng, input/nút/chip/divider/snackbar/appbar/bottom-nav đồng bộ với bảng màu
+/// thương hiệu. Nhờ vậy phần lớn màn hình đẹp lên mà không phải sửa từng file.
 class AppTheme {
-  const AppTheme._(); // Hạn chế khởi tạo đối tượng từ bên ngoài
+  const AppTheme._();
 
-  /// Định nghĩa giao diện sáng (Light Theme)
-  static ThemeData get light {
-    return ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
-      scaffoldBackgroundColor: AppColors
-          .backgroundStart, // Sử dụng màu xanh gradient làm nền Scaffold
-      useMaterial3: true,
+  static const _radiusMd = AppColors.radiusMd;
 
-      // Thiết lập style chung cho các Input (TextField)
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFFF9FAFB),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary),
-        ),
+  // ------------------------------------------------------------------
+  // TYPOGRAPHY — thang chữ dùng chung
+  // ------------------------------------------------------------------
+  static TextTheme _textTheme(Color primary, Color secondary) {
+    TextStyle t(double size, FontWeight weight,
+            {double height = 1.35, double spacing = 0, Color? color}) =>
+        TextStyle(
+          fontSize: size,
+          fontWeight: weight,
+          height: height,
+          letterSpacing: spacing,
+          color: color ?? primary,
+        );
+
+    return TextTheme(
+      // Tiêu đề lớn
+      headlineMedium: t(24, FontWeight.w800, height: 1.2, spacing: -0.4),
+      headlineSmall: t(20, FontWeight.w800, height: 1.2, spacing: -0.3),
+      titleLarge: t(18, FontWeight.w700, height: 1.25, spacing: -0.2),
+      titleMedium: t(16, FontWeight.w700, height: 1.3),
+      titleSmall: t(14, FontWeight.w600, height: 1.3),
+      // Nội dung
+      bodyLarge: t(15, FontWeight.w500, height: 1.45),
+      bodyMedium: t(14, FontWeight.w500, height: 1.45, color: primary),
+      bodySmall: t(12.5, FontWeight.w500, height: 1.4, color: secondary),
+      // Nhãn / caption
+      labelLarge: t(14, FontWeight.w700, height: 1.2, spacing: 0.1),
+      labelMedium: t(12, FontWeight.w600, height: 1.2, spacing: 0.2),
+      labelSmall: t(11, FontWeight.w600, height: 1.2, spacing: 0.3, color: secondary),
+    );
+  }
+
+  static InputDecorationTheme _inputTheme({
+    required Color fill,
+    required Color border,
+  }) {
+    OutlineInputBorder side(Color c, [double w = 1]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(_radiusMd),
+          borderSide: BorderSide(color: c, width: w),
+        );
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: fill,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      hintStyle: const TextStyle(
+        color: AppColors.textTertiary,
+        fontWeight: FontWeight.w500,
       ),
+      labelStyle: const TextStyle(
+        color: AppColors.textSecondary,
+        fontWeight: FontWeight.w600,
+      ),
+      border: side(border),
+      enabledBorder: side(border),
+      focusedBorder: side(AppColors.primary, 1.6),
+      errorBorder: side(AppColors.danger),
+      focusedErrorBorder: side(AppColors.danger, 1.6),
+    );
+  }
 
-      // Thiết lập style chung cho các nút bấm FilledButton
-      filledButtonTheme: FilledButtonThemeData(
+  static FilledButtonThemeData get _filledButton => FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(48), // Chiều cao tối thiểu 48px
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.4),
+          minimumSize: const Size.fromHeight(50),
+          textStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.2,
           ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_radiusMd),
+          ),
+        ),
+      );
+
+  static OutlinedButtonThemeData get _outlinedButton => OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.primaryDark,
+          side: const BorderSide(color: AppColors.primary, width: 1.4),
+          minimumSize: const Size.fromHeight(50),
+          textStyle: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(_radiusMd),
+          ),
+        ),
+      );
+
+  static TextButtonThemeData get _textButton => TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.primaryDark,
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+      );
+
+  // ------------------------------------------------------------------
+  // LIGHT
+  // ------------------------------------------------------------------
+  static ThemeData get light {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: AppColors.primary,
+      primary: AppColors.primary,
+      brightness: Brightness.light,
+    ).copyWith(
+      surface: AppColors.surface,
+      onSurface: AppColors.textPrimary,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: AppColors.canvas,
+      splashFactory: InkSparkle.splashFactory,
+      textTheme: _textTheme(AppColors.textPrimary, AppColors.textSecondary),
+      inputDecorationTheme:
+          _inputTheme(fill: AppColors.canvasAlt, border: AppColors.border),
+      cardTheme: CardThemeData(
+        color: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppColors.radiusLg),
+          side: const BorderSide(color: AppColors.border),
+        ),
+      ),
+      filledButtonTheme: _filledButton,
+      outlinedButtonTheme: _outlinedButton,
+      textButtonTheme: _textButton,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.forest,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.2,
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.surface,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: AppColors.textTertiary,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        selectedLabelStyle:
+            TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+        unselectedLabelStyle:
+            TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.borderSoft,
+        thickness: 1,
+        space: 1,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.brandTint,
+        labelStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primaryDark,
+        ),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppColors.radiusPill),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.textPrimary,
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppColors.radiusMd),
         ),
       ),
     );
   }
 
-  /// Định nghĩa giao diện tối (Dark Theme)
+  // ------------------------------------------------------------------
+  // DARK
+  // ------------------------------------------------------------------
   static ThemeData get dark {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: AppColors.primary,
+      primary: AppColors.primarySoft,
       brightness: Brightness.dark,
+    ).copyWith(
+      surface: AppColors.darkSurface,
+      onSurface: const Color(0xFFE6EDF3),
     );
 
     return ThemeData(
-      colorScheme: colorScheme,
-      scaffoldBackgroundColor:
-          const Color(0xFF0F172A), // Màu nền tối thẫm cho Dark mode
-      cardColor: const Color(0xFF111827),
-      dividerColor: const Color(0xFF334155),
       useMaterial3: true,
-
-      // Thiết lập style cho Input trong Dark mode
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFF111827),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF334155)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF334155)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.primary),
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: AppColors.darkCanvas,
+      splashFactory: InkSparkle.splashFactory,
+      textTheme: _textTheme(
+        const Color(0xFFE6EDF3),
+        const Color(0xFF9BA7B4),
+      ),
+      inputDecorationTheme: _inputTheme(
+        fill: AppColors.darkSurface,
+        border: AppColors.darkBorder,
+      ),
+      cardTheme: CardThemeData(
+        color: AppColors.darkSurface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppColors.radiusLg),
+          side: const BorderSide(color: AppColors.darkBorder),
         ),
       ),
-
-      // Thiết lập style cho các nút FilledButton trong Dark mode (đồng bộ chiều cao)
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+      filledButtonTheme: _filledButton,
+      outlinedButtonTheme: _outlinedButton,
+      textButtonTheme: _textButton,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.darkSurface,
+        foregroundColor: Color(0xFFE6EDF3),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: Color(0xFFE6EDF3),
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.darkSurface,
+        selectedItemColor: AppColors.primarySoft,
+        unselectedItemColor: Color(0xFF6B7684),
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        selectedLabelStyle:
+            TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+        unselectedLabelStyle:
+            TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500),
+      ),
+      dividerTheme: const DividerThemeData(
+        color: AppColors.darkBorder,
+        thickness: 1,
+        space: 1,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: const Color(0xFF14261B),
+        labelStyle: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: AppColors.primarySoft,
+        ),
+        side: BorderSide.none,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppColors.radiusPill),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.darkSurfaceAlt,
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w600,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppColors.radiusMd),
         ),
       ),
     );

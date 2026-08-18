@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/features/account/models/account_profile.dart';
-import 'package:stocklite/features/giao_hang/models/giao_hang_receipt.dart';
-import 'package:stocklite/features/history/models/operation_history.dart';
-import 'package:stocklite/features/kho/models/kho_check.dart';
+import 'package:stocklite/features/kho/models/stock_take.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
 import 'package:stocklite/features/products/data/product_variant_api.dart';
 import 'package:stocklite/features/thu_mua/models/purchase_schedule.dart';
@@ -37,81 +35,186 @@ void main() {
     });
   });
 
-  group('GiaoHangReceipt', () {
-    test('uses fallback customer name before a customer is selected', () {
-      expect(_deliveryReceipt().customerName, 'Chưa chọn khách hàng');
+  group('StockTakeLine', () {
+    test('counts bags, not kilograms', () {
+      final line = _line(systemBagCount: 3, systemQuantity: 150, bags: [
+        _bag(1, 50, counted: true, countedWeightKg: 49.4),
+        _bag(2, 50, counted: true),
+        _bag(3, 50),
+      ]);
+
+      expect(line.hasBags, isTrue);
+      expect(line.countedBags, 2);
+      // Thiếu 1 bao — đây mới là con số kho quan tâm, không phải "hụt 50 kg".
+      expect(line.bagDifference, -1);
     });
 
-    test('copyWith adds customer and preserves stock data', () {
-      const customer = GiaoHangCustomer(
-        id: 9,
-        code: 'KH-09',
-        name: 'Nhà máy A',
-      );
+    test('bag without a weighing keeps its book weight', () {
+      final line = _line(systemBagCount: 2, systemQuantity: 100, bags: [
+        _bag(1, 50, counted: true, countedWeightKg: 48.5),
+        _bag(2, 50, counted: true),
+      ]);
 
-      final copied = _deliveryReceipt().copyWith(customer: customer);
+      // 48.5 (cân thật) + 50 (không cân, giữ sổ sách) — KHÔNG quy bao chưa cân
+      // về 0 và cũng không chia đều phần chênh lệch cho các bao.
+      expect(line.countedKg, closeTo(98.5, 0.001));
+      expect(line.effectiveActualKg, closeTo(98.5, 0.001));
+    });
 
-      expect(copied.customer, same(customer));
-      expect(copied.customerName, 'Nhà máy A');
-      expect(copied.currentStock, 50);
-      expect(copied.productVariantId, 11);
+    test('line without bags falls back to the typed kilogram figure', () {
+      final line = _line(systemBagCount: 0, systemQuantity: 80, bags: const [])
+        ..actualQuantity = 78.25;
+
+      expect(line.hasBags, isFalse);
+      expect(line.effectiveActualKg, 78.25);
+      expect(line.touched, isTrue);
+    });
+
+    test('untouched line reports nothing counted', () {
+      final line = _line(systemBagCount: 2, systemQuantity: 100, bags: [
+        _bag(1, 50),
+        _bag(2, 50),
+      ]);
+
+      expect(line.touched, isFalse);
+      expect(line.countedKg, 0);
+      expect(line.bagDifference, -2);
+    });
+
+    test('toSaveJson sends per-bag results and the derived kilograms', () {
+      final line = _line(systemBagCount: 2, systemQuantity: 100, bags: [
+        _bag(1, 50, counted: true, countedWeightKg: 49, scannedByQr: true),
+        _bag(2, 50, counted: true),
+      ])
+        ..quality = StockTakeQuality.wet
+        ..qualityNote = '  Bao số 1 ẩm  '
+        ..note = '  Kiểm chiều  ';
+
+      final json = line.toSaveJson();
+
+      expect(json['actualQuantity'], 99);
+      expect(json['qrScanned'], isTrue);
+      expect(json['qualityStatus'], 'WET');
+      expect(json['qualityNote'], 'Bao số 1 ẩm');
+      expect(json['note'], 'Kiểm chiều');
+      expect((json['bags'] as List<dynamic>), hasLength(2));
     });
   });
 
-  group('KhoCheck', () {
-    test('calculates product count and total system quantity', () {
-      final check = KhoCheck(
-        warehouseId: 1,
-        checkCode: 'ST-01',
-        warehouseName: 'Kho A',
-        noteHint: '',
-        checkedAt: DateTime(2026),
-        items: const [
-          KhoCheckItem(
-            productVariantId: 1,
-            productName: 'Gạo',
-            sku: 'GAO',
-            systemQuantity: 10,
-          ),
-          KhoCheckItem(
-            productVariantId: 2,
-            productName: 'Cám',
-            sku: 'CAM',
-            systemQuantity: 7,
-          ),
+  group('StockTakeQuality', () {
+    test('maps backend codes and treats anything but OK as a failure', () {
+      expect(StockTakeQualityX.fromCode('TORN_BAG'), StockTakeQuality.tornBag);
+      expect(StockTakeQualityX.fromCode('torn_bag'), StockTakeQuality.tornBag);
+      expect(StockTakeQualityX.fromCode(null), StockTakeQuality.ok);
+      expect(StockTakeQualityX.fromCode('LẠ HOẮC'), StockTakeQuality.ok);
+
+      expect(StockTakeQuality.ok.isFailed, isFalse);
+      expect(StockTakeQuality.pest.isFailed, isTrue);
+      expect(StockTakeQuality.wet.code, 'WET');
+    });
+  });
+
+  group('StockTakeDetail', () {
+    test('parses the backend snapshot including bags', () {
+      final detail = StockTakeDetail.fromJson(<String, dynamic>{
+        'id': 12,
+        'stCode': 'ST-12',
+        'warehouseId': 3,
+        'warehouseName': 'Kho Cần Thơ',
+        'stockTakeStatusCode': 'DRAFT',
+        'stockTakeStatusName': 'Nháp',
+        'stockTakeItems': [
+          {
+            'id': 90,
+            'lotCode': 'LOT-A',
+            'zoneName': 'Khu A',
+            'locationCode': 'A-01',
+            'systemQuantity': 100,
+            'systemBagCount': 2,
+            'qualityStatus': 'PEST',
+            'bags': [
+              {'id': 2, 'paddyLotBagId': 22, 'bagNo': 2, 'systemWeightKg': 50},
+              {
+                'id': 1,
+                'paddyLotBagId': 11,
+                'bagNo': 1,
+                'systemWeightKg': 50,
+                'counted': true,
+              },
+            ],
+          },
         ],
-      );
+      });
 
-      expect(check.totalProducts, 2);
-      expect(check.totalSystemQuantity, 17);
+      expect(detail.code, 'ST-12');
+      expect(detail.isDraft, isTrue);
+      final line = detail.lines.single;
+      expect(line.locationLabel, 'Khu A/A-01');
+      expect(line.title, 'LOT-A');
+      // Bao phải được sắp theo số bao để người kiểm đọc theo thứ tự trong kho.
+      expect(line.bags.map((b) => b.bagNo), [1, 2]);
+      expect(detail.totalBags, 2);
+      expect(detail.countedBags, 1);
+      expect(detail.missingBags, 1);
+      expect(detail.hasQualityIssue, isTrue);
     });
 
-    test('difference is null until actual quantity is entered', () {
-      const item = KhoCheckItem(
-        productVariantId: 1,
-        productName: 'Gạo',
-        sku: 'GAO',
-        systemQuantity: 10,
-      );
+    test('missingBags ignores surplus bags found on the floor', () {
+      final detail = StockTakeDetail.fromJson(<String, dynamic>{
+        'id': 13,
+        'stCode': 'ST-13',
+        'stockTakeItems': [
+          {
+            'id': 1,
+            'systemBagCount': 1,
+            'bags': [
+              {'id': 1, 'bagNo': 1, 'systemWeightKg': 50, 'counted': true},
+              {
+                'id': 2,
+                'bagNo': 2,
+                'systemWeightKg': 50,
+                'counted': true,
+                'isUnexpected': true,
+              },
+            ],
+          },
+        ],
+      });
 
-      expect(item.difference, isNull);
-      expect(item.copyWith(actualQuantity: 14).difference, 4);
-      expect(item.copyWith(actualQuantity: 8).difference, -2);
+      expect(detail.lines.single.bagDifference, 1);
+      expect(detail.missingBags, 0);
+    });
+  });
+
+  group('ScanBagResult', () {
+    test('reads the bag payload and flags an already counted bag', () {
+      final result = ScanBagResult.fromJson(<String, dynamic>{
+        'matched': true,
+        'message': 'Bao này đã kiểm rồi',
+        'reason': 'ALREADY_COUNTED',
+        'stockTakeItemId': 90,
+        'lotCode': 'LOT-A',
+        'locationCode': 'A-01',
+        'bag': {'id': 5, 'paddyLotBagId': 55},
+      });
+
+      expect(result.matched, isTrue);
+      expect(result.alreadyCounted, isTrue);
+      expect(result.bagId, 5);
+      expect(result.paddyLotBagId, 55);
+      expect(result.stockTakeItemId, 90);
     });
 
-    test('copyWith can clear an existing actual quantity', () {
-      const item = KhoCheckItem(
-        productVariantId: 1,
-        productName: 'Gạo',
-        sku: 'GAO',
-        systemQuantity: 10,
-        actualQuantity: 9,
-      );
+    test('a bag from another warehouse is not counted', () {
+      final result = ScanBagResult.fromJson(<String, dynamic>{
+        'matched': false,
+        'message': 'Bao không thuộc phạm vi phiếu',
+        'reason': 'OUT_OF_SCOPE',
+      });
 
-      final cleared = item.copyWith(clearActualQuantity: true);
-
-      expect(cleared.actualQuantity, isNull);
-      expect(cleared.productName, item.productName);
+      expect(result.matched, isFalse);
+      expect(result.alreadyCounted, isFalse);
+      expect(result.bagId, isNull);
     });
   });
 
@@ -144,41 +247,6 @@ void main() {
           entry.key == AppNotificationType.alert ||
               entry.key == AppNotificationType.warning,
         );
-      });
-    }
-  });
-
-  group('OperationHistory', () {
-    for (final entry in <OperationHistoryType, (String, IconData, Color)>{
-      OperationHistoryType.inbound: (
-        'Nhập kho',
-        Icons.inventory_2_outlined,
-        const Color(0xFF16B957),
-      ),
-      OperationHistoryType.outbound: (
-        'Xuất kho',
-        Icons.local_shipping_outlined,
-        const Color(0xFFFB2C36),
-      ),
-      OperationHistoryType.inventory: (
-        'Kiểm kê',
-        Icons.assignment_outlined,
-        const Color(0xFFA855F7),
-      ),
-    }.entries) {
-      test('maps ${entry.key.name} presentation properties', () {
-        final history = OperationHistory(
-          type: entry.key,
-          productName: 'Gạo',
-          sku: 'GAO',
-          referenceCode: 'REF',
-          quantityChange: 1,
-          createdAt: DateTime(2026),
-        );
-
-        expect(history.typeLabel, entry.value.$1);
-        expect(history.icon, entry.value.$2);
-        expect(history.color, entry.value.$3);
       });
     }
   });
@@ -318,19 +386,35 @@ void main() {
   });
 }
 
-GiaoHangReceipt _deliveryReceipt() {
-  return const GiaoHangReceipt(
-    productVariantId: 11,
-    warehouseId: 1,
-    warehouseName: 'Kho A',
-    status: 'Sẵn sàng giao',
-    productName: 'Gạo',
-    sku: 'GAO',
-    currentStock: 50,
-    receiptCode: 'GH-01',
-    quantity: 1,
-    noteHint: '',
-    unitSalePrice: 12000,
+StockTakeLine _line({
+  required int systemBagCount,
+  required double systemQuantity,
+  required List<StockTakeBag> bags,
+}) {
+  return StockTakeLine(
+    id: 1,
+    systemQuantity: systemQuantity,
+    systemBagCount: systemBagCount,
+    bags: bags,
+    lotCode: 'LOT-A',
+  );
+}
+
+StockTakeBag _bag(
+  int bagNo,
+  double systemWeightKg, {
+  bool counted = false,
+  double? countedWeightKg,
+  bool scannedByQr = false,
+}) {
+  return StockTakeBag(
+    id: bagNo,
+    paddyLotBagId: bagNo * 10,
+    bagNo: bagNo,
+    systemWeightKg: systemWeightKg,
+    counted: counted,
+    countedWeightKg: countedWeightKg,
+    scannedByQr: scannedByQr,
   );
 }
 

@@ -9,7 +9,9 @@ class ScanActionPanel extends StatelessWidget {
   const ScanActionPanel({
     required this.onScanAgain,
     required this.onSwitchCamera,
+    required this.onPickImage,
     this.result,
+    this.pickingImage = false,
     super.key,
   });
 
@@ -22,7 +24,13 @@ class ScanActionPanel extends StatelessWidget {
   /// Callback đổi camera trước/sau.
   final VoidCallback onSwitchCamera;
 
-  static const _greenAccent = Color(0xFF10B981); // Màu xanh lá chủ đạo quét QR
+  /// Callback chọn ảnh trong máy rồi dò mã QR trong ảnh đó.
+  final VoidCallback onPickImage;
+
+  /// Đang đọc ảnh — khoá nút và hiện spinner.
+  final bool pickingImage;
+
+  static const _greenAccent = Color(0xFF16A34A); // Màu xanh lá chủ đạo quét QR
 
   @override
   Widget build(BuildContext context) {
@@ -101,11 +109,8 @@ class ScanActionPanel extends StatelessWidget {
                 child: _SecondaryScanButton(
                   icon: Icons.photo_library_outlined,
                   label: 'Thư viện ảnh',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Chưa hỗ trợ quét từ ảnh')),
-                    );
-                  },
+                  busy: pickingImage,
+                  onTap: pickingImage ? null : onPickImage,
                 ),
               ),
             ],
@@ -122,11 +127,13 @@ class _SecondaryScanButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.onTap,
+    this.busy = false,
   });
 
   final IconData icon;
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool busy;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +150,16 @@ class _SecondaryScanButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: AppColors.border, size: 16),
+            if (busy)
+              const SizedBox.square(
+                dimension: 14,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.border,
+                ),
+              )
+            else
+              Icon(icon, color: AppColors.border, size: 16),
             const SizedBox(width: 6),
             Text(
               label,

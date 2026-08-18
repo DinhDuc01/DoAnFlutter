@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/purchase_schedule_repository.dart';
 import '../../models/purchase_schedule.dart';
 
@@ -24,79 +28,128 @@ class PurchaseScheduleDetailScreen extends StatefulWidget {
 class _PurchaseScheduleDetailScreenState
     extends State<PurchaseScheduleDetailScreen> {
   late final PurchaseScheduleRepository _repository;
-  Future<PurchaseSchedule>? _detailFuture;
   PurchaseSchedule? _schedule;
+  PurchaseSchedule? _detail;
+  Object? _error;
+  bool _loading = false;
+  int _generation = 0;
+  StreamSubscription<Set<String>>? _realtimeSub;
+
+  static const Set<String> _entities = {
+    'PaddyPurchaseSchedule',
+    'PaddyPurchaseReceipt',
+    'InboundOrder',
+  };
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? PurchaseScheduleRepository();
+    _realtimeSub =
+        RealtimeService.instance.onEntitiesChanged.listen(_onEntitiesChanged);
     if (widget.initialSchedule != null) {
-      _load(widget.initialSchedule!);
+      // Đặt cờ trực tiếp (không setState trong initState) rồi tải bất đồng bộ.
+      _loading = true;
+      _load(widget.initialSchedule!, showLoading: false);
     }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_detailFuture != null) return;
+    if (_schedule != null) return;
 
     final arguments = ModalRoute.of(context)?.settings.arguments;
     if (arguments is PurchaseSchedule) {
-      _load(arguments);
+      _loading = true;
+      _load(arguments, showLoading: false);
     }
   }
 
-  void _load(PurchaseSchedule schedule) {
+  @override
+  void dispose() {
+    _realtimeSub?.cancel();
+    super.dispose();
+  }
+
+  void _onEntitiesChanged(Set<String> changed) {
+    if (!mounted || _schedule == null) return;
+    if (changed.any(_entities.contains)) {
+      _load(_schedule!, showLoading: false);
+    }
+  }
+
+  Future<void> _load(
+    PurchaseSchedule schedule, {
+    required bool showLoading,
+  }) async {
     _schedule = schedule;
-    _detailFuture = _repository.getScheduleDetails(schedule);
+    final generation = ++_generation;
+    if (showLoading && mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
+    try {
+      final detail = await _repository.getScheduleDetails(schedule);
+      if (!mounted || generation != _generation) return;
+      setState(() {
+        _detail = detail;
+        _loading = false;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted || generation != _generation) return;
+      // Giữ dữ liệu cũ khi reload im lặng thất bại.
+      if (_detail == null) {
+        setState(() {
+          _error = error;
+          _loading = false;
+        });
+      }
+    }
   }
 
   void _retry() {
     final schedule = _schedule;
     if (schedule == null) return;
-    setState(() {
-      _detailFuture = _repository.getScheduleDetails(schedule);
-    });
+    _load(schedule, showLoading: true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final future = _detailFuture;
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF0FBF4),
+      backgroundColor: AppColors.backgroundFor(context),
       body: SafeArea(
         child: Column(
           children: [
             const _DetailHeader(),
-            Expanded(
-              child: future == null
-                  ? HErrorState(
-                      message: 'Không tìm thấy lịch thu mua cần hiển thị.',
-                      onRetry: () => Navigator.of(context).maybePop(),
-                    )
-                  : FutureBuilder<PurchaseSchedule>(
-                      future: future,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState != ConnectionState.done) {
-                          return const _DetailSkeleton();
-                        }
-                        if (snapshot.hasError || !snapshot.hasData) {
-                          return HErrorState(
-                            message:
-                                'Không tải được chi tiết lịch: ${snapshot.error}',
-                            onRetry: _retry,
-                          );
-                        }
-                        return _DetailContent(schedule: snapshot.data!);
-                      },
-                    ),
-            ),
+            Expanded(child: _buildContent()),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildContent() {
+    if (_schedule == null) {
+      return HErrorState(
+        message: 'Không tìm thấy lịch thu mua cần hiển thị.',
+        onRetry: () => Navigator.of(context).maybePop(),
+      );
+    }
+    // Chỉ hiện skeleton ở lần tải đầu tiên.
+    if (_loading && _detail == null) {
+      return const _DetailSkeleton();
+    }
+    if (_error != null && _detail == null) {
+      return HErrorState(
+        message: 'Không tải được chi tiết lịch: $_error',
+        onRetry: _retry,
+      );
+    }
+    return _DetailContent(schedule: _detail!);
   }
 }
 
@@ -162,16 +215,19 @@ class _DetailContent extends StatelessWidget {
             children: [
               _ScheduleStatusRow(schedule: schedule),
               const SizedBox(height: 10),
+              // Ngày giờ hẹn thu mua — dữ kiện chính, làm nổi bật lên đầu.
+              _WhenBanner(scheduledAt: schedule.scheduledAt),
+              const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDCFCE7),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.brandTintStrong,
+                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
                 ),
                 child: const Text(
                   'Đặt từng bao lúa lên cân. Số cân từ thiết bị IoT sẽ tự động ghi vào điện thoại.',
                   style: TextStyle(
-                    color: Color(0xFF166534),
+                    color: AppColors.forest,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     height: 1.45,
@@ -197,11 +253,25 @@ class _DetailContent extends StatelessWidget {
                 value:
                     '${schedule.riceVariety} · dự kiến ${_formatWeight(schedule.estimatedWeightKg)}',
               ),
+              if (schedule.warehouseName?.trim().isNotEmpty == true)
+                _DetailCard(
+                  label: 'Kho nhận',
+                  value: schedule.warehouseName!.trim(),
+                ),
               _DetailCard(
                 label: 'Giá dự kiến',
                 value: schedule.expectedPrice == null
                     ? 'Chưa cập nhật'
                     : '${_formatNumber(schedule.expectedPrice!)}đ/kg',
+              ),
+              // Tình trạng lập phiếu — cho biết vì sao lịch còn/không còn tạo được phiếu.
+              _DetailCard(
+                label: 'Phiếu đã lập',
+                value: schedule.receiptCount == 0
+                    ? 'Chưa có phiếu mua nào'
+                    : '${schedule.receiptCount} phiếu · '
+                        '${_formatWeight(schedule.receiptedWeightKg)}'
+                        '${schedule.remainingQtyKg == null ? '' : ' · còn lại ${_formatWeight(schedule.remainingQtyKg!)}'}',
               ),
               _DetailCard(label: 'Trạng thái', value: schedule.status),
               if (schedule.note?.trim().isNotEmpty == true)
@@ -209,30 +279,39 @@ class _DetailContent extends StatelessWidget {
             ],
           ),
         ),
-        SafeArea(
-          top: false,
-          minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          child: FilledButton(
-            onPressed: schedule.isCancelled
-                ? null
-                : () => Navigator.of(context).pushNamed(AppRoutes.inbound),
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF16B957),
-              disabledBackgroundColor: const Color(0xFF94A3B8),
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+        if (AuthSessionStore.current?.user.isWarehouseWorker != true)
+          SafeArea(
+            top: false,
+            minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            // Khóa nút khi lịch đã hủy / đã nhập kho / đã lập đủ phiếu theo khối lượng dự kiến.
+            child: FilledButton(
+              onPressed: !schedule.canCreateReceipt
+                  ? null
+                  : () => Navigator.of(context).pushNamed(
+                        AppRoutes.inbound,
+                        arguments: schedule,
+                      ),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                disabledBackgroundColor: AppColors.textTertiary,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppColors.radiusMd),
+                ),
               ),
-            ),
-            child: Text(
-              schedule.isCancelled ? 'Lịch đã hủy' : 'Bắt đầu cân tại nhà',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
+              child: Text(
+                schedule.canCreateReceipt
+                    ? 'Tạo phiếu mua từ lịch'
+                    : (schedule.blockedReason.isEmpty
+                        ? 'Không thể tạo phiếu'
+                        : schedule.blockedReason),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ),
-        ),
       ],
     );
   }
@@ -308,6 +387,82 @@ class _ScheduleStatusRow extends StatelessWidget {
   }
 }
 
+/// Khối ngày giờ hẹn thu mua — nổi bật, luôn hiển thị đầy đủ.
+class _WhenBanner extends StatelessWidget {
+  const _WhenBanner({required this.scheduledAt});
+
+  final DateTime scheduledAt;
+
+  static const _weekdays = [
+    'Thứ 2',
+    'Thứ 3',
+    'Thứ 4',
+    'Thứ 5',
+    'Thứ 6',
+    'Thứ 7',
+    'Chủ nhật',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final wd = _weekdays[scheduledAt.weekday - 1];
+    final d = scheduledAt.day.toString().padLeft(2, '0');
+    final m = scheduledAt.month.toString().padLeft(2, '0');
+    final hasTime = scheduledAt.hour != 0 || scheduledAt.minute != 0;
+    final hh = scheduledAt.hour.toString().padLeft(2, '0');
+    final mm = scheduledAt.minute.toString().padLeft(2, '0');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.brandTint,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.brandTintStrong),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.event_available_outlined,
+                color: AppColors.primaryDark, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Thời gian hẹn thu mua',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$wd, $d/$m/${scheduledAt.year}${hasTime ? ' • $hh:$mm' : ''}',
+                  style: const TextStyle(
+                    color: AppColors.primaryDark,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DetailCard extends StatelessWidget {
   const _DetailCard({required this.label, required this.value});
 
@@ -321,9 +476,9 @@ class _DetailCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD8DEE8)),
+        color: AppColors.surfaceFor(context),
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.borderFor(context)),
       ),
       child: Text.rich(
         TextSpan(

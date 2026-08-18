@@ -1,6 +1,7 @@
 /// Phieu nhap kho nhap, gom san pham va thong tin kho de cap nhat ton.
 class ThuMuaReceipt {
   const ThuMuaReceipt({
+    this.id,
     required this.productVariantId,
     required this.warehouseId,
     required this.warehouseName,
@@ -12,10 +13,24 @@ class ThuMuaReceipt {
     required this.weightKg,
     required this.quantity,
     required this.noteHint,
+    this.note,
     required this.unitCostPrice,
     this.supplier,
     this.expectedDate,
+    this.scheduleId,
+    this.scheduleCode,
+    this.riceVarietyId,
+    this.riceVarietyName,
+    this.actualWeightKg = 0,
+    this.moisturePercent,
+    this.paidAmount = 0,
+    this.bags = const [],
+    this.isConfirmed = false,
+    this.paddyLotId,
+    this.hasBagDetails = false,
   });
+
+  final int? id;
 
   /// ID bien the san pham tren backend.
   final int productVariantId;
@@ -49,31 +64,103 @@ class ThuMuaReceipt {
 
   /// Goi y ghi chu.
   final String noteHint;
+
+  /// Ghi chu da luu tren phieu, neu Backend tra ve.
+  final String? note;
   final double unitCostPrice;
   final ThuMuaSupplier? supplier;
   final DateTime? expectedDate;
+  final int? scheduleId;
+
+  /// Mã lịch thu mua nguồn (nếu phiếu được lập từ lịch).
+  final String? scheduleCode;
+  final int? riceVarietyId;
+
+  /// Tên giống lúa do API trả về — dùng khi lookup giống lúa không khả dụng.
+  final String? riceVarietyName;
+  final double actualWeightKg;
+  final double? moisturePercent;
+  final double paidAmount;
+  final List<ThuMuaBag> bags;
+  final bool isConfirmed;
+  final int? paddyLotId;
+  final bool hasBagDetails;
+
+  double get totalBagWeightKg =>
+      bags.fold<double>(0, (sum, bag) => sum + bag.weightKg);
 
   ThuMuaReceipt copyWith({
+    int? productVariantId,
+    String? productName,
+    String? sku,
+    int? currentStock,
+    String? receiptCode,
+    double? weightKg,
+    int? quantity,
+    String? noteHint,
+    String? note,
+    String? status,
     ThuMuaSupplier? supplier,
     DateTime? expectedDate,
+    int? scheduleId,
+    String? scheduleCode,
+    int? riceVarietyId,
+    String? riceVarietyName,
+    double? actualWeightKg,
+    double? moisturePercent,
+    double? paidAmount,
+    double? unitCostPrice,
+    int? warehouseId,
+    String? warehouseName,
+    List<ThuMuaBag>? bags,
+    bool? isConfirmed,
+    int? paddyLotId,
+    bool? hasBagDetails,
   }) {
     return ThuMuaReceipt(
-      productVariantId: productVariantId,
-      warehouseId: warehouseId,
-      warehouseName: warehouseName,
-      status: status,
-      productName: productName,
-      sku: sku,
-      currentStock: currentStock,
-      receiptCode: receiptCode,
-      weightKg: weightKg,
-      quantity: quantity,
-      noteHint: noteHint,
-      unitCostPrice: unitCostPrice,
+      id: id,
+      productVariantId: productVariantId ?? this.productVariantId,
+      warehouseId: warehouseId ?? this.warehouseId,
+      warehouseName: warehouseName ?? this.warehouseName,
+      status: status ?? this.status,
+      productName: productName ?? this.productName,
+      sku: sku ?? this.sku,
+      currentStock: currentStock ?? this.currentStock,
+      receiptCode: receiptCode ?? this.receiptCode,
+      weightKg: weightKg ?? this.weightKg,
+      quantity: quantity ?? this.quantity,
+      noteHint: noteHint ?? this.noteHint,
+      note: note ?? this.note,
+      unitCostPrice: unitCostPrice ?? this.unitCostPrice,
       supplier: supplier ?? this.supplier,
       expectedDate: expectedDate ?? this.expectedDate,
+      scheduleId: scheduleId ?? this.scheduleId,
+      scheduleCode: scheduleCode ?? this.scheduleCode,
+      riceVarietyId: riceVarietyId ?? this.riceVarietyId,
+      riceVarietyName: riceVarietyName ?? this.riceVarietyName,
+      actualWeightKg: actualWeightKg ?? this.actualWeightKg,
+      moisturePercent: moisturePercent ?? this.moisturePercent,
+      paidAmount: paidAmount ?? this.paidAmount,
+      bags: bags ?? this.bags,
+      isConfirmed: isConfirmed ?? this.isConfirmed,
+      paddyLotId: paddyLotId ?? this.paddyLotId,
+      hasBagDetails: hasBagDetails ?? this.hasBagDetails,
     );
   }
+}
+
+class ThuMuaBag {
+  const ThuMuaBag({
+    this.id,
+    required this.sequenceNumber,
+    required this.weightKg,
+    this.code,
+  });
+
+  final int? id;
+  final int sequenceNumber;
+  final double weightKg;
+  final String? code;
 }
 
 class ThuMuaSupplier {
@@ -88,6 +175,23 @@ class ThuMuaSupplier {
   final String name;
 }
 
+class ThuMuaWarehouse {
+  const ThuMuaWarehouse({
+    required this.id,
+    required this.name,
+    this.code = '',
+  });
+
+  final int id;
+  final String name;
+  final String code;
+
+  String get label {
+    if (code.trim().isEmpty) return name;
+    return '$code - $name';
+  }
+}
+
 class ThuMuaOrderSubmission {
   const ThuMuaOrderSubmission({
     required this.id,
@@ -98,6 +202,69 @@ class ThuMuaOrderSubmission {
   final int id;
   final String code;
   final String status;
+}
+
+class ThuMuaDraftSummary {
+  const ThuMuaDraftSummary({
+    required this.id,
+    required this.code,
+    required this.farmerName,
+    required this.riceVarietyName,
+    required this.actualWeightKg,
+    required this.bagCount,
+    required this.createdAt,
+    this.debtAmount = 0,
+  });
+
+  final int id;
+  final String code;
+  final String farmerName;
+  final String riceVarietyName;
+  final double actualWeightKg;
+  final int bagCount;
+  final DateTime createdAt;
+  final double debtAmount;
+}
+
+/// Tóm tắt phiếu mua/nhập kho dùng cho lịch sử và phân loại trạng thái.
+class ThuMuaReceiptSummary {
+  const ThuMuaReceiptSummary({
+    required this.id,
+    required this.code,
+    required this.farmerName,
+    required this.riceVarietyName,
+    required this.actualWeightKg,
+    required this.storedWeightKg,
+    required this.remainingWeightKg,
+    required this.status,
+    required this.isDraft,
+    required this.isConfirmed,
+    required this.isFullyStored,
+    required this.createdAt,
+    this.unitPrice = 0,
+    this.totalAmount = 0,
+    this.paidAmount = 0,
+    this.debtAmount = 0,
+    this.scheduleId,
+  });
+
+  final int id;
+  final String code;
+  final String farmerName;
+  final String riceVarietyName;
+  final double actualWeightKg;
+  final double storedWeightKg;
+  final double remainingWeightKg;
+  final String status;
+  final bool isDraft;
+  final bool isConfirmed;
+  final bool isFullyStored;
+  final DateTime createdAt;
+  final double unitPrice;
+  final double totalAmount;
+  final double paidAmount;
+  final double debtAmount;
+  final int? scheduleId;
 }
 
 /// Ket qua nhap kho thanh cong de gui sang man hinh success.
@@ -114,6 +281,9 @@ class ThuMuaSuccessResult {
     required this.status,
     required this.unitCostPrice,
     this.expectedDate,
+    this.actualWeightKg = 0,
+    this.moisturePercent,
+    this.debtAmount = 0,
   });
 
   final String receiptCode;
@@ -127,6 +297,9 @@ class ThuMuaSuccessResult {
   final String status;
   final double unitCostPrice;
   final DateTime? expectedDate;
+  final double actualWeightKg;
+  final double? moisturePercent;
+  final double debtAmount;
 
   ThuMuaSuccessResult copyWithStatus(String value) {
     return ThuMuaSuccessResult(
@@ -141,6 +314,9 @@ class ThuMuaSuccessResult {
       status: value,
       unitCostPrice: unitCostPrice,
       expectedDate: expectedDate,
+      actualWeightKg: actualWeightKg,
+      moisturePercent: moisturePercent,
+      debtAmount: debtAmount,
     );
   }
 }

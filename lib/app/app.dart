@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_keys.dart';
 import '../core/routes/app_routes.dart';
 import '../core/theme/app_theme.dart';
 import '../core/theme/theme_controller.dart';
-import '../features/auth/presentation/screens/login_screen.dart';
 
 class StockLiteApp extends StatelessWidget {
-  const StockLiteApp({super.key});
+  const StockLiteApp({this.isLoggedIn = false, super.key});
+
+  /// Đã có phiên đăng nhập khôi phục được → vào thẳng trang chủ, khỏi đăng nhập lại.
+  final bool isLoggedIn;
 
   @override
   Widget build(BuildContext context) {
@@ -14,14 +17,15 @@ class StockLiteApp extends StatelessWidget {
       valueListenable: ThemeController.mode,
       builder: (context, themeMode, _) {
         return MaterialApp(
-          title: 'Tuấn Mây Mobile',
+          title: 'Lúa gạo Tuấn Mây',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: themeMode,
-          initialRoute: AppRoutes.login,
+          navigatorKey: appNavigatorKey,
+          scaffoldMessengerKey: appMessengerKey,
+          initialRoute: isLoggedIn ? AppRoutes.home : AppRoutes.login,
           routes: AppRoutes.routes,
-          home: const LoginScreen(),
         );
       },
     );

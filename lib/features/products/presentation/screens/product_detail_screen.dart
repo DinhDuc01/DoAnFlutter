@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/realtime/realtime_data_view.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_ui.dart';
 import '../../data/product_variant_api.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -17,13 +19,13 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final ProductVariantApi _productApi = ProductVariantApi();
-  late Future<ProductVariantStock> _productFuture;
 
-  @override
-  void initState() {
-    super.initState();
-    _productFuture = _loadProduct();
-  }
+  static const Set<String> _entities = {
+    'Product',
+    'ProductVariant',
+    'Inventory',
+    'InventoryTransaction',
+  };
 
   Future<ProductVariantStock> _loadProduct() {
     final id = widget.productVariantId;
@@ -32,47 +34,30 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         : _productApi.firstActiveVariantWithStock();
   }
 
-  Future<void> _reload() async {
-    final future = _loadProduct();
-    setState(() {
-      _productFuture = future;
-    });
-    await future;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundFor(context),
       appBar: AppBar(title: const Text('Chi tiết sản phẩm')),
-      body: FutureBuilder<ProductVariantStock>(
-        future: _productFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError || !snapshot.hasData) {
-            return _ErrorState(
-                message: '${snapshot.error ?? 'Không có dữ liệu'}');
-          }
-
-          final product = snapshot.data!;
-          return RefreshIndicator(
-            onRefresh: _reload,
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _ProductSummaryCard(product: product),
+      body: RealtimeDataView<ProductVariantStock>(
+        loader: _loadProduct,
+        entities: _entities,
+        loadingBuilder: (_) => const Center(child: CircularProgressIndicator()),
+        errorBuilder: (context, error, retry) => _ErrorState(message: '$error'),
+        builder: (context, product) {
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _ProductSummaryCard(product: product),
+              const SizedBox(height: 12),
+              _ProductInfoCard(product: product),
+              const SizedBox(height: 12),
+              _WarehouseStockCard(product: product),
+              if (product.description?.trim().isNotEmpty ?? false) ...[
                 const SizedBox(height: 12),
-                _ProductInfoCard(product: product),
-                const SizedBox(height: 12),
-                _WarehouseStockCard(product: product),
-                if (product.description?.trim().isNotEmpty ?? false) ...[
-                  const SizedBox(height: 12),
-                  _DescriptionCard(description: product.description!.trim()),
-                ],
+                _DescriptionCard(description: product.description!.trim()),
               ],
-            ),
+            ],
           );
         },
       ),
@@ -117,11 +102,8 @@ class _ProductSummaryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isLowStock =
         product.quantityAvailable <= (product.minStockLevel ?? 10);
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+    return AppCard(
+      child: Row(
           children: [
             _ProductImage(imageUrl: product.imageUrl),
             const SizedBox(width: 14),
@@ -152,7 +134,6 @@ class _ProductSummaryCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
       ),
     );
   }
@@ -171,7 +152,7 @@ class _ProductImage extends StatelessWidget {
       height: 68,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF7EF),
+        color: AppColors.brandTintStrong,
         borderRadius: BorderRadius.circular(16),
       ),
       child: url == null || url.isEmpty
@@ -202,7 +183,7 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: isLowStock ? const Color(0xFFFFE4E6) : const Color(0xFFDCFCE7),
+        color: isLowStock ? AppColors.dangerTint : AppColors.successTint,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
@@ -210,7 +191,7 @@ class _StatusBadge extends StatelessWidget {
         child: Text(
           isLowStock ? 'Sắp hết hàng' : 'Còn hàng',
           style: TextStyle(
-            color: isLowStock ? const Color(0xFFE11D48) : AppColors.primaryDark,
+            color: isLowStock ? AppColors.danger : AppColors.primaryDark,
             fontSize: 11,
             fontWeight: FontWeight.w800,
           ),
@@ -260,17 +241,12 @@ class _WarehouseStockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stockedWarehouses = product.warehouses
-        .where((inventory) => inventory.quantityOnHand > 0)
-        .toList();
+    // Show every warehouse, including zero-stock rows, so the warehouse
+    // split is complete and operators can see where a product is missing.
+    final stockedWarehouses = product.warehouses;
     return _SectionCard(
       title: 'Tồn kho',
       children: [
-        _InfoRow(
-          label: 'Tổng tồn hệ thống',
-          value: '${product.quantityOnHand}',
-          valueColor: AppColors.primaryDark,
-        ),
         _InfoRow(label: 'Đã giữ', value: '${product.quantityReserved}'),
         _InfoRow(label: 'Có thể xuất', value: '${product.quantityAvailable}'),
         _InfoRow(
@@ -301,9 +277,9 @@ class _WarehouseRow extends StatelessWidget {
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF4FBF7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD7EADF)),
+        color: AppColors.brandTint,
+        borderRadius: BorderRadius.circular(AppColors.radiusMd),
+        border: Border.all(color: AppColors.brandTintStrong),
       ),
       child: Row(
         children: [
@@ -366,21 +342,21 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: AppColors.textPrimaryFor(context),
             ),
-            const SizedBox(height: 8),
-            ...children,
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          ...children,
+        ],
       ),
     );
   }
@@ -390,12 +366,10 @@ class _InfoRow extends StatelessWidget {
   const _InfoRow({
     required this.label,
     required this.value,
-    this.valueColor,
   });
 
   final String label;
   final String value;
-  final Color? valueColor;
 
   @override
   Widget build(BuildContext context) {
@@ -414,7 +388,7 @@ class _InfoRow extends StatelessWidget {
               value,
               textAlign: TextAlign.right,
               style: TextStyle(
-                color: valueColor,
+                color: AppColors.textPrimaryFor(context),
                 fontWeight: FontWeight.w800,
               ),
             ),

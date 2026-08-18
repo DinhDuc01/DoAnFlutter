@@ -68,23 +68,31 @@ void main() {
     });
   });
 
-  test('uses the submitted username when API omits user email', () async {
+  test('rejects a successful response without token values', () async {
     final client = FakeApiClient(
       onPost: (_, __, ___) async => {
         'isSucceeded': true,
         'resources': {
+          'accessToken': '',
+          'refreshToken': '',
           'userInfo': {'id': 1, 'fullName': 'User'},
         },
       },
     );
 
-    final session = await ApiAuthService(apiClient: client).login(
-      email: 'warehouse-user',
-      password: 'secret',
+    await expectLater(
+      ApiAuthService(apiClient: client).login(
+        email: 'warehouse-user',
+        password: 'secret',
+      ),
+      throwsA(
+        isA<AuthException>().having(
+          (error) => error.message,
+          'message',
+          'API đăng nhập không trả đủ thông tin token phiên',
+        ),
+      ),
     );
-
-    expect(session.user.email, 'warehouse-user');
-    expect(session.accessToken, '');
   });
 
   test('uses backend failure message', () async {

@@ -10,6 +10,7 @@ class NotificationsFilterChips extends StatelessWidget {
     required this.selectedFilter,
     required this.unreadCount,
     required this.onChanged,
+    this.alertCount = 0,
     super.key,
   });
 
@@ -18,15 +19,18 @@ class NotificationsFilterChips extends StatelessWidget {
 
   /// Số lượng thông báo chưa đọc hiển thị dạng Badge.
   final int unreadCount;
+  final int alertCount;
 
   /// Callback kích hoạt khi thay đổi bộ lọc được chọn.
   final ValueChanged<NotificationFilter> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           _FilterChipButton(
             label: 'Tất cả',
@@ -43,6 +47,7 @@ class NotificationsFilterChips extends StatelessWidget {
           const SizedBox(width: 8),
           _FilterChipButton(
             label: 'Cảnh báo',
+            badge: alertCount,
             isSelected: selectedFilter == NotificationFilter.alerts,
             onTap: () => onChanged(NotificationFilter.alerts),
           ),

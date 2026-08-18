@@ -5,10 +5,13 @@ import 'package:stocklite/features/account/data/api_account_repository.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/milling/data/api_milling_repository.dart';
+import 'package:stocklite/features/milling/models/milling_location.dart';
 import 'package:stocklite/features/milling/models/milling_order.dart';
+import 'package:stocklite/features/milling/models/milling_output_form.dart';
 import 'package:stocklite/features/notifications/data/api_notifications_repository.dart';
 import 'package:stocklite/features/notifications/models/app_notification.dart';
 import 'package:stocklite/features/quality_inspection/data/quality_inspection_repository.dart';
+import 'package:stocklite/features/quality_inspection/models/quality_inspection.dart';
 import 'package:stocklite/features/thu_mua/data/purchase_schedule_repository.dart';
 import 'package:stocklite/features/thu_mua/models/purchase_schedule.dart';
 
@@ -144,16 +147,30 @@ void main() {
           .getNotifications();
 
       expect(notifications, hasLength(5));
-      expect(notifications[0].type, AppNotificationType.alert);
-      expect(notifications[0].timeAgo, '10 phút trước');
-      expect(notifications[1].type, AppNotificationType.success);
-      expect(notifications[1].timeAgo, '2 giờ trước');
-      expect(notifications[1].isRead, isTrue);
-      expect(notifications[2].type, AppNotificationType.warning);
-      expect(notifications[2].timeAgo, '2 ngày trước');
-      expect(notifications[3].type, AppNotificationType.info);
-      expect(notifications[3].timeAgo, 'Vừa xong');
-      expect(notifications[4].timeAgo, 'Không rõ thời gian');
+      expect(notifications.first.id, '4');
+      expect(notifications[1].id, '1');
+      expect(notifications[1].type, AppNotificationType.alert);
+      expect(notifications[1].timeAgo, '10 phút trước');
+      final success = notifications.singleWhere((item) => item.id == '2');
+      expect(success.type, AppNotificationType.success);
+      expect(success.timeAgo, '2 giờ trước');
+      expect(success.isRead, isTrue);
+      expect(
+        notifications.singleWhere((item) => item.id == '3').type,
+        AppNotificationType.warning,
+      );
+      expect(
+        notifications.singleWhere((item) => item.id == '3').timeAgo,
+        '2 ngày trước',
+      );
+      expect(
+        notifications.singleWhere((item) => item.id == '4').timeAgo,
+        'Vừa xong',
+      );
+      expect(
+        notifications.singleWhere((item) => item.id == '5').timeAgo,
+        'Không rõ thời gian',
+      );
       expect(client.calls.single.body, const {'pageIndex': 1, 'pageSize': 50});
     });
 
@@ -166,6 +183,36 @@ void main() {
         await ApiNotificationsRepository(apiClient: client).getNotifications(),
         isEmpty,
       );
+    });
+
+    test('fetch sends page parameters and reads the filtered total', () async {
+      final client = FakeApiClient(
+        onPost: (_, __, ___) async => {
+          'resources': {
+            'dataSource': [
+              {
+                'id': 21,
+                'title': 'Trang hai',
+                'createdDate': '2026-08-13T09:00:00Z',
+              },
+            ],
+            'total': 37,
+            'totalFiltered': 23,
+          },
+        },
+      );
+
+      final page = await ApiNotificationsRepository(apiClient: client).fetch(
+        pageIndex: 2,
+        pageSize: 10,
+      );
+
+      expect(page.items.single.id, '21');
+      expect(page.total, 23);
+      expect(client.calls.single.body, const {
+        'pageIndex': 2,
+        'pageSize': 10,
+      });
     });
   });
 
@@ -238,15 +285,17 @@ void main() {
       expect(schedules.single.estimatedWeightKg, 2500);
     });
 
-    test('returns original schedule when farmer id is invalid', () async {
+    test('skips farmer lookup when farmer id is invalid', () async {
       final client = FakeApiClient();
       final schedule = _schedule(farmerId: 0);
 
       final result = await PurchaseScheduleRepository(apiClient: client)
           .getScheduleDetails(schedule);
 
-      expect(result, same(schedule));
-      expect(client.calls, isEmpty);
+      // Vẫn làm mới lịch (giống lúa, kho, cờ chặn lập phiếu) nhưng bỏ qua API nông dân.
+      expect(result.code, schedule.code);
+      expect(result.farmerPhone, isNull);
+      expect(client.calls.single.path, '/api/v1/paddy-purchase-schedules/1');
     });
 
     test('requires login before loading farmer details', () async {
@@ -259,15 +308,32 @@ void main() {
       );
     });
 
-    test('enriches schedule from farmer endpoint', () async {
+    test('enriches schedule from detail + farmer endpoints', () async {
       final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': {
-            'name': 'Nông hộ B',
-            'phone': '0909',
-            'address': 'Tiền Giang',
-          },
-        },
+        onGet: (path, __, ___) async => path.contains('paddy-purchase-schedules')
+            ? {
+                'resources': {
+                  'id': 1,
+                  'farmerId': 2,
+                  'scheduleCode': 'TM-01',
+                  'riceVarietyName': 'ST25',
+                  'warehouseName': 'Kho A',
+                  'statusCode': 'CONFIRMED',
+                  'statusName': 'Đã xác nhận',
+                  'estimatedQtyKg': 1000,
+                  'receiptCount': 1,
+                  'receiptedWeightKg': 1000,
+                  'remainingQtyKg': 0,
+                  'canCreateReceipt': false,
+                },
+              }
+            : {
+                'resources': {
+                  'name': 'Nông hộ B',
+                  'phone': '0909',
+                  'address': 'Tiền Giang',
+                },
+              },
       );
 
       final result = await PurchaseScheduleRepository(apiClient: client)
@@ -276,7 +342,43 @@ void main() {
       expect(result.farmerName, 'Nông hộ B');
       expect(result.farmerPhone, '0909');
       expect(result.farmerAddress, 'Tiền Giang');
-      expect(client.calls.single.path, '/api/v1/farmers/2');
+      // Lịch đã đủ khối lượng dự kiến → không cho lập thêm phiếu.
+      expect(result.riceVariety, 'ST25');
+      expect(result.warehouseName, 'Kho A');
+      expect(result.receiptCount, 1);
+      expect(result.canCreateReceipt, isFalse);
+      expect(result.blockedReason, 'Lịch đã đủ phiếu mua');
+      expect(
+        client.calls.map((call) => call.path),
+        ['/api/v1/paddy-purchase-schedules/1', '/api/v1/farmers/2'],
+      );
+    });
+
+    test('blocks receipt creation once the estimated weight is reached', () {
+      final full = PurchaseSchedule.fromJson({
+        'id': 3,
+        'statusCode': 'CONFIRMED',
+        'estimatedQtyKg': 2000,
+        'receiptCount': 2,
+        'receiptedWeightKg': 2000,
+      });
+      final partial = PurchaseSchedule.fromJson({
+        'id': 4,
+        'statusCode': 'CONFIRMED',
+        'estimatedQtyKg': 2000,
+        'receiptCount': 1,
+        'receiptedWeightKg': 800,
+      });
+      // Lịch không khai báo khối lượng dự kiến chỉ được lập 1 phiếu.
+      final noEstimate = PurchaseSchedule.fromJson({
+        'id': 5,
+        'statusCode': 'CONFIRMED',
+        'receiptCount': 1,
+      });
+
+      expect(full.canCreateReceipt, isFalse);
+      expect(partial.canCreateReceipt, isTrue);
+      expect(noEstimate.canCreateReceipt, isFalse);
     });
   });
 
@@ -285,248 +387,123 @@ void main() {
       AuthSessionStore.current = null;
 
       await expectLater(
-        ApiQualityInspectionRepository(apiClient: FakeApiClient())
-            .getInspections(),
+        ApiQualityInspectionRepository(apiClient: FakeApiClient()).loadPage(),
         throwsA(isA<QualityInspectionException>()),
       );
     });
 
-    test('parses inspections and sorts newest first', () async {
+    test('sends the same column map as web and parses the page', () async {
       final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': [
-            {
-              'id': 1,
-              'paddyLotId': 10,
-              'lotCode': 'OLD',
-              'inspectedAt': '2026-07-20T00:00:00Z',
-              'passedInspection': false,
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/quality-inspections/paged-advanced');
+          expect(body!['start'], 20);
+          expect(body['length'], 20);
+          expect((body['search'] as Map)['value'], 'LOT-02');
+          final columns = body['columns'] as List;
+          expect(columns.length, 11);
+          expect(columns[8]['data'], 'passedInspection');
+          expect(columns[8]['search']['value'], 'true');
+          expect((body['order'] as List).single['column'], 2);
+          return {
+            'isSucceeded': true,
+            'resources': {
+              'data': [
+                {
+                  'id': 2,
+                  'paddyLotId': 4,
+                  'lotCode': 'LOT-02',
+                  'lotStatusCode': 'AWAITING_QC',
+                  'passedInspection': true,
+                  'inspectedAt': '2026-08-02T00:00:00Z',
+                },
+              ],
+              'recordsTotal': 41,
+              'recordsFiltered': 21,
             },
-            {
-              'id': 2,
-              'paddyLotId': 20,
-              'lotCode': 'NEW',
-              'inspectedAt': '2026-07-22T00:00:00Z',
-              'moisturePercent': '13.5',
-              'passedInspection': true,
-            },
-          ],
+          };
         },
       );
 
-      final results = await ApiQualityInspectionRepository(apiClient: client)
-          .getInspections();
+      final page = await ApiQualityInspectionRepository(apiClient: client)
+          .loadPage(page: 2, pageSize: 20, search: 'LOT-02', passedInspection: true);
 
-      expect(results.map((item) => item.lotCode), ['NEW', 'OLD']);
-      expect(results.first.moisturePercent, 13.5);
-      expect(results.first.passed, isTrue);
+      expect(page.items.single.lotCode, 'LOT-02');
+      expect(page.items.single.isDraft, isTrue);
+      expect(page.recordsTotal, 41);
+      expect(page.recordsFiltered, 21);
     });
 
-    test('loads valid paddy lots and creates fallback codes', () async {
+    test('parses detail, lot bags and newest-first history', () async {
       final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': [
-            {
-              'id': 1,
-              'lotCode': 'LOT-01',
-              'lotType': 'PADDY',
-              'remainingWeightKg': 1200,
-            },
-            {'id': 2},
-            {'id': 0, 'lotCode': 'INVALID'},
-            {'id': 3, 'lotCode': 'BRAN-01', 'lotType': 'BYPRODUCT'},
-          ],
+        onGet: (path, _, __) async {
+          if (path.contains('/by-lot/')) {
+            return {
+              'isSucceeded': true,
+              'resources': [
+                {'id': 1, 'inspectedAt': '2026-07-01T00:00:00Z', 'passedInspection': false},
+                {'id': 2, 'inspectedAt': '2026-08-01T00:00:00Z', 'passedInspection': true},
+              ],
+            };
+          }
+          if (path.startsWith('/api/v1/paddy-lots/')) {
+            return {
+              'isSucceeded': true,
+              'resources': {
+                'id': 3,
+                'lotCode': 'LOT-01',
+                'warehouseName': 'Kho A',
+                'initialWeightKg': 1000,
+                'remainingWeightKg': 0,
+                'bags': [
+                  {'id': 11, 'bagNo': 1, 'weightKg': 50, 'status': 'Pending'},
+                ],
+              },
+            };
+          }
+          return {
+            'isSucceeded': true,
+            'resources': {'id': 9, 'paddyLotId': 3, 'affectedWeightKg': 120},
+          };
         },
       );
-
-      final lots = await ApiQualityInspectionRepository(apiClient: client)
-          .getPaddyLots();
-
-      expect(lots, hasLength(2));
-      expect(lots[0].code, 'Lô #2');
-      expect(lots[1].code, 'LOT-01');
-      expect(lots[1].label, 'LOT-01 · Lúa · 1200 kg');
-    });
-
-    test('posts every draft field and returns created id', () async {
-      final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'isSucceeded': true,
-          'resources': {'id': 99},
-        },
-      );
-      const draft = QualityInspectionDraft(
-        paddyLotId: 7,
-        passed: true,
-        moisturePercent: 13,
-        impurityPercent: 2,
-        moldLevel: 'Không',
-        pestLevel: 'Thấp',
-        packagingStatus: 'Tốt',
-        handling: 'Nhập kho',
-        note: 'Đạt',
-      );
-
-      final id = await ApiQualityInspectionRepository(apiClient: client)
-          .createInspection(draft);
-
-      expect(id, 99);
-      final call = client.calls.single;
-      expect(call.path, '/api/v1/quality-inspections');
-      expect(call.body?['paddyLotId'], 7);
-      expect(call.body?['passedInspection'], isTrue);
-      expect(call.body?['moisturePercent'], 13);
-      expect(call.body?['note'], 'Đạt');
-    });
-
-    test('uses the backend failure message when creation is rejected',
-        () async {
-      final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'isSucceeded': false,
-          'message': 'Lô đã bị khóa',
-        },
-      );
-
-      await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).createInspection(
-          const QualityInspectionDraft(
-            paddyLotId: 7,
-            passed: false,
-            moisturePercent: 15,
-            impurityPercent: 3,
-          ),
-        ),
-        throwsA(
-          isA<QualityInspectionException>().having(
-            (error) => error.message,
-            'message',
-            'Lô đã bị khóa',
-          ),
-        ),
-      );
-    });
-
-    test('validates required quality measurements before posting', () async {
-      final client = FakeApiClient();
-
-      await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).createInspection(
-          const QualityInspectionDraft(paddyLotId: 7, passed: true),
-        ),
-        throwsA(isA<QualityInspectionException>()),
-      );
-      expect(client.calls, isEmpty);
-    });
-
-    test('rejects an invalid paddy lot before posting', () async {
-      final client = FakeApiClient();
-
-      await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).createInspection(
-          const QualityInspectionDraft(
-            paddyLotId: 0,
-            passed: false,
-            moisturePercent: 13,
-            impurityPercent: 2,
-          ),
-        ),
-        throwsA(
-          isA<QualityInspectionException>().having(
-            (error) => error.message,
-            'message',
-            contains('không hợp lệ'),
-          ),
-        ),
-      );
-      expect(client.calls, isEmpty);
-    });
-
-    test('rejects percentage measurements outside zero to one hundred',
-        () async {
-      final client = FakeApiClient();
       final repository = ApiQualityInspectionRepository(apiClient: client);
 
-      for (final draft in const [
-        QualityInspectionDraft(
-          paddyLotId: 7,
-          passed: false,
-          moisturePercent: -0.1,
-          impurityPercent: 2,
-        ),
-        QualityInspectionDraft(
-          paddyLotId: 7,
-          passed: false,
-          moisturePercent: 13,
-          impurityPercent: 100.1,
-        ),
-      ]) {
-        await expectLater(
-          repository.createInspection(draft),
-          throwsA(
-            isA<QualityInspectionException>().having(
-              (error) => error.message,
-              'message',
-              contains('0 đến 100%'),
-            ),
-          ),
-        );
-      }
-      expect(client.calls, isEmpty);
+      final detail = await repository.getDetail(9);
+      final lot = await repository.getLot(3);
+      final history = await repository.getHistory(3);
+
+      expect(detail.affectedWeightKg, 120);
+      expect(lot.basisWeightKg, 1000);
+      expect(lot.bags.single.bagNo, 1);
+      expect(history.first.id, 2);
+      expect(client.calls.every((call) => call.method == 'GET'), isTrue);
     });
 
-    test('rejects a successful create response without a valid id', () async {
+    test('updates a inspection with the logged-in user as inspector', () async {
       final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'isSucceeded': true,
-          'resources': {'id': 0},
-        },
+        onPut: (_, __, ___) async => {'isSucceeded': true},
       );
 
-      await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).createInspection(
-          const QualityInspectionDraft(
-            paddyLotId: 7,
-            passed: true,
-            moisturePercent: 13,
-            impurityPercent: 2,
-          ),
-        ),
-        throwsA(
-          isA<QualityInspectionException>().having(
-            (error) => error.message,
-            'message',
-            contains('không trả về mã phiếu'),
-          ),
+      await ApiQualityInspectionRepository(apiClient: client).update(
+        QualityInspectionUpdate(
+          id: 5,
+          paddyLotId: 3,
+          inspectorId: 42,
+          inspectedAt: DateTime.utc(2026, 8, 2, 7),
+          passedInspection: false,
+          affectedWeightKg: 120,
+          affectedBagIds: const [11, 12],
+          moldLevel: '  ',
         ),
       );
-      expect(client.calls, hasLength(1));
-    });
 
-    test('loads paginated rice lots and formats their labels', () async {
-      final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'isSucceeded': true,
-          'resources': {
-            'items': [
-              {
-                'id': 9,
-                'lotCode': 'RICE-09',
-                'lotType': 'rice',
-                'remainingWeightKg': '125.5',
-              },
-            ],
-          },
-        },
-      );
-
-      final lots = await ApiQualityInspectionRepository(apiClient: client)
-          .getPaddyLots();
-
-      expect(lots.single.id, 9);
-      expect(lots.single.lotType, 'rice');
-      expect(lots.single.remainingWeightKg, 125.5);
-      expect(lots.single.label, 'RICE-09 · Gạo · 126 kg');
+      final call = client.calls.single;
+      expect(call.method, 'PUT');
+      expect(call.path, '/api/v1/quality-inspections');
+      expect(call.body!['inspectorId'], 42);
+      expect(call.body!['passedInspection'], isFalse);
+      expect(call.body!['affectedBagIds'], [11, 12]);
+      expect(call.body!['moldLevel'], isNull);
     });
 
     test('converts API errors into quality inspection errors', () async {
@@ -536,7 +513,7 @@ void main() {
       );
 
       await expectLater(
-        ApiQualityInspectionRepository(apiClient: client).getInspections(),
+        ApiQualityInspectionRepository(apiClient: client).getDetail(1),
         throwsA(
           isA<QualityInspectionException>().having(
             (error) => error.message,
@@ -616,6 +593,139 @@ void main() {
       ]);
     });
 
+    test('loads paged milling orders with search and filters', () async {
+      final client = FakeApiClient(
+        onPost: (_, __, ___) async => {
+          'resources': {
+            'recordsTotal': 3,
+            'recordsFiltered': 1,
+            'data': [
+              {
+                'id': 21,
+                'millingCode': 'MO-21',
+                'statusId': 3,
+                'statusName': 'Đang xay',
+                'warehouseId': 7,
+                'warehouseName': 'Kho xay',
+                'machineRef': 'MILL-01',
+                'yieldRateUsed': 0.65,
+                'totalRiceOutputKg': 650,
+                'computedPaddyKg': 1000,
+                'createdDate': '2026-08-01T08:30:00',
+              },
+            ],
+          },
+        },
+      );
+
+      final page =
+          await ApiMillingRepository(apiClient: client).getMillingOrderPage(
+        search: 'MO-21',
+        statusId: 3,
+        warehouseId: 7,
+        start: 20,
+        length: 20,
+      );
+
+      expect(page.recordsTotal, 3);
+      expect(page.recordsFiltered, 1);
+      expect(page.orders.single.millingCode, 'MO-21');
+      expect(page.orders.single.statusCode, 'IN_PROGRESS');
+      final call = client.calls.single;
+      expect(call.path, '/api/v1/milling-orders/paged-advanced');
+      expect(call.body?['start'], 20);
+      expect(call.body?['length'], 20);
+      expect((call.body?['search'] as Map)['value'], 'MO-21');
+      final columns = call.body?['columns'] as List<dynamic>;
+      expect(((columns[0] as Map)['search'] as Map)['value'], '3');
+      expect(((columns[1] as Map)['search'] as Map)['value'], '7');
+    });
+
+    test('loads milling detail with inputs, selected bags and outputs',
+        () async {
+      final client = FakeApiClient(
+        onGet: (_, __, ___) async => {
+          'resources': {
+            'id': 22,
+            'millingCode': 'MO-22',
+            'statusId': 5,
+            'statusName': 'Hoàn tất',
+            'statusCode': 'COMPLETED',
+            'warehouseId': 8,
+            'warehouseName': 'Kho thành phẩm',
+            'riceVarietyName': 'OM5451',
+            'yieldRateUsed': 0.7,
+            'totalRiceOutputKg': 700,
+            'computedPaddyKg': 1000,
+            'byproductKg': 120,
+            'lossKg': 30,
+            'inputs': [
+              {
+                'id': 1,
+                'paddyLotId': 9,
+                'lotCode': 'LOT-09',
+                'locationId': 4,
+                'locationCode': 'A-04',
+                'consumedWeightKg': 1000,
+                'reservedWeightKg': 1000,
+                'bags': [
+                  {
+                    'bagId': 30,
+                    'bagNo': 12,
+                    'weightKg': 50,
+                    'stackOrder': 1,
+                    'status': 'Allocated',
+                  },
+                ],
+              },
+            ],
+            'outputs': [
+              {
+                'id': 2,
+                'productVariantId': 11,
+                'sku': 'RICE-11',
+                'outputLotId': 44,
+                'outputType': 'RICE',
+                'outputWeightKg': 700,
+                'bagCount': 28,
+                'isByproduct': false,
+                'unitCost': 9000,
+              },
+            ],
+          },
+        },
+      );
+
+      final order = await ApiMillingRepository(apiClient: client)
+          .getMillingOrderDetail(22);
+
+      expect(client.calls.single.path, '/api/v1/milling-orders/22');
+      expect(order.statusCode, 'COMPLETED');
+      expect(order.inputs.single.lotCode, 'LOT-09');
+      expect(order.inputs.single.bags.single.weightKg, 50);
+      expect(order.outputs.single.sku, 'RICE-11');
+      expect(order.riceProductVariantId, 11);
+    });
+
+    test('parses nullable milling detail fields safely', () async {
+      final order = MillingOrder.fromJson(const {
+        'id': 7,
+        'millingCode': 'MO-NULL',
+        'inputs': [
+          {'id': 1, 'paddyLotId': 2, 'consumedWeightKg': null},
+        ],
+        'outputs': [
+          {'id': 3, 'productVariantId': null, 'outputWeightKg': null},
+        ],
+      });
+
+      expect(order.id, 7);
+      expect(order.inputWeightKg, 0);
+      expect(order.inputs.single.consumedWeightKg, 0);
+      expect(order.outputs.single.outputWeightKg, 0);
+      expect(order.outputs.single.isByproduct, isFalse);
+    });
+
     test('completes an order through the correct endpoint', () async {
       final client = FakeApiClient(
         onPost: (_, __, ___) async => {'isSucceeded': true},
@@ -646,6 +756,296 @@ void main() {
           ),
         ),
       );
+    });
+
+    test('parses nullable output location fields safely', () {
+      final location = MillingLocation.fromJson(const {
+        'id': 12,
+        'warehouseId': 2,
+        'warehouseName': 'Kho A',
+        'slotCode': null,
+        'zoneName': null,
+        'maxCapacity': null,
+        'currentOccupancy': null,
+        'allowedCategoryId': null,
+        'currentProductVariantId': null,
+        'isQuarantine': null,
+        'isActive': null,
+      });
+
+      expect(location.id, 12);
+      expect(location.warehouseId, 2);
+      expect(location.maxCapacity, isNull);
+      expect(location.currentOccupancy, 0);
+      expect(location.isQuarantine, isFalse);
+      expect(location.isActive, isFalse);
+    });
+
+    test('sends putaway suggestion contract without selecting a location',
+        () async {
+      final client = FakeApiClient(
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/putaway/suggestions');
+          expect(token, 'token');
+          expect(body, {
+            'warehouseId': 2,
+            'productVariantId': 101,
+            'paddyLotId': null,
+            'requiredWeightKg': 3250.0,
+            'placementMode': 1,
+            'top': 5,
+          });
+          return {
+            'isSucceeded': true,
+            'resources': {
+              'suggestions': [
+                {
+                  'locationId': 12,
+                  'locationCode': 'A01',
+                  'zoneName': 'Khu A',
+                  'currentOccupancyKg': 100,
+                  'maxCapacityKg': 5000,
+                  'freeCapacityKg': 4900,
+                  'isEmpty': false,
+                },
+              ],
+            },
+          };
+        },
+      );
+
+      final suggestions = await ApiMillingRepository(apiClient: client)
+          .getPutawaySuggestions(
+            warehouseId: 2,
+            productVariantId: 101,
+            requiredWeightKg: 3250,
+          );
+
+      expect(suggestions.single.locationId, 12);
+      expect(client.calls.single.path, '/api/v1/putaway/suggestions');
+    });
+
+    test('builds complete outputs from local bags and selected locations',
+        () async {
+      Map<String, dynamic>? capturedBody;
+      final client = FakeApiClient(
+        onPost: (path, body, token) async {
+          if (path.endsWith('/complete')) capturedBody = body;
+          return {'isSucceeded': true};
+        },
+      );
+
+      const order = MillingOrder(
+        id: 21,
+        millingCode: 'MO-21',
+        inputLotCode: 'LOT-01',
+        inputWeightKg: 5000,
+        warehouseZone: 'Kho A',
+        locationCode: '12',
+        scaleCode: 'Cân thủ công',
+        statusCode: 'IN_PROGRESS',
+        riceProductVariantId: 101,
+        branProductVariantId: 102,
+        riceBags: [
+          MillingBag(index: 1, weightKg: 25),
+          MillingBag(index: 2, weightKg: 25),
+        ],
+        branBags: [MillingBag(index: 1, weightKg: 5)],
+      );
+
+      await ApiMillingRepository(apiClient: client).completeOrder(
+        order,
+        outputLocationIds: const {'RICE': 12, 'BRAN': 13},
+      );
+
+      expect(capturedBody?['outputs'], [
+        {
+          'productVariantId': 101,
+          'locationId': 12,
+          'outputType': 'RICE',
+          'outputWeightKg': 50.0,
+          'bagCount': 2,
+          'isByproduct': false,
+          'unitCost': null,
+        },
+        {
+          'productVariantId': 102,
+          'locationId': 13,
+          'outputType': 'BRAN',
+          'outputWeightKg': 5.0,
+          'bagCount': 1,
+          'isByproduct': true,
+          'unitCost': null,
+        },
+      ]);
+    });
+
+    test('sends validated multi-output form values without UI-only fields',
+        () async {
+      Map<String, dynamic>? capturedBody;
+      String? capturedToken;
+      final client = FakeApiClient(
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/milling-orders/21/complete');
+          capturedBody = body;
+          capturedToken = token;
+          return {'isSucceeded': true};
+        },
+      );
+
+      await ApiMillingRepository(apiClient: client).completeOrder(
+        _millingOrder(),
+        note: 'Đã kiểm tra thủ công',
+        outputForms: const [
+          MillingOutputFormValue(
+            type: MillingOutputType.rice,
+            productVariantId: 101,
+            locationId: 12,
+            bagCount: 4,
+            kgPerBag: 25,
+            outputWeightKg: 100,
+          ),
+          MillingOutputFormValue(
+            type: MillingOutputType.bran,
+            productVariantId: 102,
+            locationId: 13,
+            bagCount: 1,
+            kgPerBag: 5,
+            outputWeightKg: 5,
+          ),
+        ],
+      );
+
+      expect(capturedToken, 'token');
+      expect(capturedBody, {
+        'outputs': [
+          {
+            'productVariantId': 101,
+            'locationId': 12,
+            'outputType': 'RICE',
+            'outputWeightKg': 100.0,
+            'bagCount': 4,
+            'isByproduct': false,
+            'unitCost': null,
+          },
+          {
+            'productVariantId': 102,
+            'locationId': 13,
+            'outputType': 'BRAN',
+            'outputWeightKg': 5.0,
+            'bagCount': 1,
+            'isByproduct': true,
+            'unitCost': null,
+          },
+        ],
+        'note': 'Đã kiểm tra thủ công',
+      });
+      expect(capturedBody!.toString(), isNot(contains('kgPerBag')));
+      expect(client.calls.where((call) => call.method == 'POST'), hasLength(1));
+    });
+
+    test('does not treat an unsuccessful complete response as success',
+        () async {
+      final client = FakeApiClient(
+        onPost: (_, __, ___) async => {
+          'isSucceeded': false,
+          'message': 'Không thể hoàn tất lệnh',
+        },
+      );
+
+      await expectLater(
+        ApiMillingRepository(apiClient: client).completeOrder(
+          _millingOrder(),
+          outputForms: const [
+            MillingOutputFormValue(
+              type: MillingOutputType.rice,
+              productVariantId: 101,
+              locationId: 12,
+              bagCount: 1,
+              kgPerBag: 25,
+              outputWeightKg: 25,
+            ),
+          ],
+        ),
+        throwsA(
+          isA<MillingApiException>().having(
+            (error) => error.message,
+            'message',
+            'Không thể hoàn tất lệnh',
+          ),
+        ),
+      );
+      expect(client.calls, hasLength(1));
+    });
+
+    test('loads physical bags from source suggestions and sends Columns/BagIds',
+        () async {
+      final client = FakeApiClient(
+        onGet: (path, _, __) async {
+          if (path == '/api/v1/milling-orders/21/source-suggestions') {
+            return {
+              'resources': {
+                'requiredWeightKg': 100,
+                'columns': [
+                  {
+                    'locationId': 4,
+                    'locationCode': 'A-04',
+                    'bagIds': [30, 31]
+                  },
+                ],
+                'inputs': [
+                  {
+                    'locationId': 4,
+                    'paddyLotId': 9,
+                    'bagIds': [30, 31]
+                  },
+                ],
+              },
+            };
+          }
+          return {
+            'resources': {
+              'bags': [
+                {'id': 30, 'bagNo': 1, 'weightKg': 50, 'status': 'STORED'},
+                {'id': 31, 'bagNo': 2, 'weightKg': 50, 'status': 'STORED'},
+              ],
+            },
+          };
+        },
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/milling-orders/21/reserve');
+          expect(body?['columns'], [
+            {
+              'locationId': 4,
+              'bagIds': [30, 31]
+            },
+          ]);
+          expect(token, 'token');
+          return {'isSucceeded': true};
+        },
+      );
+      final repository = ApiMillingRepository(apiClient: client);
+      final suggestion = await repository.getSourceSuggestion(21);
+
+      expect(suggestion.requiredWeightKg, 100);
+      expect(
+          suggestion.columns.single.bags.map((bag) => bag.weightKg), [50, 50]);
+      expect(suggestion.columns.single.selectedBagIds, [30, 31]);
+
+      await repository.reserveOrder(21, suggestion.columns);
+    });
+
+    test('starts a reserved order with a separate request', () async {
+      final client = FakeApiClient(
+        onPost: (path, body, token) async {
+          expect(path, '/api/v1/milling-orders/21/start');
+          expect(body, isEmpty);
+          expect(token, 'token');
+          return {'isSucceeded': true};
+        },
+      );
+
+      await ApiMillingRepository(apiClient: client).startOrder(21);
     });
   });
 }
@@ -683,5 +1083,7 @@ MillingOrder _millingOrder() {
     scaleCode: 'SCALE-01',
     riceBags: [],
     branBags: [],
+    riceProductVariantId: 101,
+    branProductVariantId: 102,
   );
 }

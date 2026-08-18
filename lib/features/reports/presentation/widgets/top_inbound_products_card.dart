@@ -103,7 +103,7 @@ class _ProductProgressRow extends StatelessWidget {
           child: LinearProgressIndicator(
             value: progress,
             minHeight: 6,
-            backgroundColor: const Color(0xFFE5E7EB),
+            backgroundColor: AppColors.borderFor(context),
             valueColor: AlwaysStoppedAnimation<Color>(product.color),
           ),
         ),

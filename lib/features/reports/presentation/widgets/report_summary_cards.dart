@@ -32,7 +32,7 @@ class ReportSummaryCards extends StatelessWidget {
         Expanded(
           child: _SummaryCard(
             icon: Icons.trending_down,
-            iconColor: const Color(0xFF3478F6),
+            iconColor: AppColors.info,
             value: report.totalGiaoHang.toString(),
             label: 'Tổng xuất',
           ),
@@ -42,7 +42,7 @@ class ReportSummaryCards extends StatelessWidget {
         Expanded(
           child: _SummaryCard(
             icon: Icons.inventory_2_outlined,
-            iconColor: const Color(0xFFA855F7),
+            iconColor: AppColors.accentPurple,
             value: report.totalStockLabel,
             label: 'Tồn kho',
           ),

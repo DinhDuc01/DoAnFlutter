@@ -15,6 +15,34 @@ class ProductVariantApi {
   final int pageSize;
   final int maxConcurrentStockRequests;
 
+  /// Lấy danh sách biến thể đang hoạt động (không cần tải tồn kho từng variant).
+  Future<List<ProductVariantStock>> activeVariants() async {
+    final token = _currentToken();
+    final List<Map<String, dynamic>> variants;
+    try {
+      variants = await _loadActiveVariants(token);
+    } on ApiException catch (error) {
+      throw ProductVariantApiException(error.message);
+    }
+
+    final products = <ProductVariantStock>[];
+    for (final variant in variants) {
+      final id = JsonReader.integer(variant, 'id') ??
+          JsonReader.integer(variant, 'Id') ??
+          0;
+      if (id > 0) {
+        products.add(
+          ProductVariantStock.fromJson(
+            variant,
+            stock: const ProductStock(),
+          ),
+        );
+      }
+    }
+
+    return products..sort((a, b) => a.name.compareTo(b.name));
+  }
+
   /// Lấy danh sách biến thể đang hoạt động kèm tồn kho thực tế.
   Future<List<ProductVariantStock>> activeVariantsWithStock() async {
     final token = _currentToken();
@@ -33,8 +61,12 @@ class ProductVariantApi {
       final batch = variants.sublist(start, end);
       final loaded = await Future.wait(
         batch.map((variant) async {
-          final id = JsonReader.integer(variant, 'id') ?? 0;
-          final sku = JsonReader.string(variant, 'sku')?.trim();
+          final id = JsonReader.integer(variant, 'id') ??
+              JsonReader.integer(variant, 'Id') ??
+              0;
+          final sku = JsonReader.string(variant, 'sku')?.trim() ??
+              JsonReader.string(variant, 'SKU')?.trim() ??
+              JsonReader.string(variant, 'sKU')?.trim();
           if (id <= 0 || sku == null || sku.isEmpty) return null;
 
           try {
@@ -106,8 +138,9 @@ class ProductVariantApi {
     return products.first;
   }
 
-  /// Màn xuất kho chỉ chọn sản phẩm còn tồn khả dụng.
-  Future<ProductVariantStock> firstVariantForGiaoHang() async {
+  /// Sản phẩm còn tồn khả dụng nhiều nhất — dùng khi cần gợi ý mặc định
+  /// một mặt hàng để xuất.
+  Future<ProductVariantStock> firstVariantWithAvailableStock() async {
     final products = await activeVariantsWithStock();
     final availableProducts = products
         .where((product) => product.quantityAvailable > 0)
@@ -144,6 +177,20 @@ class ProductVariantApi {
   }
 
   Future<List<Map<String, dynamic>>> _loadActiveVariants(String token) async {
+    try {
+      final json = await _apiClient.get(
+        '/api/v1/product-variant',
+        token: token,
+      );
+      final resources = JsonReader.value(json, 'resources');
+      if (resources is List) {
+        return [
+          for (final item in resources)
+            if (item is Map<String, dynamic>) item,
+        ];
+      }
+    } catch (_) {}
+
     final json = await _apiClient.get(
       '/api/v1/product-variant/search',
       token: token,
@@ -155,7 +202,16 @@ class ProductVariantApi {
     );
 
     final resources = JsonReader.map(json, 'resources');
-    if (resources == null) return const [];
+    if (resources == null) {
+      final listRes = JsonReader.list(json, 'resources');
+      if (listRes != null) {
+        return [
+          for (final item in listRes)
+            if (item is Map<String, dynamic>) item,
+        ];
+      }
+      return const [];
+    }
 
     final dataSource = JsonReader.list(resources, 'dataSource') ?? const [];
     return [
@@ -232,22 +288,40 @@ class ProductVariantStock {
     Map<String, dynamic> json, {
     required ProductStock stock,
   }) {
-    final sku = JsonReader.string(json, 'sku') ?? '';
+    final sku = JsonReader.string(json, 'sku') ??
+        JsonReader.string(json, 'SKU') ??
+        JsonReader.string(json, 'sKU') ??
+        '';
     return ProductVariantStock(
-      id: JsonReader.integer(json, 'id') ?? 0,
+      id: JsonReader.integer(json, 'id') ??
+          JsonReader.integer(json, 'Id') ??
+          0,
       name: JsonReader.string(json, 'name') ??
+          JsonReader.string(json, 'Name') ??
           JsonReader.string(json, 'productName') ??
           sku,
       sku: sku,
-      productName: JsonReader.string(json, 'productName'),
-      description: JsonReader.string(json, 'description'),
-      categoryName: JsonReader.string(json, 'productCategoryName'),
-      unitName: JsonReader.string(json, 'unitOfMeasureName'),
-      costPrice: JsonReader.decimal(json, 'costPrice') ?? 0,
-      salePrice: JsonReader.decimal(json, 'salePrice') ?? 0,
-      minStockLevel: JsonReader.decimal(json, 'minStockLevel'),
-      imageUrl: JsonReader.string(json, 'imageUrl'),
-      weightKg: JsonReader.decimal(json, 'weight') ?? 0,
+      productName: JsonReader.string(json, 'productName') ??
+          JsonReader.string(json, 'ProductName'),
+      description: JsonReader.string(json, 'description') ??
+          JsonReader.string(json, 'Description'),
+      categoryName: JsonReader.string(json, 'productCategoryName') ??
+          JsonReader.string(json, 'ProductCategoryName'),
+      unitName: JsonReader.string(json, 'unitOfMeasureName') ??
+          JsonReader.string(json, 'UnitOfMeasureName'),
+      costPrice: JsonReader.decimal(json, 'costPrice') ??
+          JsonReader.decimal(json, 'CostPrice') ??
+          0,
+      salePrice: JsonReader.decimal(json, 'salePrice') ??
+          JsonReader.decimal(json, 'SalePrice') ??
+          0,
+      minStockLevel: JsonReader.decimal(json, 'minStockLevel') ??
+          JsonReader.decimal(json, 'MinStockLevel'),
+      imageUrl: JsonReader.string(json, 'imageUrl') ??
+          JsonReader.string(json, 'ImageUrl'),
+      weightKg: JsonReader.decimal(json, 'weight') ??
+          JsonReader.decimal(json, 'Weight') ??
+          0,
       quantityOnHand: stock.quantityOnHand,
       quantityReserved: stock.quantityReserved,
       quantityAvailable: stock.quantityAvailable,

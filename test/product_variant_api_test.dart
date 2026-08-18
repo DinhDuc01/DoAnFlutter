@@ -171,7 +171,7 @@ void main() {
       _product(3, 'C', available: 15),
     ]);
 
-    final product = await api.firstVariantForGiaoHang();
+    final product = await api.firstVariantWithAvailableStock();
 
     expect(product.id, 3);
   });
@@ -185,7 +185,7 @@ void main() {
     await expectLater(
       _ProductListApi([
         _product(1, 'A', available: 0),
-      ]).firstVariantForGiaoHang(),
+      ]).firstVariantWithAvailableStock(),
       throwsA(isA<ProductVariantApiException>()),
     );
   });

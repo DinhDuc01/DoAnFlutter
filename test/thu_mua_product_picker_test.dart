@@ -20,13 +20,12 @@ void main() {
 
     expect(find.text('Chọn sản phẩm cần thu mua'), findsOneWidget);
     expect(find.text('Lúa thơm'), findsOneWidget);
-    expect(
-        find.textContaining('LUA-THOM · Tồn hiện tại 8 bao'), findsOneWidget);
+    expect(find.textContaining('LUA-THOM · Tồn hiện tại 8 kg'), findsOneWidget);
 
     await tester.tap(find.text('Lúa thơm'));
     await tester.pumpAndSettle();
 
-    expect(repository.selectedProductId, 2);
+    expect(repository.selectedProductId, 1);
     expect(find.textContaining('Lúa thơm · LUA-THOM'), findsOneWidget);
   });
 }
@@ -72,6 +71,11 @@ class _ThuMuaPickerRepository implements ThuMuaRepository {
 
   @override
   Future<List<ThuMuaSupplier>> getSuppliers() async => const [supplier];
+
+  @override
+  Future<List<ThuMuaWarehouse>> getWarehouses() async => const [
+        ThuMuaWarehouse(id: 1, code: 'WH-1', name: 'Kho chính'),
+      ];
 
   @override
   Future<ThuMuaReceipt> getDraftReceiptForProduct(

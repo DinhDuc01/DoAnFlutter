@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "838736977755",
+    "project_id": "bookcar-c8483",
+    "storage_bucket": "bookcar-c8483.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:838736977755:android:772e5d5ecd38f4a286847e",
+        "android_client_info": {
+          "package_name": "com.example.bookcarapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCg8yZXkR5YSl3xUwD7Rru5socKj8ieo6A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:838736977755:android:d300336d2668cae886847e",
+        "android_client_info": {
+          "package_name": "com.stocklite.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCg8yZXkR5YSl3xUwD7Rru5socKj8ieo6A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

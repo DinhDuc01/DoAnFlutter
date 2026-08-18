@@ -37,10 +37,19 @@ class AppNotification {
     required this.message,
     required this.timeAgo,
     required this.isRead,
+    this.createdAt,
+    this.directionId,
   });
 
-  /// Mã định danh của thông báo.
+  /// Mã định danh của thông báo (userNotificationId, dùng cho mark-read/unread/xoá).
   final String id;
+
+  /// Đường dẫn nội bộ (kiểu web) do backend gửi kèm để điều hướng khi bấm vào thông báo.
+  /// Có thể null nếu thông báo không gắn với màn hình cụ thể.
+  final String? directionId;
+
+  /// Id dạng số của thông báo để gọi API (mark-read/unread/xoá).
+  int get numericId => int.tryParse(id) ?? 0;
 
   /// Phân loại loại thông báo.
   final AppNotificationType type;
@@ -54,6 +63,9 @@ class AppNotification {
   /// Khoảng thời gian đã trôi qua kể từ khi tạo thông báo (VD: 5 phút trước).
   final String timeAgo;
 
+  /// Exact creation time returned by the backend, used for sorting.
+  final DateTime? createdAt;
+
   /// Trạng thái đã đọc hay chưa.
   final bool isRead;
 
@@ -61,6 +73,28 @@ class AppNotification {
   bool get isAlert {
     return type == AppNotificationType.alert ||
         type == AppNotificationType.warning;
+  }
+
+  bool get isLowStock {
+    final value = '$title $message'.toLowerCase();
+    return value.contains('tồn kho thấp') ||
+        value.contains('sắp hết') ||
+        value.contains('gần hết') ||
+        value.contains('low stock');
+  }
+
+  /// Tạo bản sao với một vài trường được thay đổi (VD: đánh dấu đã đọc).
+  AppNotification copyWith({bool? isRead}) {
+    return AppNotification(
+      id: id,
+      type: type,
+      title: title,
+      message: message,
+      timeAgo: timeAgo,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt,
+      directionId: directionId,
+    );
   }
 
   /// Trả về biểu tượng Icon tương ứng cho từng loại thông báo.
@@ -79,7 +113,7 @@ class AppNotification {
       AppNotificationType.alert => const Color(0xFFFF3B30),
       AppNotificationType.warning => const Color(0xFFFFA000),
       AppNotificationType.info => const Color(0xFF3B82F6),
-      AppNotificationType.success => const Color(0xFF16B957),
+      AppNotificationType.success => const Color(0xFF16A34A),
     };
   }
 }

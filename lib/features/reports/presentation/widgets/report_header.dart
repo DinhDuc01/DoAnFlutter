@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_colors.dart';
 import '../../models/warehouse_report.dart';
 
 /// Widget Header cho màn hình thống kê báo cáo kho hàng (Report Header).
@@ -23,10 +24,11 @@ class ReportHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0EA5E9),
-            Color(0xFF06B6D4),
-          ],
+          colors: [AppColors.forest, AppColors.primaryDark],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
       ),
       child: Column(
