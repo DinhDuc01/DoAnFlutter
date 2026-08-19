@@ -153,13 +153,22 @@ void main() {
             paddyLotBagId: 11,
             bagNo: 1,
             systemWeightKg: 50,
+            pickSequence: 1,
+            restowSequence: 2,
             counted: true,
             scannedByQr: true,
             countedWeightKg: 49.4,
           ),
-          StockTakeBag(id: 2, paddyLotBagId: 22, bagNo: 2, systemWeightKg: 50),
+          StockTakeBag(
+            id: 2,
+            paddyLotBagId: 22,
+            bagNo: 2,
+            systemWeightKg: 50,
+            pickSequence: 2,
+            restowSequence: 1,
+          ),
         ],
-      )..note = 'Thiếu 1 bao';
+      )..varianceReason = 'Thiếu 1 bao';
 
       await ApiStockTakeRepository(apiClient: client)
           .saveCounts(5, [line], note: '  Ca chiều  ');
@@ -172,9 +181,9 @@ void main() {
       final items = call.body?['items'] as List<dynamic>;
       final item = items.single as Map<String, dynamic>;
       expect(item['id'], 90);
-      // Chỉ bao ĐÃ tìm thấy mới được cộng vào kg thực tế.
-      expect(item['actualQuantity'], 49.4);
-      expect(item['qrScanned'], isTrue);
+      // Dòng theo bao không gửi tổng kg — backend tính lại từ chính các bao.
+      expect(item.containsKey('actualQuantity'), isFalse);
+      expect(item['varianceReason'], 'Thiếu 1 bao');
       final bags = item['bags'] as List<dynamic>;
       expect(bags, hasLength(2));
       expect((bags.first as Map<String, dynamic>)['countedWeightKg'], 49.4);
@@ -201,9 +210,12 @@ void main() {
           'resources': {
             'matched': true,
             'message': 'Đã đếm bao',
+            'reason': 'OK',
             'stockTakeItemId': 90,
+            'stockTakeItemBagId': 5,
+            'paddyLotBagId': 55,
+            'bagNo': 3,
             'lotCode': 'LOT-A',
-            'bag': {'id': 5, 'paddyLotBagId': 55},
           },
         },
       );
@@ -215,7 +227,21 @@ void main() {
       expect(client.calls.single.body?['qrCode'], 'BAG-0001');
       expect(result.matched, isTrue);
       expect(result.bagId, 5);
+      expect(result.paddyLotBagId, 55);
       expect(result.stockTakeItemId, 90);
+    });
+
+    test('sends the weighed kilograms captured at scan time', () async {
+      final client = FakeApiClient(
+        onPost: (_, __, ___) async => {
+          'resources': {'matched': true, 'reason': 'OK', 'message': 'ok'},
+        },
+      );
+
+      await ApiStockTakeRepository(apiClient: client)
+          .scanBag(4, 'BAG-0001', countedWeightKg: 49.2);
+
+      expect(client.calls.single.body?['countedWeightKg'], 49.2);
     });
 
     test('an empty payload is reported as "not matched", never as counted',

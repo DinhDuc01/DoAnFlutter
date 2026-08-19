@@ -8,7 +8,7 @@ import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_scr
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/thu_mua/presentation/screens/thu_mua_screen.dart';
 import '../../features/thu_mua/models/purchase_schedule.dart';
-import '../../features/stock_take/presentation/screens/stock_take_list_screen.dart';
+import '../../features/kho/presentation/screens/stock_take_list_screen.dart';
 import '../../features/kho/presentation/screens/stock_take_detail_screen.dart';
 import '../../features/products/presentation/screens/product_detail_screen.dart';
 import '../../features/reports/presentation/screens/reports_screen.dart';

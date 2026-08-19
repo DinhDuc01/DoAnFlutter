@@ -15,7 +15,7 @@ class StockTakeException implements Exception {
 }
 
 /// Phạm vi chụp phiếu kiểm kê.
-enum StockTakeScope { warehouse, zone, column, lot, sku }
+enum StockTakeScope { warehouse, zone, column, lot }
 
 extension StockTakeScopeX on StockTakeScope {
   String get code => switch (this) {
@@ -23,7 +23,6 @@ extension StockTakeScopeX on StockTakeScope {
         StockTakeScope.zone => 'ZONE',
         StockTakeScope.column => 'COLUMN',
         StockTakeScope.lot => 'LOT',
-        StockTakeScope.sku => 'SKU',
       };
 
   String get label => switch (this) {
@@ -31,7 +30,14 @@ extension StockTakeScopeX on StockTakeScope {
         StockTakeScope.zone => 'Theo khu',
         StockTakeScope.column => 'Theo cột/vị trí',
         StockTakeScope.lot => 'Theo lô',
-        StockTakeScope.sku => 'Theo SKU',
+      };
+
+  static StockTakeScope fromCode(String? code) =>
+      switch ((code ?? '').toUpperCase()) {
+        'ZONE' => StockTakeScope.zone,
+        'LOT' => StockTakeScope.lot,
+        'WAREHOUSE' => StockTakeScope.warehouse,
+        _ => StockTakeScope.column,
       };
 }
 
@@ -58,6 +64,7 @@ abstract class StockTakeRepository {
     required StockTakeScope scope,
     String? zoneName,
     int? locationId,
+    int? paddyLotId,
     String? note,
   });
   Future<void> saveCounts(int id, List<StockTakeLine> lines, {String? note});
@@ -65,9 +72,18 @@ abstract class StockTakeRepository {
   Future<void> approve(int id, {String? approveNote});
   Future<void> reject(int id, {required String reason});
   Future<void> delete(int id);
-  Future<ScanBagResult> scanBag(int id, String qrCode);
+  Future<ScanBagResult> scanBag(int id, String qrCode, {double? countedWeightKg});
   Future<List<StockTakeLocationOption>> getLocations(int warehouseId);
   Future<List<WarehouseOption>> getWarehouses();
+
+  /// Khu / cột / lô ĐANG CÓ BAO để chọn phạm vi kiểm kê.
+  Future<StockTakeScopeOptions> getScopeOptions(int warehouseId, {bool? quarantineOnly});
+
+  /// Quét QR dán trên khu/cột hoặc lô để chọn nhanh phạm vi.
+  Future<StockTakeScopeResolve> resolveScopeQr(String qrCode, {int? warehouseId});
+
+  /// Gợi ý ô cách ly / cột thường cho một bao (vẫn chọn lại được).
+  Future<List<BagTargetSuggestion>> getBagTargets(int stockTakeId, int bagId);
 }
 
 /// Kiểm kê theo BAO — đọc/ghi thẳng API `/stocktakes`.
@@ -140,6 +156,7 @@ class ApiStockTakeRepository implements StockTakeRepository {
     required StockTakeScope scope,
     String? zoneName,
     int? locationId,
+    int? paddyLotId,
     String? note,
   }) async {
     try {
@@ -153,6 +170,7 @@ class ApiStockTakeRepository implements StockTakeRepository {
           'scopeType': scope.code,
           if (zoneName != null) 'zoneName': zoneName,
           if (locationId != null) 'locationId': locationId,
+          if (paddyLotId != null) 'paddyLotId': paddyLotId,
           'note': note?.trim(),
           // Danh sách dòng do BACKEND chụp: client không được tự bịa tồn kho.
           'stockTakeItems': const <dynamic>[],
@@ -237,12 +255,15 @@ class ApiStockTakeRepository implements StockTakeRepository {
   }
 
   @override
-  Future<ScanBagResult> scanBag(int id, String qrCode) async {
+  Future<ScanBagResult> scanBag(int id, String qrCode, {double? countedWeightKg}) async {
     try {
       final json = await _apiClient.post(
         '/api/v1/stocktakes/$id/scan-bag',
         token: _token,
-        body: {'qrCode': qrCode.trim()},
+        body: {
+          'qrCode': qrCode.trim(),
+          if (countedWeightKg != null) 'countedWeightKg': countedWeightKg,
+        },
       );
       final resources = JsonReader.map(json, 'resources');
       if (resources == null) {
@@ -254,6 +275,61 @@ class ApiStockTakeRepository implements StockTakeRepository {
       return ScanBagResult.fromJson(resources);
     } on ApiException catch (error) {
       _rethrow(error);
+    }
+  }
+
+  @override
+  Future<StockTakeScopeOptions> getScopeOptions(int warehouseId, {bool? quarantineOnly}) async {
+    try {
+      final query = quarantineOnly == null ? '' : '&quarantineOnly=$quarantineOnly';
+      final json = await _apiClient.get(
+        '/api/v1/stocktakes/scope-options?warehouseId=$warehouseId$query',
+        token: _token,
+      );
+      final resources = JsonReader.map(json, 'resources');
+      if (resources == null) return const StockTakeScopeOptions();
+      return StockTakeScopeOptions.fromJson(resources);
+    } on ApiException catch (error) {
+      _rethrow(error);
+    }
+  }
+
+  @override
+  Future<StockTakeScopeResolve> resolveScopeQr(String qrCode, {int? warehouseId}) async {
+    try {
+      final query = warehouseId == null ? '' : '&warehouseId=$warehouseId';
+      final json = await _apiClient.get(
+        '/api/v1/stocktakes/scope-resolve?qrCode=${Uri.encodeQueryComponent(qrCode.trim())}$query',
+        token: _token,
+      );
+      final resources = JsonReader.map(json, 'resources');
+      if (resources == null) {
+        return const StockTakeScopeResolve(
+          matched: false,
+          message: 'Không đọc được kết quả tra mã.',
+        );
+      }
+      return StockTakeScopeResolve.fromJson(resources);
+    } on ApiException catch (error) {
+      _rethrow(error);
+    }
+  }
+
+  @override
+  Future<List<BagTargetSuggestion>> getBagTargets(int stockTakeId, int bagId) async {
+    try {
+      final json = await _apiClient.get(
+        '/api/v1/stocktakes/$stockTakeId/bags/$bagId/target-suggestions',
+        token: _token,
+      );
+      final resources = JsonReader.list(json, 'resources') ?? const [];
+      return [
+        for (final row in resources.whereType<Map<String, dynamic>>())
+          BagTargetSuggestion.fromJson(row),
+      ];
+    } on ApiException {
+      // Không lấy được gợi ý thì vẫn cho chọn tay ở màn hình.
+      return const [];
     }
   }
 

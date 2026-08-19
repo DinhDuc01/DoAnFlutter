@@ -81,36 +81,68 @@ void main() {
       expect(line.bagDifference, -2);
     });
 
-    test('toSaveJson sends per-bag results and the derived kilograms', () {
+    test('toSaveJson sends per-bag results, never a client-side total', () {
       final line = _line(systemBagCount: 2, systemQuantity: 100, bags: [
         _bag(1, 50, counted: true, countedWeightKg: 49, scannedByQr: true),
         _bag(2, 50, counted: true),
       ])
-        ..quality = StockTakeQuality.wet
-        ..qualityNote = '  Bao số 1 ẩm  '
+        ..varianceReason = '  Bao số 1 rách  '
         ..note = '  Kiểm chiều  ';
+      line.bags.first
+        ..quality = BagQualityResult.issue
+        ..packagingStatus = 'Rách'
+        ..disposition = BagDisposition.quarantine
+        ..targetLocationId = 7;
 
       final json = line.toSaveJson();
 
-      expect(json['actualQuantity'], 99);
-      expect(json['qrScanned'], isTrue);
-      expect(json['qualityStatus'], 'WET');
-      expect(json['qualityNote'], 'Bao số 1 ẩm');
+      // Dòng theo bao KHÔNG gửi tổng kg: backend tự tính lại từ các bao,
+      // gửi lên chỉ tạo cơ hội cho client và server lệch nhau.
+      expect(json.containsKey('actualQuantity'), isFalse);
+      expect(json['varianceReason'], 'Bao số 1 rách');
       expect(json['note'], 'Kiểm chiều');
-      expect((json['bags'] as List<dynamic>), hasLength(2));
+
+      final bags = json['bags'] as List<dynamic>;
+      expect(bags, hasLength(2));
+      final first = bags.first as Map<String, dynamic>;
+      expect(first['qualityResult'], 'ISSUE_DETECTED');
+      expect(first['packagingStatus'], 'Rách');
+      expect(first['disposition'], 'QUARANTINE');
+      expect(first['targetLocationId'], 7);
+    });
+
+    test('bags leaving the column are counted separately from the shortfall', () {
+      final line = _line(systemBagCount: 3, systemQuantity: 150, bags: [
+        _bag(1, 50, counted: true, disposition: BagDisposition.quarantine),
+        _bag(2, 50, counted: true, disposition: BagDisposition.dispose),
+        _bag(3, 50, counted: true),
+      ]);
+
+      // Cả 3 bao đều TÌM THẤY nên không lệch số bao; việc chuyển cách ly hay bỏ
+      // bao hỏng là quyết định xử lý, không phải hụt kho.
+      expect(line.bagDifference, 0);
+      expect(line.quarantineBags, 1);
+      expect(line.disposedBags, 1);
+      expect(line.countedKg, closeTo(150, 0.001));
     });
   });
 
-  group('StockTakeQuality', () {
-    test('maps backend codes and treats anything but OK as a failure', () {
-      expect(StockTakeQualityX.fromCode('TORN_BAG'), StockTakeQuality.tornBag);
-      expect(StockTakeQualityX.fromCode('torn_bag'), StockTakeQuality.tornBag);
-      expect(StockTakeQualityX.fromCode(null), StockTakeQuality.ok);
-      expect(StockTakeQualityX.fromCode('LẠ HOẮC'), StockTakeQuality.ok);
+  group('BagQualityResult & BagDisposition', () {
+    test('maps backend codes both ways', () {
+      expect(BagQualityResultX.fromCode('ISSUE_DETECTED'), BagQualityResult.issue);
+      expect(BagQualityResultX.fromCode('pass'), BagQualityResult.pass);
+      expect(BagQualityResultX.fromCode(null), BagQualityResult.none);
+      expect(BagQualityResult.none.code, isNull);
+      expect(BagQualityResult.issue.isIssue, isTrue);
 
-      expect(StockTakeQuality.ok.isFailed, isFalse);
-      expect(StockTakeQuality.pest.isFailed, isTrue);
-      expect(StockTakeQuality.wet.code, 'WET');
+      expect(BagDispositionX.fromCode('QUARANTINE'), BagDisposition.quarantine);
+      expect(BagDispositionX.fromCode('release'), BagDisposition.release);
+      expect(BagDispositionX.fromCode(null), BagDisposition.keep);
+      // Chuyển cách ly và rút về khu thường đều phải chọn vị trí đích.
+      expect(BagDisposition.quarantine.needsTarget, isTrue);
+      expect(BagDisposition.release.needsTarget, isTrue);
+      expect(BagDisposition.dispose.needsTarget, isFalse);
+      expect(BagDisposition.keep.needsTarget, isFalse);
     });
   });
 
@@ -131,15 +163,24 @@ void main() {
             'locationCode': 'A-01',
             'systemQuantity': 100,
             'systemBagCount': 2,
-            'qualityStatus': 'PEST',
             'bags': [
-              {'id': 2, 'paddyLotBagId': 22, 'bagNo': 2, 'systemWeightKg': 50},
+              {
+                'id': 2,
+                'paddyLotBagId': 22,
+                'bagNo': 2,
+                'systemWeightKg': 50,
+                'pickSequence': 2,
+                'restowSequence': 1,
+              },
               {
                 'id': 1,
                 'paddyLotBagId': 11,
                 'bagNo': 1,
                 'systemWeightKg': 50,
+                'pickSequence': 1,
+                'restowSequence': 2,
                 'counted': true,
+                'qualityResult': 'ISSUE_DETECTED',
               },
             ],
           },
@@ -151,8 +192,9 @@ void main() {
       final line = detail.lines.single;
       expect(line.locationLabel, 'Khu A/A-01');
       expect(line.title, 'LOT-A');
-      // Bao phải được sắp theo số bao để người kiểm đọc theo thứ tự trong kho.
-      expect(line.bags.map((b) => b.bagNo), [1, 2]);
+      // Bao sắp theo THỨ TỰ LẤY RA (trên cột xuống), không theo số bao —
+      // thủ kho phải dỡ đúng thứ tự đó mới lấy được bao ở dưới.
+      expect(line.bags.map((b) => b.pickSequence), [1, 2]);
       expect(detail.totalBags, 2);
       expect(detail.countedBags, 1);
       expect(detail.missingBags, 1);
@@ -406,15 +448,20 @@ StockTakeBag _bag(
   bool counted = false,
   double? countedWeightKg,
   bool scannedByQr = false,
+  BagDisposition disposition = BagDisposition.keep,
 }) {
   return StockTakeBag(
     id: bagNo,
     paddyLotBagId: bagNo * 10,
     bagNo: bagNo,
     systemWeightKg: systemWeightKg,
+    // Bao số nhỏ nằm dưới đáy cột nên được lấy sau cùng.
+    pickSequence: bagNo,
+    restowSequence: bagNo,
     counted: counted,
     countedWeightKg: countedWeightKg,
     scannedByQr: scannedByQr,
+    disposition: disposition,
   );
 }
 
