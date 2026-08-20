@@ -224,17 +224,14 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
   final TextEditingController _noteController = TextEditingController();
 
   List<WarehouseOption> _warehouses = const [];
-  StockTakeScopeOptions _scopeOptions = const StockTakeScopeOptions();
+  List<StockTakeColumnOption> _columns = const [];
   int? _warehouseId;
-  StockTakeScope _scope = StockTakeScope.column;
-  String? _zoneName;
   int? _locationId;
-  int? _paddyLotId;
 
-  /// Kiểm kê lại KHU CÁCH LY: dropdown chỉ liệt kê ô cách ly.
+  /// Kiểm kê lại KHU CÁCH LY: danh sách chỉ liệt kê ô cách ly.
   bool _quarantineOnly = false;
   bool _loading = true;
-  bool _loadingScopes = false;
+  bool _loadingColumns = false;
   bool _saving = false;
   String? _error;
 
@@ -259,7 +256,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
         _warehouseId = warehouses.isNotEmpty ? warehouses.first.id : null;
         _loading = false;
       });
-      if (_warehouseId != null) await _loadScopeOptions(_warehouseId!);
+      if (_warehouseId != null) await _loadColumns(_warehouseId!);
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -269,10 +266,10 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
     }
   }
 
-  /// Chỉ lấy khu/cột/lô ĐANG CÓ BAO — kiểm kê theo bao mà cột rỗng thì không có
-  /// gì để đếm, đưa vào dropdown chỉ làm thủ kho chọn nhầm.
-  Future<void> _loadScopeOptions(int warehouseId) async {
-    setState(() => _loadingScopes = true);
+  /// Chỉ lấy cột ĐANG CÓ BAO — cột rỗng thì không có gì để đếm, đưa vào danh
+  /// sách chỉ làm thủ kho chọn nhầm.
+  Future<void> _loadColumns(int warehouseId) async {
+    setState(() => _loadingColumns = true);
     try {
       final options = await widget.repository.getScopeOptions(
         warehouseId,
@@ -280,28 +277,27 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
       );
       if (!mounted) return;
       setState(() {
-        _scopeOptions = options;
+        _columns = options.columns;
         _locationId = null;
-        _zoneName = null;
-        _paddyLotId = null;
-        _loadingScopes = false;
+        _loadingColumns = false;
       });
     } catch (error) {
       if (!mounted) return;
       setState(() {
         _error = '$error';
-        _loadingScopes = false;
+        _loadingColumns = false;
       });
     }
   }
 
-  /// Quét tem QR dán trên cột/khu/lô để chọn phạm vi thay vì mò dropdown.
-  Future<void> _scanScope() async {
+  /// Quét tem QR dán trên cột — nhanh hơn mò trong danh sách khi đang đứng
+  /// giữa kho. Tem mang payload STOCKLITE|{kho}|LOCATION|{mã}, backend tự tách.
+  Future<void> _scanColumn() async {
     final code = await Navigator.of(context).push<String>(
       MaterialPageRoute<String>(
         builder: (_) => const QrScanScreen(
-          title: 'Quét tem khu/cột/lô',
-          hint: 'Đưa camera vào tem QR dán trên cột, khu hoặc lô',
+          title: 'Quét tem cột',
+          hint: 'Đưa camera vào tem QR dán trên cột',
         ),
       ),
     );
@@ -312,44 +308,32 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
       final result = await widget.repository
           .resolveScopeQr(code, warehouseId: _warehouseId);
       if (!mounted) return;
-      if (!result.matched) {
+      if (!result.matched || result.locationId == null) {
         setState(() {
           _error = result.message;
           _saving = false;
         });
         return;
       }
+
       final warehouseChanged =
           result.warehouseId != null && result.warehouseId != _warehouseId;
       setState(() {
         _error = null;
         _saving = false;
         _warehouseId = result.warehouseId ?? _warehouseId;
-        _scope = StockTakeScopeX.fromCode(result.scopeType);
         _quarantineOnly = result.isQuarantine;
-        _zoneName = result.zoneName;
-        _locationId = result.locationId;
-        _paddyLotId = result.paddyLotId;
       });
-      if (warehouseChanged && _warehouseId != null) {
-        // Nạp lại danh mục theo kho mới nhưng GIỮ phạm vi vừa quét.
-        final zone = _zoneName;
-        final location = _locationId;
-        final lot = _paddyLotId;
-        await _loadScopeOptions(_warehouseId!);
-        if (!mounted) return;
-        setState(() {
-          _zoneName = zone;
-          _locationId = location;
-          _paddyLotId = lot;
-        });
+      if (warehouseChanged || _quarantineOnly) {
+        // Nạp lại danh sách theo kho/loại ô mới nhưng GIỮ cột vừa quét.
+        await _loadColumns(_warehouseId!);
       }
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
-              content: Text('${result.message} · ${result.bagCount} bao')));
-      }
+      if (!mounted) return;
+      setState(() => _locationId = result.locationId);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+            content: Text('${result.message} · ${result.bagCount} bao')));
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -364,16 +348,8 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
       setState(() => _error = 'Vui lòng chọn kho.');
       return;
     }
-    if (_scope == StockTakeScope.zone && (_zoneName ?? '').isEmpty) {
-      setState(() => _error = 'Vui lòng chọn khu cần kiểm.');
-      return;
-    }
-    if (_scope == StockTakeScope.column && _locationId == null) {
+    if (_locationId == null) {
       setState(() => _error = 'Vui lòng chọn cột cần kiểm.');
-      return;
-    }
-    if (_scope == StockTakeScope.lot && _paddyLotId == null) {
-      setState(() => _error = 'Vui lòng chọn lô cần kiểm.');
       return;
     }
 
@@ -384,10 +360,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
     try {
       final id = await widget.repository.create(
         warehouseId: _warehouseId!,
-        scope: _scope,
-        zoneName: _scope == StockTakeScope.zone ? _zoneName : null,
-        locationId: _scope == StockTakeScope.column ? _locationId : null,
-        paddyLotId: _scope == StockTakeScope.lot ? _paddyLotId : null,
+        locationId: _locationId!,
         note: _noteController.text,
       );
       if (!mounted) return;
@@ -398,70 +371,6 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
         _error = '$error';
         _saving = false;
       });
-    }
-  }
-
-  Widget _scopeValuePicker() {
-    if (_loadingScopes) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 12),
-        child: Center(child: CircularProgressIndicator()),
-      );
-    }
-    switch (_scope) {
-      case StockTakeScope.zone:
-        return DropdownButtonFormField<String>(
-          initialValue: _zoneName,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Khu *',
-            prefixIcon: Icon(Icons.grid_view_rounded),
-          ),
-          items: [
-            for (final zone in _scopeOptions.zones)
-              DropdownMenuItem(
-                value: zone.zoneName,
-                child: Text(zone.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: _saving ? null : (value) => setState(() => _zoneName = value),
-        );
-      case StockTakeScope.column:
-        return DropdownButtonFormField<int>(
-          initialValue: _locationId,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Cột *',
-            prefixIcon: Icon(Icons.place_outlined),
-          ),
-          items: [
-            for (final column in _scopeOptions.columns)
-              DropdownMenuItem(
-                value: column.locationId,
-                child: Text(column.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: _saving ? null : (value) => setState(() => _locationId = value),
-        );
-      case StockTakeScope.lot:
-        return DropdownButtonFormField<int>(
-          initialValue: _paddyLotId,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Lô *',
-            prefixIcon: Icon(Icons.inventory_2_outlined),
-          ),
-          items: [
-            for (final lot in _scopeOptions.lots)
-              DropdownMenuItem(
-                value: lot.paddyLotId,
-                child: Text(lot.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-              ),
-          ],
-          onChanged: _saving ? null : (value) => setState(() => _paddyLotId = value),
-        );
-      case StockTakeScope.warehouse:
-        return const SizedBox.shrink();
     }
   }
 
@@ -481,19 +390,19 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Tạo phiếu kiểm kê',
+                    const Text('Kiểm kê một cột',
                         style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 4),
                     Text(
-                      'Backend sẽ chụp danh sách BAO trong phạm vi, kèm thứ tự lấy ra từ trên cột xuống.',
+                      'Backend chụp danh sách BAO của cột, kèm thứ tự lấy ra từ trên xuống.',
                       style: TextStyle(
                           fontSize: 12, color: AppColors.textSecondaryFor(context)),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: _saving ? null : _scanScope,
+                      onPressed: _saving ? null : _scanColumn,
                       icon: const Icon(Icons.qr_code_scanner_rounded),
-                      label: const Text('Quét QR khu / cột / lô'),
+                      label: const Text('Quét QR cột'),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int>(
@@ -512,34 +421,41 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                           : (value) {
                               if (value == null) return;
                               setState(() => _warehouseId = value);
-                              _loadScopeOptions(value);
+                              _loadColumns(value);
                             },
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<StockTakeScope>(
-                      initialValue: _scope,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Phạm vi *',
-                        prefixIcon: Icon(Icons.crop_free_rounded),
+                    if (_loadingColumns)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_columns.isEmpty)
+                      Text('Kho này chưa có cột nào đang chứa bao.',
+                          style: TextStyle(
+                              fontSize: 12.5, color: AppColors.textSecondaryFor(context)))
+                    else
+                      DropdownButtonFormField<int>(
+                        initialValue: _columns.any((c) => c.locationId == _locationId)
+                            ? _locationId
+                            : null,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Cột *',
+                          prefixIcon: Icon(Icons.place_outlined),
+                        ),
+                        items: [
+                          for (final column in _columns)
+                            DropdownMenuItem(
+                              value: column.locationId,
+                              child: Text(
+                                  '${column.isQuarantine ? '🚧 ' : ''}${column.label}',
+                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                            ),
+                        ],
+                        onChanged:
+                            _saving ? null : (value) => setState(() => _locationId = value),
                       ),
-                      items: [
-                        for (final scope in StockTakeScope.values)
-                          DropdownMenuItem(value: scope, child: Text(scope.label)),
-                      ],
-                      onChanged: _saving
-                          ? null
-                          : (value) => setState(() {
-                                _scope = value ?? StockTakeScope.column;
-                                _zoneName = null;
-                                _locationId = null;
-                                _paddyLotId = null;
-                              }),
-                    ),
-                    if (_scope != StockTakeScope.warehouse) ...[
-                      const SizedBox(height: 12),
-                      _scopeValuePicker(),
-                    ],
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _quarantineOnly,
@@ -552,7 +468,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                           ? null
                           : (value) {
                               setState(() => _quarantineOnly = value);
-                              if (_warehouseId != null) _loadScopeOptions(_warehouseId!);
+                              if (_warehouseId != null) _loadColumns(_warehouseId!);
                             },
                     ),
                     TextField(

@@ -100,7 +100,6 @@ void main() {
 
       final id = await ApiStockTakeRepository(apiClient: client).create(
         warehouseId: 3,
-        scope: StockTakeScope.column,
         locationId: 7,
         note: '  Kiểm cuối tháng  ',
       );
@@ -118,24 +117,23 @@ void main() {
       expect(body['stockTakeStatusId'], 0);
     });
 
-    test('only sends the scope field that matches the chosen scope', () async {
+    test('always asks for a COLUMN scope — kiểm kê không còn theo khu hay lô',
+        () async {
       final client = FakeApiClient(
         onPost: (_, __, ___) async => {
           'resources': {'id': '11'},
         },
       );
 
-      final id = await ApiStockTakeRepository(apiClient: client).create(
-        warehouseId: 3,
-        scope: StockTakeScope.zone,
-        zoneName: 'Khu A',
-      );
+      final id = await ApiStockTakeRepository(apiClient: client)
+          .create(warehouseId: 3, locationId: 12);
 
       expect(id, 11);
       final body = client.calls.single.body!;
-      expect(body['scopeType'], 'ZONE');
-      expect(body['zoneName'], 'Khu A');
-      expect(body.containsKey('locationId'), isFalse);
+      expect(body['scopeType'], 'COLUMN');
+      expect(body['locationId'], 12);
+      expect(body.containsKey('zoneName'), isFalse);
+      expect(body.containsKey('paddyLotId'), isFalse);
     });
   });
 
@@ -202,93 +200,6 @@ void main() {
     });
   });
 
-  group('ApiStockTakeRepository.scanBag', () {
-    test('asks the backend whether the scanned bag belongs to the slip',
-        () async {
-      final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'resources': {
-            'matched': true,
-            'message': 'Đã đếm bao',
-            'reason': 'OK',
-            'stockTakeItemId': 90,
-            'stockTakeItemBagId': 5,
-            'paddyLotBagId': 55,
-            'bagNo': 3,
-            'lotCode': 'LOT-A',
-          },
-        },
-      );
-
-      final result =
-          await ApiStockTakeRepository(apiClient: client).scanBag(4, '  BAG-0001  ');
-
-      expect(client.calls.single.path, '/api/v1/stocktakes/4/scan-bag');
-      expect(client.calls.single.body?['qrCode'], 'BAG-0001');
-      expect(result.matched, isTrue);
-      expect(result.bagId, 5);
-      expect(result.paddyLotBagId, 55);
-      expect(result.stockTakeItemId, 90);
-    });
-
-    test('sends the weighed kilograms captured at scan time', () async {
-      final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'resources': {'matched': true, 'reason': 'OK', 'message': 'ok'},
-        },
-      );
-
-      await ApiStockTakeRepository(apiClient: client)
-          .scanBag(4, 'BAG-0001', countedWeightKg: 49.2);
-
-      expect(client.calls.single.body?['countedWeightKg'], 49.2);
-    });
-
-    test('an empty payload is reported as "not matched", never as counted',
-        () async {
-      final client = FakeApiClient(onPost: (_, __, ___) async => {});
-
-      final result =
-          await ApiStockTakeRepository(apiClient: client).scanBag(4, 'BAG-0001');
-
-      expect(result.matched, isFalse);
-      expect(result.bagId, isNull);
-    });
-  });
-
-  group('ApiStockTakeRepository.getLocations', () {
-    test('keeps only the locations of the selected warehouse', () async {
-      final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': [
-            {'id': 1, 'warehouseId': 3, 'zoneName': 'Khu A', 'slotCode': 'A-01'},
-            {'id': 2, 'warehouseId': 9, 'zoneName': 'Khu B', 'slotCode': 'B-01'},
-            {'id': 0, 'warehouseId': 3, 'zoneName': 'Khu C'},
-          ],
-        },
-      );
-
-      final options =
-          await ApiStockTakeRepository(apiClient: client).getLocations(3);
-
-      expect(options, hasLength(1));
-      expect(options.single.id, 1);
-      expect(options.single.label, 'Khu A / A-01');
-    });
-
-    test('missing permission on the location catalog still allows a stocktake',
-        () async {
-      final client = FakeApiClient(
-        onGet: (_, __, ___) async =>
-            throw const ApiException(message: 'Không đủ quyền', statusCode: 403),
-      );
-
-      expect(
-        await ApiStockTakeRepository(apiClient: client).getLocations(3),
-        isEmpty,
-      );
-    });
-  });
 }
 
 Map<String, dynamic> _summary({required int id, required String code}) => {

@@ -228,38 +228,6 @@ void main() {
     });
   });
 
-  group('ScanBagResult', () {
-    test('reads the bag payload and flags an already counted bag', () {
-      final result = ScanBagResult.fromJson(<String, dynamic>{
-        'matched': true,
-        'message': 'Bao này đã kiểm rồi',
-        'reason': 'ALREADY_COUNTED',
-        'stockTakeItemId': 90,
-        'lotCode': 'LOT-A',
-        'locationCode': 'A-01',
-        'bag': {'id': 5, 'paddyLotBagId': 55},
-      });
-
-      expect(result.matched, isTrue);
-      expect(result.alreadyCounted, isTrue);
-      expect(result.bagId, 5);
-      expect(result.paddyLotBagId, 55);
-      expect(result.stockTakeItemId, 90);
-    });
-
-    test('a bag from another warehouse is not counted', () {
-      final result = ScanBagResult.fromJson(<String, dynamic>{
-        'matched': false,
-        'message': 'Bao không thuộc phạm vi phiếu',
-        'reason': 'OUT_OF_SCOPE',
-      });
-
-      expect(result.matched, isFalse);
-      expect(result.alreadyCounted, isFalse);
-      expect(result.bagId, isNull);
-    });
-  });
-
   group('AppNotification', () {
     for (final entry in <AppNotificationType, (IconData, Color)>{
       AppNotificationType.alert: (

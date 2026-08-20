@@ -393,48 +393,6 @@ class StockTakeSummaryRow {
       );
 }
 
-/// Kết quả quét một mã QR bao khi đang kiểm kê.
-class ScanBagResult {
-  const ScanBagResult({
-    required this.matched,
-    required this.message,
-    this.reason,
-    this.stockTakeItemId,
-    this.bagId,
-    this.paddyLotBagId,
-    this.bagNo,
-    this.lotCode,
-    this.locationCode,
-  });
-
-  final bool matched;
-  final String message;
-  final String? reason;
-  final int? stockTakeItemId;
-
-  /// Id dòng StockTakeItemBag trong phiếu (không phải id bao vật lý).
-  final int? bagId;
-  final int? paddyLotBagId;
-  final int? bagNo;
-  final String? lotCode;
-  final String? locationCode;
-
-  bool get alreadyCounted => reason == 'ALREADY_COUNTED';
-  bool get pulledIn => reason == 'PULLED_IN';
-
-  factory ScanBagResult.fromJson(Map<String, dynamic> json) => ScanBagResult(
-        matched: JsonReader.boolean(json, 'matched') ?? false,
-        message: JsonReader.string(json, 'message') ?? '',
-        reason: JsonReader.string(json, 'reason'),
-        stockTakeItemId: JsonReader.integer(json, 'stockTakeItemId'),
-        bagId: JsonReader.integer(json, 'stockTakeItemBagId'),
-        paddyLotBagId: JsonReader.integer(json, 'paddyLotBagId'),
-        bagNo: JsonReader.integer(json, 'bagNo'),
-        lotCode: JsonReader.string(json, 'lotCode'),
-        locationCode: JsonReader.string(json, 'locationCode'),
-      );
-}
-
 /// Gợi ý vị trí đích cho bao (ô cách ly hoặc cột thường).
 class BagTargetSuggestion {
   const BagTargetSuggestion({
@@ -453,8 +411,10 @@ class BagTargetSuggestion {
   final String reason;
   final bool isRecommended;
 
-  String get label =>
-      '${isRecommended ? '★ ' : ''}$zoneName / ${locationCode ?? '#$locationId'}';
+  /// Chỉ hiện tên vị trí. Backend có chấm điểm (isRecommended/reason) và màn
+  /// hình dùng nó để chọn sẵn dòng đầu, nhưng KHÔNG gắn nhãn "gợi ý" ra giao
+  /// diện — khi bảo vệ, chữ đó dễ bị hiểu nhầm là hệ thống dùng AI quyết định.
+  String get label => '$zoneName / ${locationCode ?? '#$locationId'}';
 
   factory BagTargetSuggestion.fromJson(Map<String, dynamic> json) =>
       BagTargetSuggestion(
@@ -467,82 +427,47 @@ class BagTargetSuggestion {
       );
 }
 
-/// Một lựa chọn phạm vi kiểm kê (khu / cột / lô) đang có bao.
-class StockTakeScopeOption {
-  const StockTakeScopeOption({
+/// Một CỘT đang có bao — lựa chọn phạm vi kiểm kê.
+class StockTakeColumnOption {
+  const StockTakeColumnOption({
+    required this.locationId,
     required this.label,
     required this.bagCount,
     required this.isQuarantine,
     this.zoneName,
-    this.locationId,
-    this.paddyLotId,
   });
 
+  final int locationId;
   final String label;
   final int bagCount;
   final bool isQuarantine;
   final String? zoneName;
-  final int? locationId;
-  final int? paddyLotId;
 }
 
 class StockTakeScopeOptions {
-  const StockTakeScopeOptions({
-    this.zones = const [],
-    this.columns = const [],
-    this.lots = const [],
-  });
+  const StockTakeScopeOptions({this.columns = const []});
 
-  final List<StockTakeScopeOption> zones;
-  final List<StockTakeScopeOption> columns;
-  final List<StockTakeScopeOption> lots;
+  final List<StockTakeColumnOption> columns;
 
-  factory StockTakeScopeOptions.fromJson(Map<String, dynamic> json) {
-    List<Map<String, dynamic>> rows(String key) => [
-          for (final raw in JsonReader.list(json, key) ?? const [])
-            if (raw is Map<String, dynamic>) raw,
-        ];
-
-    return StockTakeScopeOptions(
-      zones: [
-        for (final row in rows('zones'))
-          StockTakeScopeOption(
-            zoneName: JsonReader.string(row, 'zoneName'),
-            bagCount: JsonReader.integer(row, 'bagCount') ?? 0,
-            isQuarantine: JsonReader.boolean(row, 'isQuarantine') ?? false,
-            label: '${JsonReader.string(row, 'zoneName') ?? '—'} '
-                '(${JsonReader.integer(row, 'columnCount') ?? 0} cột, '
-                '${JsonReader.integer(row, 'bagCount') ?? 0} bao)',
-          ),
-      ],
-      columns: [
-        for (final row in rows('columns'))
-          StockTakeScopeOption(
-            locationId: JsonReader.integer(row, 'locationId'),
-            zoneName: JsonReader.string(row, 'zoneName'),
-            bagCount: JsonReader.integer(row, 'bagCount') ?? 0,
-            isQuarantine: JsonReader.boolean(row, 'isQuarantine') ?? false,
-            label: '${JsonReader.string(row, 'zoneName') ?? '—'} / '
-                '${JsonReader.string(row, 'locationCode') ?? '#${JsonReader.integer(row, 'locationId')}'} '
-                '(${JsonReader.integer(row, 'bagCount') ?? 0} bao)',
-          ),
-      ],
-      lots: [
-        for (final row in rows('lots'))
-          StockTakeScopeOption(
-            paddyLotId: JsonReader.integer(row, 'paddyLotId'),
-            bagCount: JsonReader.integer(row, 'bagCount') ?? 0,
-            isQuarantine: JsonReader.boolean(row, 'isQuarantine') ?? false,
-            label: '${JsonReader.string(row, 'lotCode') ?? '—'} '
-                '(${JsonReader.integer(row, 'bagCount') ?? 0} bao / '
-                '${JsonReader.integer(row, 'columnCount') ?? 0} cột)',
-          ),
-      ],
-    );
-  }
+  factory StockTakeScopeOptions.fromJson(Map<String, dynamic> json) =>
+      StockTakeScopeOptions(
+        columns: [
+          for (final raw in JsonReader.list(json, 'columns') ?? const [])
+            if (raw is Map<String, dynamic>)
+              StockTakeColumnOption(
+                locationId: JsonReader.integer(raw, 'locationId') ?? 0,
+                zoneName: JsonReader.string(raw, 'zoneName'),
+                bagCount: JsonReader.integer(raw, 'bagCount') ?? 0,
+                isQuarantine: JsonReader.boolean(raw, 'isQuarantine') ?? false,
+                label: '${JsonReader.string(raw, 'zoneName') ?? '—'} / '
+                    '${JsonReader.string(raw, 'locationCode') ?? '#${JsonReader.integer(raw, 'locationId')}'} '
+                    '(${JsonReader.integer(raw, 'bagCount') ?? 0} bao)',
+              ),
+        ],
+      );
 }
 
-/// Kết quả quét QR khu/cột/lô để chọn phạm vi kiểm kê.
+/// Kết quả quét QR dán trên CỘT để chọn phạm vi kiểm kê.
 class StockTakeScopeResolve {
   const StockTakeScopeResolve({
     required this.matched,
@@ -550,7 +475,6 @@ class StockTakeScopeResolve {
     this.scopeType,
     this.zoneName,
     this.locationId,
-    this.paddyLotId,
     this.warehouseId,
     this.isQuarantine = false,
     this.bagCount = 0,
@@ -559,11 +483,10 @@ class StockTakeScopeResolve {
   final bool matched;
   final String message;
 
-  /// ZONE | COLUMN | LOT
+  /// Luôn là COLUMN khi khớp.
   final String? scopeType;
   final String? zoneName;
   final int? locationId;
-  final int? paddyLotId;
   final int? warehouseId;
   final bool isQuarantine;
   final int bagCount;
@@ -575,7 +498,6 @@ class StockTakeScopeResolve {
         scopeType: JsonReader.string(json, 'scopeType'),
         zoneName: JsonReader.string(json, 'zoneName'),
         locationId: JsonReader.integer(json, 'locationId'),
-        paddyLotId: JsonReader.integer(json, 'paddyLotId'),
         warehouseId: JsonReader.integer(json, 'warehouseId'),
         isQuarantine: JsonReader.boolean(json, 'isQuarantine') ?? false,
         bagCount: JsonReader.integer(json, 'bagCount') ?? 0,
