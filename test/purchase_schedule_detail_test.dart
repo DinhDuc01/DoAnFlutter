@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stocklite/features/auth/data/auth_session_store.dart';
+import 'package:stocklite/features/auth/models/auth_permission.dart';
+import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/thu_mua/data/purchase_schedule_repository.dart';
 import 'package:stocklite/features/thu_mua/models/purchase_schedule.dart';
 import 'package:stocklite/features/thu_mua/presentation/screens/purchase_schedule_detail_screen.dart';
@@ -17,6 +20,26 @@ class _FakePurchaseScheduleRepository extends PurchaseScheduleRepository {
 }
 
 void main() {
+  setUp(() {
+    AuthSessionStore.current = const AuthSession(
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      user: AuthUser(
+        id: 1,
+        fullName: 'Purchasing',
+        email: 'purchase@example.com',
+        permissions: [
+          UserPermission(
+            menuId: 1,
+            menuCode: 'RICE_PURCHASE',
+            actions: {'READ', 'CREATE'},
+          ),
+        ],
+      ),
+    );
+  });
+  tearDown(() => AuthSessionStore.current = null);
+
   final schedule = PurchaseSchedule(
     id: 1,
     farmerId: 2,
@@ -28,6 +51,7 @@ void main() {
     estimatedWeightKg: 5000,
     location: 'Ấp 3, Phú Hưng',
     expectedPrice: 6200,
+    canCreateReceiptFlag: true,
   );
 
   testWidgets('purchase schedule detail follows the mobile design',

@@ -172,6 +172,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('open_traceability')));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Dòng thời gian'));
+    await tester.pumpAndSettle();
     expect(find.text('Chưa có lịch sử truy vết'), findsOneWidget);
   });
 }

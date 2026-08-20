@@ -36,6 +36,10 @@ class ThuMuaTab extends StatefulWidget {
 class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   bool get _warehouseReadOnly =>
       AuthSessionStore.current?.user.isWarehouseWorker == true;
+  bool get _canCreate =>
+      AuthSessionStore.current?.hasPermission('RICE_PURCHASE', 'CREATE') == true;
+  bool get _canUpdate =>
+      AuthSessionStore.current?.hasPermission('RICE_PURCHASE', 'UPDATE') == true;
   final PurchaseScheduleRepository _repository = PurchaseScheduleRepository();
   final ApiThuMuaRepository _receiptRepository = ApiThuMuaRepository();
   Future<List<PurchaseSchedule>>? _schedulesFuture;
@@ -191,7 +195,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
               Text(
                   '${draft.actualWeightKg.toStringAsFixed(1)} kg • ${draft.bagCount} bao'),
               const SizedBox(height: 18),
-              if (!_warehouseReadOnly)
+              if (!_warehouseReadOnly && _canUpdate)
                 FilledButton.icon(
                   onPressed: () {
                     Navigator.of(sheetContext).pop();
@@ -208,6 +212,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   }
 
   Future<void> _editDraft(ThuMuaDraftSummary draft) async {
+    if (!_canUpdate) return;
     try {
       final detail = await _receiptRepository
           .getDraftReceiptDetail(draft.id)
@@ -387,6 +392,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   }
 
   Future<void> _editReceipt(ThuMuaReceiptSummary receipt) async {
+    if (!_canUpdate || !receipt.isDraft) return;
     if (receipt.id <= 0) return;
     try {
       final detail = await _receiptRepository.getDraftReceiptDetail(receipt.id);
@@ -530,7 +536,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                   color: Colors.white,
                   icon: const Icon(Icons.refresh),
                 ),
-                if (!_warehouseReadOnly)
+                if (!_warehouseReadOnly && _canCreate)
                   IconButton(
                     tooltip: 'Tạo phiếu mua lúa',
                     onPressed: () =>
@@ -910,7 +916,10 @@ class _ScheduleCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 12),
-          if (AuthSessionStore.current?.user.isWarehouseWorker != true)
+          if (AuthSessionStore.current?.user.isWarehouseWorker != true &&
+              AuthSessionStore.current
+                      ?.hasPermission('RICE_PURCHASE', 'CREATE') ==
+                  true)
             SizedBox(
               width: double.infinity,
               // Khóa nút khi lịch đã hủy / đã nhập kho / đã lập đủ phiếu.

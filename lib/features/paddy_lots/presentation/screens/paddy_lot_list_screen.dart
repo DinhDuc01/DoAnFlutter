@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_pagination.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../../scan/presentation/screens/scan_qr_screen.dart';
@@ -39,13 +40,17 @@ class _PaddyLotListScreenState extends State<PaddyLotListScreen>
   @override
   void onRealtimeChanged() => _load(showLoading: false);
 
+  static const int _pageSize = 20;
+
   late final PaddyLotRepository _repository;
   final _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
 
   PaddyLotPage? _page;
   Object? _error;
   bool _loading = true;
+  int _pageNumber = 1;
 
   PaddyLotFilter _filter = const PaddyLotFilter();
   List<PaddyLotFilterOption> _warehouses = const [];
@@ -63,9 +68,15 @@ class _PaddyLotListScreenState extends State<PaddyLotListScreen>
   @override
   void dispose() {
     _debounce?.cancel();
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
+
+  int get _totalPages =>
+      (_page?.totalRecords ?? 0) <= 0
+          ? 1
+          : (((_page!.totalRecords) + _pageSize - 1) ~/ _pageSize);
 
   /// Nạp nguồn cho hai dropdown. Trước đây danh sách này được suy ra từ chính
   /// các lô đã tải; mà `GET /paddy-lots` không trả warehouseName/statusName nên
@@ -90,13 +101,28 @@ class _PaddyLotListScreenState extends State<PaddyLotListScreen>
       });
     }
     try {
-      final page = await _repository.searchLots(filter: _filter);
+      final start = (_pageNumber - 1) * _pageSize;
+      final page = await _repository.searchLots(
+        filter: _filter,
+        start: start,
+        length: _pageSize,
+      );
       if (!mounted) return;
+
+      if (page.lots.isEmpty && page.totalRecords > 0 && _pageNumber > 1) {
+        final lastPage = (page.totalRecords + _pageSize - 1) ~/ _pageSize;
+        final target = lastPage < _pageNumber ? lastPage : _pageNumber - 1;
+        _pageNumber = target < 1 ? 1 : target;
+        await _load(showLoading: false);
+        return;
+      }
+
       setState(() {
         _page = page;
         _error = null;
         _loading = false;
       });
+      _scrollToTop();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -106,8 +132,22 @@ class _PaddyLotListScreenState extends State<PaddyLotListScreen>
     }
   }
 
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.jumpTo(0);
+  }
+
+  void _goToPage(int page) {
+    if (page == _pageNumber) return;
+    setState(() => _pageNumber = page);
+    _load();
+  }
+
   void _applyFilter(PaddyLotFilter next) {
-    setState(() => _filter = next);
+    setState(() {
+      _filter = next;
+      _pageNumber = 1;
+    });
     _load();
   }
 
@@ -182,6 +222,7 @@ class _PaddyLotListScreenState extends State<PaddyLotListScreen>
     return RefreshIndicator(
       onRefresh: () => _load(showLoading: false),
       child: ListView(
+        controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
         children: [
@@ -231,19 +272,16 @@ class _PaddyLotListScreenState extends State<PaddyLotListScreen>
                   ),
                 ),
               ),
-            if (page.hasMore)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Đang hiện ${lots.length}/${page.totalRecords} lô. Dùng tìm '
-                  'kiếm hoặc bộ lọc để thu hẹp kết quả.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondaryFor(context),
-                  ),
-                ),
+            if (page.totalRecords > 0) ...[
+              const SizedBox(height: 8),
+              AppPagination(
+                page: _pageNumber,
+                totalPages: _totalPages,
+                total: page.totalRecords,
+                enabled: !_loading,
+                onChanged: _goToPage,
               ),
+            ],
           ],
         ],
       ),

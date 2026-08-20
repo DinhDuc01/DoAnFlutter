@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/inbound_order_repository.dart';
 import '../../models/bag_putaway_planner.dart';
 import '../../models/inbound_order.dart';
@@ -102,6 +103,9 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   }
 
   String get _orderStatus => _line.order.normalizedStatus;
+  bool get _canUpdate =>
+      AuthSessionStore.current?.hasPermission('INBOUND_ORDERS', 'UPDATE') ==
+      true;
 
   /// Nhãn nút chuyển bước. Chỉ còn GỬI DUYỆT:
   /// - "Phê duyệt phiếu" cố ý không có trên mobile (chỉ web).
@@ -175,6 +179,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   /// Chạy đúng một lần cho mỗi lượt xếp; phiếu chưa được duyệt thì bỏ qua và sẽ
   /// tự chạy khi realtime báo phiếu đã duyệt trên web.
   Future<void> _maybeAutoPrepare() async {
+    if (!_canUpdate) return;
     if (!mounted || _busy || _finished || _autoPrepared) return;
     if (!_canPrepare || _line.item.remainingKg <= 0) return;
     if (_suggestions.isNotEmpty || (_plan?.columns.isNotEmpty ?? false)) return;
@@ -241,6 +246,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
 
   /// Chỉ còn một bước thủ công: gửi phiếu nháp đi duyệt.
   Future<void> _advance() async {
+    if (!_canUpdate) return;
     if (_busy || _orderStatus != InboundOrderStatuses.draft) return;
     setState(() => _busy = true);
     try {
@@ -263,6 +269,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   /// còn phải nhập (giống web tự động ghi nhận `remaining` sau khi duyệt) nên
   /// không cần ô nhập tay.
   Future<void> _prepare({int? preferredLocationId}) async {
+    if (!_canUpdate) return;
     if (_busy) return;
     final weight = _line.item.remainingKg;
     if (weight <= 0) return;
@@ -308,6 +315,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   }
 
   Future<void> _chooseWarehouseLocation(StorageLocation location) async {
+    if (!_canUpdate) return;
     if (_busy) return;
     if (_orderStatus == InboundOrderStatuses.draft ||
         _orderStatus == InboundOrderStatuses.submitted) {
@@ -340,6 +348,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   }
 
   Future<void> _confirmPutaway() async {
+    if (!_canUpdate) return;
     if (_busy) return;
     final plan = _plan;
     final hasPlan = plan != null && plan.columns.isNotEmpty;
@@ -594,7 +603,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
                   'hiện trên web; sau khi được duyệt, quay lại đây để nhận hàng.',
             ),
           ],
-          if (_actionLabel.isNotEmpty) ...[
+          if (_canUpdate && _actionLabel.isNotEmpty) ...[
             const SizedBox(height: 12),
             FilledButton.icon(
               onPressed: _busy ? null : _advance,
@@ -646,7 +655,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
           ),
           const SizedBox(height: 10),
           FilledButton.icon(
-            onPressed: _busy
+            onPressed: _busy || !_canUpdate
                 ? null
                 : () {
                     _autoPrepared = true;
@@ -1178,7 +1187,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   }
 
   Widget? _bottomBar() {
-    if (_finished) return null;
+    if (_finished || !_canUpdate) return null;
     final plan = _plan;
     final hasPlan = plan != null && plan.columns.isNotEmpty;
     if (!hasPlan && _suggestions.isEmpty) return null;

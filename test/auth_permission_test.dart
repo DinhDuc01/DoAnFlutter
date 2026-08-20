@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stocklite/features/auth/data/auth_service.dart';
+import 'package:stocklite/features/auth/data/startup_session_resolver.dart';
 import 'package:stocklite/features/auth/models/auth_permission.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
 
@@ -34,6 +36,45 @@ void main() {
   });
 
   group('AuthUser & AuthSession Permission Helpers', () {
+    test('merges duplicate permissions by menu code and unions actions', () {
+      final user = AuthUser.fromJson({
+        'permissions': [
+          {
+            'menuId': 41,
+            'menuCode': ' sale_orders ',
+            'actionIds': [1002]
+          },
+          {
+            'menuId': 41,
+            'menuCode': 'SALE_ORDERS',
+            'actions': ['UPDATE']
+          },
+          {
+            'menuId': 99,
+            'menuCode': 'SALE_ORDERS',
+            'actionCodes': ['APPROVE']
+          },
+        ],
+      });
+
+      expect(user.permissions, hasLength(1));
+      expect(user.hasPermission('SALE_ORDERS', 'READ'), isTrue);
+      expect(user.hasPermission('SALE_ORDERS', 'UPDATE'), isTrue);
+      expect(user.hasPermission('SALE_ORDERS', 'APPROVE'), isTrue);
+    });
+
+    test('drops unidentified or empty permissions without granting access', () {
+      final user = AuthUser.fromJson({
+        'permissions': [
+          {'menuId': null, 'menuCode': null, 'actions': null},
+          {'menuId': 0, 'menuCode': '', 'actionIds': []},
+        ],
+      });
+
+      expect(user.permissions, isEmpty);
+      expect(user.isAdmin, isFalse);
+      expect(user.hasMenuAccess('SALE_ORDERS'), isFalse);
+    });
     test('flattens nested sales menus and maps child permission ids', () {
       final user = AuthUser.fromJson({
         'id': 15,
@@ -329,4 +370,142 @@ void main() {
       expect(restoredSession.hasPermission('RICE_PURCHASE', 'DELETE'), isFalse);
     });
   });
+
+  group('Startup session hardening', () {
+    const cached = AuthSession(
+      accessToken: 'cached-access',
+      refreshToken: 'cached-refresh',
+      user: AuthUser(id: 7, fullName: 'Owner', email: 'owner@test.local'),
+    );
+
+    for (final status in <int>[401, 403]) {
+      test('clears cached session and stops services on HTTP $status',
+          () async {
+        final harness = _StartupHarness();
+        final result = await resolveStartupSession(
+          cachedSession: cached,
+          authService: _FetchSessionAuthService(
+            error: AuthException('denied', statusCode: status),
+          ),
+          saveSession: harness.save,
+          clearSession: harness.clear,
+          stopNotifications: harness.stopNotifications,
+          stopRealtime: harness.stopRealtime,
+        );
+
+        expect(result, isFalse);
+        expect(harness.cleared, isTrue);
+        expect(harness.notificationsStopped, isTrue);
+        expect(harness.realtimeStopped, isTrue);
+        expect(harness.saved, isNull);
+      });
+    }
+
+    test('clears cached session when token/session payload is invalid',
+        () async {
+      final harness = _StartupHarness();
+      final result = await resolveStartupSession(
+        cachedSession: cached,
+        authService: _FetchSessionAuthService(
+          error: const AuthException(
+            'expired token',
+            invalidSession: true,
+          ),
+        ),
+        saveSession: harness.save,
+        clearSession: harness.clear,
+        stopNotifications: harness.stopNotifications,
+        stopRealtime: harness.stopRealtime,
+      );
+
+      expect(result, isFalse);
+      expect(harness.cleared, isTrue);
+      expect(harness.notificationsStopped, isTrue);
+      expect(harness.realtimeStopped, isTrue);
+    });
+
+    test('keeps valid cached session during a temporary network failure',
+        () async {
+      final harness = _StartupHarness();
+      final result = await resolveStartupSession(
+        cachedSession: cached,
+        authService: _FetchSessionAuthService(
+          error: const AuthException('offline', isTransient: true),
+        ),
+        saveSession: harness.save,
+        clearSession: harness.clear,
+        stopNotifications: harness.stopNotifications,
+        stopRealtime: harness.stopRealtime,
+      );
+
+      expect(result, isTrue);
+      expect(harness.cleared, isFalse);
+      expect(harness.notificationsStopped, isFalse);
+      expect(harness.realtimeStopped, isFalse);
+    });
+
+    test('blocked Milling role never restores a mobile session', () async {
+      const millingSession = AuthSession(
+        accessToken: 'milling-access',
+        refreshToken: 'milling-refresh',
+        user: AuthUser(
+          id: 8,
+          fullName: 'Milling worker',
+          email: 'milling@test.local',
+          roles: [UserRole(id: 9, code: 'MILLING', name: 'Milling')],
+        ),
+      );
+      final harness = _StartupHarness();
+      final service = _FetchSessionAuthService(session: millingSession);
+
+      final result = await resolveStartupSession(
+        cachedSession: millingSession,
+        authService: service,
+        saveSession: harness.save,
+        clearSession: harness.clear,
+        stopNotifications: harness.stopNotifications,
+        stopRealtime: harness.stopRealtime,
+      );
+
+      expect(result, isFalse);
+      expect(service.fetchCalls, 0);
+      expect(harness.cleared, isTrue);
+    });
+  });
+}
+
+class _FetchSessionAuthService implements AuthService {
+  _FetchSessionAuthService({this.session, this.error});
+
+  final AuthSession? session;
+  final AuthException? error;
+  int fetchCalls = 0;
+
+  @override
+  Future<AuthSession> fetchSession(AuthSession current) async {
+    fetchCalls++;
+    if (error != null) throw error!;
+    return session ?? current;
+  }
+
+  @override
+  Future<AuthSession> login(
+          {required String email, required String password}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<AuthSession> refresh(AuthSession session) =>
+      throw UnimplementedError();
+}
+
+class _StartupHarness {
+  AuthSession? saved;
+  bool cleared = false;
+  bool notificationsStopped = false;
+  bool realtimeStopped = false;
+
+  Future<void> save(AuthSession session) async => saved = session;
+  Future<void> clear() async => cleared = true;
+  Future<void> stopNotifications() async => notificationsStopped = true;
+  Future<void> stopRealtime() async => realtimeStopped = true;
 }

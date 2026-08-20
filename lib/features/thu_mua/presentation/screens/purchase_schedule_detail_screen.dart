@@ -279,7 +279,10 @@ class _DetailContent extends StatelessWidget {
             ],
           ),
         ),
-        if (AuthSessionStore.current?.user.isWarehouseWorker != true)
+        if (AuthSessionStore.current?.user.isWarehouseWorker != true &&
+            AuthSessionStore.current
+                    ?.hasPermission('RICE_PURCHASE', 'CREATE') ==
+                true)
           SafeArea(
             top: false,
             minimum: const EdgeInsets.fromLTRB(16, 8, 16, 16),

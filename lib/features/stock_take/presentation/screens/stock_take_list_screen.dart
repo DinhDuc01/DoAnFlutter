@@ -1,137 +1,194 @@
-// Stock Take List Screen
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import '../../../../core/api/api_client.dart';
+import '../../../../core/realtime/realtime_reload_mixin.dart';
+import '../../../../core/routes/app_routes.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/widgets/app_pagination.dart';
+import '../../../../core/widgets/app_ui.dart';
+import '../../../../core/widgets/permission_guard.dart';
+import '../../../../core/widgets/state_widgets.dart';
+import '../../../kho/data/stock_take_repository.dart' as legacy_repo;
+import '../../../kho/models/inventory_stock.dart' show WarehouseOption;
 import '../../data/api_stock_take_repository.dart';
 import '../../data/stock_take_repository.dart';
 import '../../models/stock_take.dart';
-import '../../../../core/routes/app_routes.dart';
-import '../../../../core/api/api_client.dart';
 import '../widgets/stock_take_card.dart';
-import 'package:stocklite/features/kho/models/inventory_stock.dart' show WarehouseOption;
-import 'package:stocklite/features/kho/data/stock_take_repository.dart' as legacy_repo;
-import '../../../../core/widgets/permission_guard.dart';
 
+/// Màn hình danh sách kiểm kê kho.
+///
+/// Thống nhất giao diện và luồng chuẩn với toàn bộ hệ thống:
+/// AppGradientHeader, search bar có debounce, ChoiceChips lọc trạng thái/kho,
+/// ListSkeleton, HEmptyState, HErrorState, và AppPagination.
 class StockTakeListScreen extends StatefulWidget {
-  const StockTakeListScreen({this.repository, this.legacyRepository, super.key});
+  const StockTakeListScreen({
+    this.repository,
+    this.legacyRepository,
+    this.embedded = false,
+    super.key,
+  });
 
   final StockTakeRepository? repository;
   final legacy_repo.StockTakeRepository? legacyRepository;
+  final bool embedded;
 
   @override
   State<StockTakeListScreen> createState() => _StockTakeListScreenState();
 }
 
-class _StockTakeListScreenState extends State<StockTakeListScreen> {
-  late final StockTakeRepository _repo;
-  final List<StockTakeSummary> _items = [];
-  bool _isLoading = false;
-  bool _hasMore = true;
-  int _start = 0;
-  final int _length = 20;
-  final String _search = '';
-  int? _selectedWarehouse;
-  String? _selectedStatus;
+class _StockTakeListScreenState extends State<StockTakeListScreen>
+    with RealtimeReloadMixin {
+  static const int _pageSize = 20;
 
-  List<WarehouseOption> _apiWarehouses = [];
-  List<StockTakeStatusOption> _apiStatuses = [];
+  @override
+  Set<String> get realtimeEntities => const {
+        'StockTake',
+        'StockTakeItem',
+        'StockTakeStatus',
+        'Inventory',
+        'PaddyLotBag',
+      };
+
+  @override
+  void onRealtimeChanged() => _load(showLoading: false);
+
+  static const List<({int? id, String label})> _statusTabs = [
+    (id: null, label: 'Tất cả'),
+    (id: StockTakeStatusIds.draft, label: 'Bản nháp'),
+    (id: StockTakeStatusIds.submitted, label: 'Chờ duyệt'),
+    (id: StockTakeStatusIds.approved, label: 'Đã duyệt'),
+    (id: StockTakeStatusIds.rejected, label: 'Từ chối'),
+  ];
+
+  late final StockTakeRepository _repo;
+  final _searchController = TextEditingController();
+  final _scrollController = ScrollController();
+  Timer? _debounce;
+
+  int _requestId = 0;
+  List<StockTakeSummary> _items = const [];
+  int _total = 0;
+  int _page = 1;
+  String _keyword = '';
+  int? _selectedWarehouse;
+  int? _selectedStatusId;
+  bool _loading = true;
+  Object? _error;
+
+  List<WarehouseOption> _apiWarehouses = const [];
 
   @override
   void initState() {
     super.initState();
-    _repo = widget.repository ?? (widget.legacyRepository as StockTakeRepository? ?? ApiStockTakeRepository());
+    _repo = widget.repository ??
+        (widget.legacyRepository as StockTakeRepository? ??
+            ApiStockTakeRepository());
     _loadFilters();
-    _loadPage();
+    _load();
   }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  int get _totalPages =>
+      _total <= 0 ? 1 : ((_total + _pageSize - 1) ~/ _pageSize);
 
   Future<void> _loadFilters() async {
     try {
-      final whs = await _repo.getWarehouses();
-      final sts = await _repo.getStatuses();
+      final warehouses = await _repo.getWarehouses();
       if (mounted) {
         setState(() {
-          _apiWarehouses = whs;
-          _apiStatuses = sts;
+          _apiWarehouses = warehouses;
         });
       }
     } catch (_) {}
   }
 
-  Future<void> _loadPage({bool reset = false}) async {
-    if (_isLoading) return;
-    setState(() => _isLoading = true);
-    if (reset) {
-      _start = 0;
-      _items.clear();
-      _hasMore = true;
+  Future<void> _load({bool showLoading = true}) async {
+    final requestId = ++_requestId;
+    if (showLoading) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
     }
     try {
+      final start = (_page - 1) * _pageSize;
       final page = await _repo.getStockTakesPaged(
-        start: _start,
-        length: _length,
-        search: _search,
+        start: start,
+        length: _pageSize,
+        search: _keyword.trim().isEmpty ? null : _keyword.trim(),
         warehouseId: _selectedWarehouse,
-        statusCode: _selectedStatus,
+        statusId: _selectedStatusId,
       );
-      _items.addAll(page.items);
-      _hasMore = _items.length < page.recordsTotal;
-      _start += _length;
-    } on ApiException catch (e) {
-      if (mounted) {
+      if (!mounted || requestId != _requestId) return;
+
+      if (page.items.isEmpty && page.recordsFiltered > 0 && _page > 1) {
+        final lastPage = (page.recordsFiltered + _pageSize - 1) ~/ _pageSize;
+        final target = lastPage < _page ? lastPage : _page - 1;
+        _page = target < 1 ? 1 : target;
+        await _load(showLoading: false);
+        return;
+      }
+
+      setState(() {
+        _items = page.items;
+        _total = page.recordsFiltered;
+        _loading = false;
+        _error = null;
+      });
+      _scrollToTop();
+    } catch (error) {
+      if (!mounted || requestId != _requestId) return;
+      setState(() {
+        _loading = false;
+        _error = error;
+        _items = const [];
+        _total = 0;
+      });
+      if (error is ApiException) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: ${e.message} (code ${e.statusCode})')),
+          SnackBar(
+            content: Text('Lỗi: ${error.message} (code ${error.statusCode})'),
+          ),
         );
       }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _refresh() async {
-    await _loadPage(reset: true);
+  void _scrollToTop() {
+    if (!_scrollController.hasClients) return;
+    _scrollController.jumpTo(0);
   }
 
-  Widget _buildFilters() {
-    final warehouseItems = <DropdownMenuItem<int>>[
-      const DropdownMenuItem(value: null, child: Text('Tất cả kho')),
-      for (final wh in _apiWarehouses)
-        DropdownMenuItem(value: wh.id, child: Text(wh.name)),
-    ];
-    final statusItems = <DropdownMenuItem<String>>[
-      const DropdownMenuItem(value: null, child: Text('Tất cả trạng thái')),
-      for (final st in _apiStatuses)
-        DropdownMenuItem(value: st.code, child: Text(st.name)),
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: DropdownButton<int>(
-              isExpanded: true,
-              value: _selectedWarehouse,
-              hint: const Text('Kho'),
-              items: warehouseItems,
-              onChanged: (v) {
-                setState(() => _selectedWarehouse = v);
-                _refresh();
-              },
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: _selectedStatus,
-              hint: const Text('Trạng thái'),
-              items: statusItems,
-              onChanged: (v) {
-                setState(() => _selectedStatus = v);
-                _refresh();
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+  void _applyFilter(void Function() change) {
+    setState(() {
+      change();
+      _page = 1;
+    });
+    _load();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      final keyword = value.trim();
+      if (keyword == _keyword) return;
+      _applyFilter(() => _keyword = keyword);
+    });
+  }
+
+  void _goToPage(int page) {
+    if (page == _page) return;
+    setState(() => _page = page);
+    _load();
   }
 
   Future<void> _openDetail(int id) async {
@@ -140,7 +197,7 @@ class _StockTakeListScreenState extends State<StockTakeListScreen> {
       AppRoutes.stockTakeDetail,
       arguments: id,
     );
-    _refresh();
+    _load(showLoading: false);
   }
 
   Future<void> _createStockTake() async {
@@ -149,7 +206,7 @@ class _StockTakeListScreenState extends State<StockTakeListScreen> {
       isScrollControlled: true,
       showDragHandle: true,
       useRootNavigator: false,
-      builder: (sheetContext) => _CreateStockTakeSheet(repository: _repo),
+      builder: (_) => _CreateStockTakeSheet(repository: _repo),
     );
     if (created != null && created > 0 && mounted) {
       await _openDetail(created);
@@ -158,60 +215,220 @@ class _StockTakeListScreenState extends State<StockTakeListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Danh sách Kiểm kê kho'),
-        backgroundColor: const Color(0xFF00A76F),
-        actions: [
-          IconButton(
-            key: const Key('createStockTakeTopButton'),
-            icon: const Icon(Icons.add, size: 28),
-            tooltip: 'Tạo phiếu mới',
-            onPressed: _createStockTake,
+    final content = Column(
+      children: [
+        AppGradientHeader(
+          title: 'Kiểm kê kho',
+          subtitle: 'Kiểm đếm theo bao, quét QR và đối soát chênh lệch',
+          leading: widget.embedded
+              ? null
+              : IconButton(
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  color: Colors.white,
+                  icon: const Icon(Icons.arrow_back),
+                ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                key: const Key('createStockTakeTopButton'),
+                icon: const Icon(Icons.add),
+                color: Colors.white,
+                tooltip: 'Tạo phiếu mới',
+                onPressed: _createStockTake,
+              ),
+              IconButton(
+                onPressed: _loading ? null : () => _load(),
+                color: Colors.white,
+                tooltip: 'Tải lại',
+                icon: const Icon(Icons.refresh),
+              ),
+            ],
           ),
-        ],
+        ),
+        Expanded(child: _body()),
+      ],
+    );
+
+    final createButton = PermissionBuilder(
+      menuCode: 'STOCKTAKE',
+      action: 'CREATE',
+      child: FloatingActionButton.extended(
+        onPressed: _createStockTake,
+        icon: const Icon(Icons.add),
+        label: const Text('Phiếu mới'),
       ),
-      body: Column(
+    );
+
+    if (widget.embedded) {
+      return ColoredBox(
+        color: AppColors.backgroundFor(context),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            content,
+            Positioned(right: 16, bottom: 16, child: createButton),
+          ],
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.backgroundFor(context),
+      body: SafeArea(child: content),
+      floatingActionButton: createButton,
+    );
+  }
+
+  Widget _body() {
+    if (_loading && _items.isEmpty && _error == null) {
+      return const ListSkeleton();
+    }
+    if (_error != null && _items.isEmpty) return _errorState(_error!);
+
+    return RefreshIndicator(
+      onRefresh: () => _load(showLoading: false),
+      child: ListView(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
         children: [
-          _buildFilters(),
-          Expanded(
-            child: _items.isEmpty
-                ? const Center(
-                    child: Text('Chưa có phiếu kiểm kê'),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _refresh,
-                    child: ListView.builder(
-                      itemCount: _items.length + (_hasMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index < _items.length) {
-                          final item = _items[index];
-                          return StockTakeCard(
-                            summary: item,
-                            onTap: () => _openDetail(item.id),
-                          );
-                        }
-                        _loadPage();
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16),
-                          child: Center(child: CircularProgressIndicator()),
-                        );
+          TextField(
+            controller: _searchController,
+            onChanged: _onSearchChanged,
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              labelText: 'Tìm mã phiếu hoặc ghi chú',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        _onSearchChanged('');
                       },
                     ),
-                  ),
+            ),
           ),
+          const SizedBox(height: 10),
+          _statusChips(),
+          if (_apiWarehouses.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _warehouseChips(),
+          ],
+          const SizedBox(height: 14),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (_items.isEmpty)
+            const HEmptyState(
+              title: 'Chưa có phiếu kiểm kê',
+              description:
+                  'Thử đổi từ khóa hoặc bộ lọc kho/trạng thái, hoặc bấm "Phiếu mới".',
+              icon: Icons.inventory_2_outlined,
+            )
+          else
+            for (final item in _items)
+              StockTakeCard(
+                summary: item,
+                onTap: () => _openDetail(item.id),
+              ),
+          if (_total > 0) ...[
+            const SizedBox(height: 6),
+            AppPagination(
+              page: _page,
+              totalPages: _totalPages,
+              total: _total,
+              enabled: !_loading,
+              onChanged: _goToPage,
+            ),
+          ],
         ],
       ),
-      floatingActionButton: PermissionBuilder(
-        menuCode: 'STOCKTAKE',
-        action: 'CREATE',
-        child: FloatingActionButton.extended(
-          onPressed: _createStockTake,
-          backgroundColor: const Color(0xFF00A76F),
-          icon: const Icon(Icons.add),
-          label: const Text('Phiếu mới'),
-        ),
+    );
+  }
+
+  Widget _statusChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final tab in _statusTabs) ...[
+            ChoiceChip(
+              label: Text(tab.label),
+              selected: _selectedStatusId == tab.id,
+              onSelected: _loading
+                  ? null
+                  : (_) => _applyFilter(() => _selectedStatusId = tab.id),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
       ),
+    );
+  }
+
+  Widget _warehouseChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Icon(
+              Icons.warehouse_outlined,
+              size: 18,
+              color: AppColors.textSecondaryFor(context),
+            ),
+          ),
+          ChoiceChip(
+            label: const Text('Tất cả kho'),
+            selected: _selectedWarehouse == null,
+            onSelected: _loading
+                ? null
+                : (_) => _applyFilter(() => _selectedWarehouse = null),
+          ),
+          const SizedBox(width: 8),
+          for (final wh in _apiWarehouses) ...[
+            ChoiceChip(
+              label: Text(wh.name),
+              selected: _selectedWarehouse == wh.id,
+              onSelected: _loading
+                  ? null
+                  : (_) => _applyFilter(() => _selectedWarehouse = wh.id),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _errorState(Object error) {
+    if (error is ApiException) {
+      if (error.statusCode == 401) {
+        return HErrorState(
+          message: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+          onRetry: _load,
+        );
+      }
+      if (error.statusCode == 403) {
+        return HErrorState(
+          message: 'Bạn không có quyền xem danh sách kiểm kê kho.',
+          onRetry: _load,
+        );
+      }
+      if (error.isTransient) {
+        return HNetworkState(message: error.message, onRetry: _load);
+      }
+      return HErrorState(message: 'Lỗi: ${error.message}', onRetry: _load);
+    }
+    return HErrorState(
+      message: 'Lỗi: $error',
+      onRetry: _load,
     );
   }
 }
@@ -294,7 +511,8 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
   }
 
   List<String> get _zones =>
-      {for (final l in _locations) if (l.zoneName.isNotEmpty) l.zoneName}.toList()
+      {for (final l in _locations) if (l.zoneName.isNotEmpty) l.zoneName}
+          .toList()
         ..sort();
 
   Future<void> _submit() async {
@@ -367,16 +585,16 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
+                        const Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
+                            children: [
                               Text(
                                 'BƯỚC 1 - CHỤP SNAPSHOT',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF00A76F),
+                                  color: AppColors.primary,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -391,7 +609,8 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                               SizedBox(height: 2),
                               Text(
                                 'Backend sẽ chụp snapshot tồn kho tại thời điểm tạo phiên.',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                                style: TextStyle(
+                                    fontSize: 12, color: AppColors.textSecondary),
                               ),
                             ],
                           ),
@@ -406,7 +625,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
                       key: const Key('warehouseDropdown'),
-                      value: _warehouseId,
+                      initialValue: _warehouseId,
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Kho *',
@@ -434,7 +653,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                         Expanded(
                           child: DropdownButtonFormField<StockTakeScope>(
                             key: const Key('scopeDropdown'),
-                            value: _scope,
+                            initialValue: _scope,
                             isExpanded: true,
                             decoration: const InputDecoration(
                               labelText: 'Loại phạm vi *',
@@ -462,7 +681,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                         Expanded(
                           child: _scope == StockTakeScope.warehouse
                               ? DropdownButtonFormField<String>(
-                                  value: null,
+                                  initialValue: null,
                                   isExpanded: true,
                                   decoration: const InputDecoration(
                                     labelText: 'Giá trị phạm vi',
@@ -479,7 +698,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                               : _scope == StockTakeScope.zone
                                   ? DropdownButtonFormField<String>(
                                       key: const Key('zoneDropdown'),
-                                      value: _zoneName,
+                                      initialValue: _zoneName,
                                       isExpanded: true,
                                       decoration: const InputDecoration(
                                         labelText: 'Giá trị phạm vi *',
@@ -500,7 +719,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                                   : _scope == StockTakeScope.column
                                       ? DropdownButtonFormField<int>(
                                           key: const Key('columnDropdown'),
-                                          value: _locationId,
+                                          initialValue: _locationId,
                                           isExpanded: true,
                                           decoration: const InputDecoration(
                                             labelText: 'Giá trị phạm vi *',
@@ -527,7 +746,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                                           ? (_apiLots.isNotEmpty
                                               ? DropdownButtonFormField<int>(
                                                   key: const Key('lotDropdown'),
-                                                  value: _selectedLotId,
+                                                  initialValue: _selectedLotId,
                                                   isExpanded: true,
                                                   decoration: const InputDecoration(
                                                     labelText: 'Giá trị phạm vi *',
@@ -569,7 +788,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                                           : (_apiSkus.isNotEmpty
                                               ? DropdownButtonFormField<int>(
                                                   key: const Key('skuDropdown'),
-                                                  value: _selectedSkuId,
+                                                  initialValue: _selectedSkuId,
                                                   isExpanded: true,
                                                   decoration: const InputDecoration(
                                                     labelText: 'Giá trị phạm vi *',
@@ -612,59 +831,16 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                       ],
                     ),
                     const SizedBox(height: 14),
-                    TextField(
-                      key: const Key('noteField'),
+                    TextFormField(
                       controller: _noteController,
-                      maxLines: 3,
+                      enabled: !_saving,
+                      maxLines: 2,
                       decoration: const InputDecoration(
                         labelText: 'Ghi chú',
-                        hintText: 'Mục đích hoặc hướng dẫn kiểm kê',
+                        hintText: 'Nhập ghi chú phiên kiểm kê nếu có',
                         border: OutlineInputBorder(),
                         contentPadding:
-                            EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEDF8F4),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFB7E4D3)),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF00A76F),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: const Text(
-                              'Snapshot do\nbackend tạo',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 9.5,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                                height: 1.1,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          const Expanded(
-                            child: Text(
-                              'Các dòng tồn hợp lệ trong phạm vi sẽ được cố định tại thời điểm tạo phiếu. Phiếu trống sẽ không được tạo.',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                color: Color(0xFF004B36),
-                                height: 1.35,
-                              ),
-                            ),
-                          ),
-                        ],
+                            EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                     ),
                     if (_error != null) ...[
@@ -672,49 +848,26 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                       Text(
                         _error!,
                         style: const TextStyle(
-                          color: Colors.redAccent,
+                          color: AppColors.danger,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          fontSize: 12.5,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _saving
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            ),
-                            child: const Text('Hủy'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
-                            key: const Key('submitButton'),
-                            onPressed: _saving ? null : _submit,
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF00A76F),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                            ),
-                            child: _saving
-                                ? const SizedBox.square(
-                                    dimension: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Tạo & bắt đầu kiểm'),
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 18),
+                    FilledButton.icon(
+                      key: const Key('submitButton'),
+                      onPressed: _saving ? null : _submit,
+                      icon: _saving
+                          ? const SizedBox.square(
+                              dimension: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.check),
+                      label: Text(_saving ? 'Đang tạo...' : 'Tạo phiên kiểm kê'),
                     ),
                   ],
                 ),

@@ -97,6 +97,33 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Vui lòng chọn kho.'), findsOneWidget);
     });
+
+    phoneTestWidgets('tapping status filter chip updates list with status id',
+        (tester) async {
+      final repository = _FakeRepository();
+      await _pump(tester, StockTakeListScreen(repository: repository));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastStatusId, isNull);
+
+      // Tap "Chờ duyệt"
+      await tester.tap(find.text('Chờ duyệt'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastStatusId, 2);
+
+      // Tap "Đã duyệt"
+      await tester.tap(find.text('Đã duyệt'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastStatusId, 3);
+
+      // Tap "Tất cả"
+      await tester.tap(find.text('Tất cả'));
+      await tester.pumpAndSettle();
+
+      expect(repository.lastStatusId, isNull);
+    });
   });
 
   group('StockTakeDetailScreen', () {
@@ -479,6 +506,7 @@ class _FakeRepository
   int rejectCalls = 0;
   int deleteCalls = 0;
   String? lastRejectReason;
+  int? lastStatusId;
   List<legacy.StockTakeLine> savedLines = const [];
 
   @override
@@ -529,9 +557,11 @@ class _FakeRepository
     required int length,
     String? search,
     int? warehouseId,
+    int? statusId,
     String? statusCode,
   }) async {
     listCalls += 1;
+    lastStatusId = statusId;
     final error = listError;
     if (error != null) {
       throw ApiException(

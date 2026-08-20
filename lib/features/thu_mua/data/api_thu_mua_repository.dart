@@ -212,11 +212,26 @@ class ApiThuMuaRepository implements ThuMuaRepository {
         JsonReader.string(item, 'receiptStatusName') ??
         JsonReader.string(item, 'inboundStatusName') ??
         JsonReader.string(item, 'status');
+    final statusCode = (JsonReader.string(
+              item,
+              'paddyPurchaseReceiptStatusCode',
+            ) ??
+            JsonReader.string(item, 'receiptStatusCode') ??
+            JsonReader.string(item, 'statusCode') ??
+            '')
+        .trim()
+        .toUpperCase();
     final statusToken = explicitStatus?.toLowerCase() ?? '';
     final isCancelled = statusToken.contains('cancel') ||
         statusToken.contains('hủy') ||
         statusToken.contains('huỷ');
-    final isDraft = !isCancelled && !confirmed && (lotId == null || lotId <= 0);
+    final isDraftStatus = statusCode == 'DRAFT' ||
+        statusToken.contains('nháp') ||
+        statusToken.contains('draft');
+    final isDraft = isDraftStatus &&
+        !isCancelled &&
+        !confirmed &&
+        (lotId == null || lotId <= 0);
     final explicitToken = (explicitStatus ?? '').toLowerCase();
     final isWaitingWeighing = explicitToken.contains('cân') ||
         explicitToken.contains('can') ||

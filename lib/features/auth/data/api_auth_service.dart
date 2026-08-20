@@ -61,7 +61,8 @@ class ApiAuthService implements AuthService {
       return session.copyWith(
         accessToken: accessToken,
         // Giữ refresh token cũ nếu backend không cấp lại token mới.
-        refreshToken: refreshToken.isEmpty ? session.refreshToken : refreshToken,
+        refreshToken:
+            refreshToken.isEmpty ? session.refreshToken : refreshToken,
       );
     } on AuthException {
       rethrow;
@@ -115,8 +116,10 @@ class ApiAuthService implements AuthService {
 
       final accessToken = JsonReader.string(resources, 'accessToken');
       final refreshToken = JsonReader.string(resources, 'refreshToken');
-      if (accessToken == null || accessToken.isEmpty ||
-          refreshToken == null || refreshToken.isEmpty) {
+      if (accessToken == null ||
+          accessToken.isEmpty ||
+          refreshToken == null ||
+          refreshToken.isEmpty) {
         throw const AuthException(
           'API đăng nhập không trả đủ thông tin token phiên',
         );
@@ -142,7 +145,10 @@ class ApiAuthService implements AuthService {
   @override
   Future<AuthSession> fetchSession(AuthSession session) async {
     if (session.accessToken.isEmpty) {
-      throw const AuthException('Phiên đăng nhập không hợp lệ');
+      throw const AuthException(
+        'Phiên đăng nhập không hợp lệ',
+        invalidSession: true,
+      );
     }
 
     try {
@@ -154,13 +160,18 @@ class ApiAuthService implements AuthService {
       final isSucceeded = JsonReader.boolean(json, 'isSucceeded') ?? false;
       if (!isSucceeded) {
         throw AuthException(
-          JsonReader.string(json, 'message') ?? 'Không tải được thông tin phân quyền',
+          JsonReader.string(json, 'message') ??
+              'Không tải được thông tin phân quyền',
+          invalidSession: true,
         );
       }
 
       final resources = JsonReader.map(json, 'resources');
       if (resources == null) {
-        throw const AuthException('API nạp phiên không trả dữ liệu');
+        throw const AuthException(
+          'API nạp phiên không trả dữ liệu',
+          invalidSession: true,
+        );
       }
 
       final updatedUser = AuthUser.fromJson(resources);
@@ -168,7 +179,11 @@ class ApiAuthService implements AuthService {
     } on AuthException {
       rethrow;
     } on ApiException catch (error) {
-      throw AuthException(error.message);
+      throw AuthException(
+        error.message,
+        statusCode: error.statusCode,
+        isTransient: error.isTransient,
+      );
     } catch (error) {
       throw AuthException('Không tải được phân quyền: $error');
     }

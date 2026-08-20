@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../../sales_orders/data/sales_order_repository.dart';
 import '../../../scale/presentation/widgets/scale_status_chip.dart';
 import '../../data/outbound_order_repository.dart';
@@ -27,12 +28,14 @@ const List<String> _pipelineSteps = [
 class OutboundOrderDetailScreen extends StatefulWidget {
   const OutboundOrderDetailScreen({
     required this.outboundOrderId,
+    this.preview,
     this.repository,
     this.salesOrderRepository,
     super.key,
   });
 
   final int outboundOrderId;
+  final OutboundOrderDetail? preview;
   final OutboundOrderRepository? repository;
   final SalesOrderRepository? salesOrderRepository;
 
@@ -69,13 +72,19 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
   bool _busy = false;
   bool _changed = false;
 
+  bool get _canUpdate =>
+      AuthSessionStore.current?.hasPermission('OUTBOUND_ORDERS', 'UPDATE') ==
+      true;
+
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiOutboundOrderRepository();
     _salesOrderRepository =
         widget.salesOrderRepository ?? ApiSalesOrderRepository();
-    _load();
+    _order = widget.preview;
+    _loading = widget.preview == null;
+    _load(showLoading: widget.preview == null);
   }
 
   Future<void> _load({bool showLoading = true}) async {
@@ -118,6 +127,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
     Future<void> Function() action, {
     required String successMessage,
   }) async {
+    if (_busy) return;
     setState(() => _busy = true);
     try {
       await action();
@@ -135,6 +145,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
   // ── 1. Phân bổ lô ────────────────────────────────────────────────────
   Future<void> _allocate(OutboundOrderDetail order) async {
+    if (!_canUpdate || !order.canAllocate || _busy) return;
     setState(() => _busy = true);
     List<OutboundAllocationCandidate> candidates;
     try {
@@ -154,7 +165,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
       showDragHandle: true,
       builder: (_) => AllocateSheet(order: order, candidates: candidates),
     );
-    if (payload == null || payload.isEmpty) return;
+    if (payload == null || payload.isEmpty || !mounted || _busy) return;
 
     await _run(
       () => _repository.allocate(order.id, payload),
@@ -164,13 +175,14 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
   // ── 2. Lấy hàng ──────────────────────────────────────────────────────
   Future<void> _pick(OutboundOrderDetail order) async {
+    if (!_canUpdate || !order.canPick || _busy) return;
     final picks = await showModalBottomSheet<List<PickAllocationPayload>>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => PickSheet(order: order),
     );
-    if (picks == null || picks.isEmpty) return;
+    if (picks == null || picks.isEmpty || !mounted || _busy) return;
 
     await _run(
       () => _repository.pick(order.id, picks),
@@ -180,13 +192,14 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
   // ── 3. Đóng gói ──────────────────────────────────────────────────────
   Future<void> _pack(OutboundOrderDetail order) async {
+    if (!_canUpdate || !order.canPack || _busy) return;
     final result = await showModalBottomSheet<PackingResult>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (_) => PackingSheet(order: order),
     );
-    if (result == null) return;
+    if (result == null || !mounted || _busy) return;
 
     await _run(
       () => _repository.confirmPacking(
@@ -209,6 +222,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
   // ── 4. Xác nhận xuất kho ─────────────────────────────────────────────
   Future<void> _dispatch(OutboundOrderDetail order) async {
+    if (!_canUpdate || !order.canDispatch || _busy) return;
     setState(() => _busy = true);
     final receivable = await _computeExpectedReceivable(order);
     if (!mounted) return;
@@ -221,7 +235,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
       builder: (_) =>
           DispatchSheet(order: order, expectedReceivable: receivable),
     );
-    if (result == null) return;
+    if (result == null || !mounted || _busy) return;
 
     await _run(
       () => _repository.confirmDispatch(
@@ -262,6 +276,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
   // ── 5. Giao hàng thành công (giữ form mở khi backend trả 422) ────────
   Future<void> _completeDelivery(OutboundOrderDetail order) async {
+    if (!_canUpdate || !order.canDeliver || _busy) return;
     setState(() => _busy = true);
     final debt = await _repository.getReceivableSnapshot(
       outboundOrderId: order.id,
@@ -272,6 +287,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
     String? validationError;
     while (mounted) {
+      if (!mounted) return;
       final result = await showModalBottomSheet<DeliveryResult>(
         context: context,
         isScrollControlled: true,
@@ -283,7 +299,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
           externalError: validationError,
         ),
       );
-      if (result == null || !mounted) return;
+      if (result == null || !mounted || _busy) return;
 
       setState(() => _busy = true);
       try {
@@ -329,6 +345,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
   // ── 6. Giao thất bại ─────────────────────────────────────────────────
   Future<void> _failDelivery(OutboundOrderDetail order) async {
+    if (!_canUpdate || !order.canDeliver || _busy) return;
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => const ReasonDialog(
@@ -338,7 +355,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
         hint: 'VD: Khách không nhận hàng',
       ),
     );
-    if (reason == null) return;
+    if (reason == null || !mounted || _busy) return;
 
     await _run(
       () => _repository.failDelivery(order.id, reason: reason),
@@ -348,6 +365,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
   // ── 7. Hủy phiếu (bắt buộc nhập lý do) ───────────────────────────────
   Future<void> _cancel(OutboundOrderDetail order) async {
+    if (!_canUpdate || !order.canCancel || _busy) return;
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => ReasonDialog(
@@ -359,7 +377,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
         maxLength: 500,
       ),
     );
-    if (reason == null) return;
+    if (reason == null || !mounted || _busy) return;
 
     await _run(
       () => _repository.cancel(order.id, reason: reason),
@@ -646,10 +664,13 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
   }
 
   Widget? _actionBar(OutboundOrderDetail order) {
+    if (!_canUpdate) return null;
+
     final buttons = <Widget>[];
 
     if (order.canAllocate) {
       buttons.add(FilledButton.icon(
+        key: const Key('outbound_allocate'),
         onPressed: _busy ? null : () => _allocate(order),
         icon: const Icon(Icons.splitscreen_rounded),
         label: const Text('Phân bổ lô'),
@@ -657,6 +678,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
     }
     if (order.canPick) {
       buttons.add(FilledButton.icon(
+        key: const Key('outbound_pick'),
         onPressed: _busy ? null : () => _pick(order),
         icon: const Icon(Icons.shopping_basket_outlined),
         label: const Text('Lấy hàng'),
@@ -664,6 +686,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
     }
     if (order.canPack) {
       buttons.add(OutlinedButton.icon(
+        key: const Key('outbound_pack'),
         onPressed: _busy ? null : () => _pack(order),
         icon: const Icon(Icons.inventory_rounded),
         label: const Text('Đóng gói'),
@@ -671,6 +694,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
     }
     if (order.canDispatch) {
       buttons.add(FilledButton.icon(
+        key: const Key('outbound_dispatch'),
         onPressed: _busy ? null : () => _dispatch(order),
         icon: const Icon(Icons.local_shipping_rounded),
         label: const Text('Xuất kho'),
@@ -678,11 +702,13 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
     }
     if (order.canDeliver) {
       buttons.add(FilledButton.icon(
+        key: const Key('outbound_complete_delivery'),
         onPressed: _busy ? null : () => _completeDelivery(order),
         icon: const Icon(Icons.check_circle_outline_rounded),
         label: const Text('Đã giao'),
       ));
       buttons.add(OutlinedButton.icon(
+        key: const Key('outbound_fail_delivery'),
         onPressed: _busy ? null : () => _failDelivery(order),
         style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
         icon: const Icon(Icons.report_gmailerrorred_rounded),
@@ -691,6 +717,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
     }
     if (order.canCancel) {
       buttons.add(OutlinedButton.icon(
+        key: const Key('outbound_cancel'),
         onPressed: _busy ? null : () => _cancel(order),
         style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
         icon: const Icon(Icons.cancel_outlined),

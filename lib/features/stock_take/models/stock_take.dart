@@ -245,3 +245,10 @@ class StockTakePage {
   final int recordsTotal;
   final int recordsFiltered;
 }
+
+class StockTakeStatusIds {
+  static const int draft = 1;
+  static const int submitted = 2;
+  static const int approved = 3;
+  static const int rejected = 4;
+}

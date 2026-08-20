@@ -1274,10 +1274,12 @@ class _ReasonDialogState extends State<ReasonDialog> {
       ),
       actions: [
         TextButton(
+          key: const Key('reason_cancel'),
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Quay lại'),
         ),
         FilledButton(
+          key: const Key('reason_confirm'),
           onPressed: _submit,
           style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
           child: Text(widget.confirmLabel),
@@ -1354,6 +1356,7 @@ class _SheetShell extends StatelessWidget {
                 children: [
                   Expanded(
                     child: OutlinedButton(
+                      key: const Key('sheet_cancel'),
                       onPressed: () => Navigator.of(context).pop(),
                       child: const Text('Quay lại'),
                     ),
@@ -1361,6 +1364,7 @@ class _SheetShell extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton.icon(
+                      key: const Key('sheet_confirm'),
                       onPressed: onConfirm,
                       icon: Icon(confirmIcon),
                       label: Text(confirmLabel),

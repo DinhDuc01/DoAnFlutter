@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/realtime/realtime_reload_mixin.dart';
-import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
@@ -62,6 +61,9 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
   /// true nếu đã có thao tác làm đổi dữ liệu → màn danh sách cần tải lại.
   bool _changed = false;
 
+  bool get _canUpdate =>
+      AuthSessionStore.current?.hasPermission('SALE_ORDERS', 'UPDATE') == true;
+
   @override
   void initState() {
     super.initState();
@@ -105,6 +107,7 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
   }
 
   Future<void> _confirmOrder(SalesOrderDetail order) async {
+    if (!_canUpdate || !order.canConfirm || _busy) return;
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -149,6 +152,7 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
 
   // ── Hủy đơn kèm lý do ────────────────────────────────────────────────
   Future<void> _cancelOrder(SalesOrderDetail order) async {
+    if (!_canUpdate || !order.canCancel || _busy) return;
     final reason = await showDialog<String>(
       context: context,
       builder: (_) => _CancelReasonDialog(soCode: order.soCode),
@@ -174,6 +178,7 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
   /// Gọi `/reserve`: backend kiểm tra khách hàng còn hoạt động, hạn mức công nợ
   /// và tồn khả dụng trước khi chuyển đơn sang "Đã giữ hàng".
   Future<void> _reserveOrder(SalesOrderDetail order) async {
+    if (!_canUpdate || !order.canReserve || _busy) return;
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -215,6 +220,7 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
 
   // ── Tạo phiếu xuất ───────────────────────────────────────────────────
   Future<void> _createOutbound(SalesOrderDetail order) async {
+    if (!_canUpdate || !order.canCreateOutbound || _busy) return;
     final lines = await showModalBottomSheet<List<CreateOutboundLine>>(
       context: context,
       isScrollControlled: true,
@@ -499,14 +505,14 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
     final draft = order.draftOutbound;
     final buttons = <Widget>[];
     final session = AuthSessionStore.current;
-    final canApprove = order.canConfirm &&
-        session?.hasPermission('SALE_ORDERS', 'APPROVE') == true &&
+    final canUpdate =
         session?.hasPermission('SALE_ORDERS', 'UPDATE') == true;
+    final canApprove = order.canConfirm && canUpdate;
 
     if (canApprove) {
       buttons.add(
         FilledButton.icon(
-          key: const Key('sales_order_approve'),
+          key: const Key('sales_order_confirm'),
           onPressed: _busy ? null : () => _confirmOrder(order),
           icon: const Icon(Icons.verified_outlined),
           label: const Text('Duyệt đơn'),
@@ -515,35 +521,39 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
     }
 
     // Mobile chỉ có "Kiểm tra & giữ hàng"; bước xác nhận đơn để web làm.
-    if (order.canReserve) {
+    if (canUpdate && order.canReserve) {
       buttons.add(
         FilledButton.icon(
+          key: const Key('sales_order_reserve'),
           onPressed: _busy ? null : () => _reserveOrder(order),
           icon: const Icon(Icons.inventory_outlined),
           label: const Text('Kiểm tra & giữ hàng'),
         ),
       );
     }
-    if (draft != null) {
+    if (canUpdate && draft != null) {
       buttons.add(
         FilledButton.icon(
+          key: const Key('sales_order_continue_outbound'),
           onPressed: _busy ? null : () => _openOutbound(draft.id),
           icon: const Icon(Icons.playlist_add_check_rounded),
           label: const Text('Tiếp tục phiếu xuất'),
         ),
       );
-    } else if (order.canCreateOutbound) {
+    } else if (canUpdate && order.canCreateOutbound) {
       buttons.add(
         FilledButton.icon(
+          key: const Key('sales_order_create_outbound'),
           onPressed: _busy ? null : () => _createOutbound(order),
           icon: const Icon(Icons.local_shipping_outlined),
           label: const Text('Tạo phiếu xuất'),
         ),
       );
     }
-    if (order.canCancel) {
+    if (canUpdate && order.canCancel) {
       buttons.add(
         OutlinedButton.icon(
+          key: const Key('sales_order_cancel'),
           onPressed: _busy ? null : () => _cancelOrder(order),
           style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
           icon: const Icon(Icons.cancel_outlined),

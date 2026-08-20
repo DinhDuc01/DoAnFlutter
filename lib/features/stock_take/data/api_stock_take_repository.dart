@@ -29,9 +29,19 @@ class ApiStockTakeRepository implements StockTakeRepository {
     required int length,
     String? search,
     int? warehouseId,
+    int? statusId,
     String? statusCode,
   }) async {
     final token = _currentToken();
+
+    final effectiveStatusId = statusId ??
+        switch (statusCode?.toUpperCase()) {
+          'DRAFT' || 'COUNTING' => StockTakeStatusIds.draft,
+          'SUBMITTED' => StockTakeStatusIds.submitted,
+          'APPROVED' => StockTakeStatusIds.approved,
+          'REJECTED' => StockTakeStatusIds.rejected,
+          _ => null,
+        };
 
     final body = {
       'draw': 1,
@@ -49,12 +59,12 @@ class ApiStockTakeRepository implements StockTakeRepository {
           },
         },
         {
-          'data': 'stockTakeStatusCode',
+          'data': 'stockTakeStatusId',
           'name': '',
           'searchable': true,
           'orderable': true,
           'search': {
-            'value': statusCode ?? '',
+            'value': effectiveStatusId == null ? '' : '$effectiveStatusId',
             'regex': false,
           },
         },
@@ -98,7 +108,6 @@ class ApiStockTakeRepository implements StockTakeRepository {
   }
 
   @override
-  @override
   Future<legacy.StockTakeDetail> getStockTakeDetail(int id) async {
     final token = _currentToken();
     final json = await _apiClient.get(
@@ -130,7 +139,7 @@ class ApiStockTakeRepository implements StockTakeRepository {
     try {
       final token = _currentToken();
       final json = await _apiClient.get(
-        '/api/v1/stocktakes/statuses',
+        '/api/v1/stock-take-status',
         token: token,
       );
       final resources = JsonReader.list(json, 'resources') ??
@@ -141,18 +150,38 @@ class ApiStockTakeRepository implements StockTakeRepository {
           for (final item in resources)
             if (item is Map<String, dynamic>)
               StockTakeStatusOption(
-                code: JsonReader.string(item, 'code') ?? JsonReader.string(item, 'statusCode') ?? '',
-                name: JsonReader.string(item, 'name') ?? JsonReader.string(item, 'statusName') ?? '',
+                id: JsonReader.integer(item, 'id') ?? 0,
+                code: JsonReader.string(item, 'code') ??
+                    JsonReader.string(item, 'statusCode') ??
+                    '',
+                name: JsonReader.string(item, 'name') ??
+                    JsonReader.string(item, 'statusName') ??
+                    '',
               ),
         ];
       }
     } catch (_) {}
     return const [
-      StockTakeStatusOption(code: 'DRAFT', name: 'Nháp'),
-      StockTakeStatusOption(code: 'COUNTING', name: 'Đang kiểm'),
-      StockTakeStatusOption(code: 'SUBMITTED', name: 'Chờ duyệt'),
-      StockTakeStatusOption(code: 'APPROVED', name: 'Đã duyệt'),
-      StockTakeStatusOption(code: 'REJECTED', name: 'Từ chối'),
+      StockTakeStatusOption(
+        id: StockTakeStatusIds.draft,
+        code: 'Draft',
+        name: 'Bản nháp',
+      ),
+      StockTakeStatusOption(
+        id: StockTakeStatusIds.submitted,
+        code: 'Submitted',
+        name: 'Chờ duyệt',
+      ),
+      StockTakeStatusOption(
+        id: StockTakeStatusIds.approved,
+        code: 'Approved',
+        name: 'Đã duyệt',
+      ),
+      StockTakeStatusOption(
+        id: StockTakeStatusIds.rejected,
+        code: 'Rejected',
+        name: 'Từ chối',
+      ),
     ];
   }
 

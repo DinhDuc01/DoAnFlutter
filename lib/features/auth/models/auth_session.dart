@@ -211,7 +211,7 @@ class AuthUser {
       for (final menu in parsedMenus)
         if (menu.id > 0 && menu.code.isNotEmpty) menu.id: menu.code,
     };
-    final parsedPermissions = rawPermissions is List
+    final unmergedPermissions = rawPermissions is List
         ? rawPermissions.whereType<Map>().map((p) {
             final permission = UserPermission.fromJson(
               p.cast<String, dynamic>(),
@@ -226,6 +226,7 @@ class AuthUser {
             );
           }).toList()
         : <UserPermission>[];
+    final parsedPermissions = _mergePermissions(unmergedPermissions);
 
     return AuthUser(
       id: (json['id'] as num?)?.toInt() ?? 0,
@@ -241,6 +242,40 @@ class AuthUser {
       menus: parsedMenus,
     );
   }
+}
+
+List<UserPermission> _mergePermissions(List<UserPermission> permissions) {
+  final merged = <UserPermission>[];
+
+  for (final permission in permissions) {
+    final code = permission.menuCode.trim().toUpperCase();
+    final id = permission.menuId;
+    // A permission with neither identity cannot authorize any feature.
+    if (code.isEmpty && id <= 0) continue;
+
+    final index = merged.indexWhere(
+      (item) =>
+          (code.isNotEmpty && item.menuCode == code) ||
+          (id > 0 && item.menuId == id),
+    );
+    final existing = index < 0 ? null : merged[index];
+    final combined = UserPermission(
+      menuId: existing?.menuId ?? id,
+      menuCode:
+          existing?.menuCode.isNotEmpty == true ? existing!.menuCode : code,
+      actions: <String>{
+        ...?existing?.actions,
+        ...permission.actions,
+      },
+    );
+    if (index < 0) {
+      merged.add(combined);
+    } else {
+      merged[index] = combined;
+    }
+  }
+
+  return List<UserPermission>.unmodifiable(merged);
 }
 
 List<UserMenu> _flattenMenus(List<dynamic> rawMenus) {

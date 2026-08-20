@@ -268,7 +268,11 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
   }
 
   Future<void> _submit() async {
-    if (_submitting) return;
+    if (_submitting ||
+        AuthSessionStore.current?.hasPermission('SALE_ORDERS', 'CREATE') !=
+            true) {
+      return;
+    }
     setState(() => _formError = null);
 
     final input = _buildInput();
@@ -300,7 +304,9 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (AuthSessionStore.current?.user.isWarehouseWorker == true) {
+    if (AuthSessionStore.current?.user.isWarehouseWorker == true ||
+        AuthSessionStore.current?.hasPermission('SALE_ORDERS', 'CREATE') !=
+            true) {
       return Scaffold(
         backgroundColor: AppColors.backgroundFor(context),
         appBar: AppBar(title: const Text('Đơn bán')),

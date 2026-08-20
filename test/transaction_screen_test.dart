@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/core/routes/app_routes.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
+import 'package:stocklite/features/auth/models/auth_permission.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/products/data/product_variant_api.dart';
 import 'package:stocklite/features/thu_mua/data/thu_mua_repository.dart';
@@ -177,6 +178,7 @@ void main() {
         scheduledAt: DateTime(2026, 8, 9),
         estimatedWeightKg: 120,
         expectedPrice: 6500,
+        canCreateReceiptFlag: true,
         location: 'Ruộng A',
       );
 
@@ -529,6 +531,17 @@ AuthSession _session() {
   return const AuthSession(
     accessToken: 'token',
     refreshToken: 'refresh',
-    user: AuthUser(id: 1, fullName: 'Tester', email: 'tester@example.com'),
+    user: AuthUser(
+      id: 1,
+      fullName: 'Tester',
+      email: 'tester@example.com',
+      permissions: [
+        UserPermission(
+          menuId: 1,
+          menuCode: 'RICE_PURCHASE',
+          actions: {'READ', 'CREATE', 'UPDATE'},
+        ),
+      ],
+    ),
   );
 }

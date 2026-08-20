@@ -1,8 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
+import 'package:stocklite/features/auth/models/auth_permission.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/sales_orders/data/sales_order_repository.dart';
 import 'package:stocklite/features/sales_orders/models/sales_order.dart';
+import 'package:stocklite/features/sales_orders/presentation/screens/sales_order_detail_screen.dart';
 
 import 'support/fake_api_client.dart';
 
@@ -183,7 +186,183 @@ void main() {
       expect(_detail(SalesOrderStatusIds.reserved).canReserve, isFalse);
       expect(_detail(SalesOrderStatusIds.cancelled).canReserve, isFalse);
     });
+    testWidgets('READ-only detail hides every sales mutation CTA',
+        (tester) async {
+      AuthSessionStore.current = _sessionWithActions({'READ'});
+      final repository = _FakeDetailRepository(
+        detail: _detail(SalesOrderStatusIds.newOrder),
+      );
+      await _pumpDetail(tester, repository);
+
+      expect(find.byKey(const Key('sales_order_confirm')), findsNothing);
+      expect(find.byKey(const Key('sales_order_reserve')), findsNothing);
+      expect(find.byKey(const Key('sales_order_cancel')), findsNothing);
+      expect(find.byKey(const Key('sales_order_create_outbound')), findsNothing);
+      expect(repository.mutationCalls, 0);
+    });
+
+    testWidgets('UPDATE without APPROVE can confirm NEW exactly once',
+        (tester) async {
+      AuthSessionStore.current = _sessionWithActions({'READ', 'UPDATE'});
+      final repository = _FakeDetailRepository(
+        detail: _detail(SalesOrderStatusIds.newOrder),
+      );
+      await _pumpDetail(tester, repository);
+
+      await tester.tap(find.byKey(const Key('sales_order_confirm')));
+      await tester.pump();
+      expect(repository.confirmCalls, 0);
+      await tester.tap(find.byType(FilledButton).last);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(find.byType(FilledButton).last, warnIfMissed: false);
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(repository.confirmCalls, 1);
+    });
+
+    testWidgets('UPDATE exposes only status-eligible actions', (tester) async {
+      AuthSessionStore.current = _sessionWithActions({'READ', 'UPDATE'});
+
+      var repository = _FakeDetailRepository(
+        detail: _detail(SalesOrderStatusIds.pendingConfirm),
+      );
+      await _pumpDetail(tester, repository);
+      expect(find.byKey(const Key('sales_order_reserve')), findsOneWidget);
+      expect(find.byKey(const Key('sales_order_cancel')), findsOneWidget);
+      expect(find.byKey(const Key('sales_order_confirm')), findsNothing);
+
+      repository = _FakeDetailRepository(
+        detail: _detail(SalesOrderStatusIds.reserved),
+      );
+      await _pumpDetail(tester, repository);
+      expect(find.byKey(const Key('sales_order_create_outbound')), findsOneWidget);
+      expect(find.byKey(const Key('sales_order_cancel')), findsOneWidget);
+
+      for (final status in [
+        SalesOrderStatusIds.completed,
+        SalesOrderStatusIds.cancelled,
+        0,
+      ]) {
+        repository = _FakeDetailRepository(detail: _detail(status));
+        await _pumpDetail(tester, repository);
+        expect(find.byKey(const Key('sales_order_confirm')), findsNothing);
+        expect(find.byKey(const Key('sales_order_reserve')), findsNothing);
+        expect(find.byKey(const Key('sales_order_cancel')), findsNothing);
+        expect(
+          find.byKey(const Key('sales_order_create_outbound')),
+          findsNothing,
+        );
+      }
+    });
+
+    testWidgets('cancelling the cancel dialog does not call repository',
+        (tester) async {
+      AuthSessionStore.current = _sessionWithActions({'READ', 'UPDATE'});
+      final repository = _FakeDetailRepository(
+        detail: _detail(SalesOrderStatusIds.pendingConfirm),
+      );
+      await _pumpDetail(tester, repository);
+
+      await tester.tap(find.byKey(const Key('sales_order_cancel')));
+      await tester.pump();
+      expect(repository.cancelCalls, 0);
+      await tester.tap(find.byType(TextButton).last);
+      await tester.pump();
+      expect(repository.cancelCalls, 0);
+    });
   });
+}
+
+Future<void> _pumpDetail(
+  WidgetTester tester,
+  _FakeDetailRepository repository,
+) async {
+  await tester.pumpWidget(
+    MaterialApp(
+      home: SalesOrderDetailScreen(
+        key: ValueKey(repository.detail.statusId),
+        salesOrderId: repository.detail.id,
+        repository: repository,
+      ),
+    ),
+  );
+  await tester.pump(const Duration(milliseconds: 100));
+}
+
+AuthSession _sessionWithActions(Set<String> actions) => AuthSession(
+      accessToken: 'token',
+      refreshToken: 'refresh',
+      user: AuthUser(
+        id: 1,
+        fullName: 'Sales',
+        email: 'sales@example.com',
+        permissions: [
+          UserPermission(
+            menuId: 1,
+            menuCode: 'SALE_ORDERS',
+            actions: actions,
+          ),
+        ],
+      ),
+    );
+
+class _FakeDetailRepository implements SalesOrderRepository {
+  _FakeDetailRepository({required this.detail});
+
+  SalesOrderDetail detail;
+  int confirmCalls = 0;
+  int reserveCalls = 0;
+  int cancelCalls = 0;
+  int outboundCalls = 0;
+  int getCalls = 0;
+  int get mutationCalls =>
+      confirmCalls + reserveCalls + cancelCalls + outboundCalls;
+
+  @override
+  Future<SalesOrderDetail> getById(int id) async {
+    getCalls++;
+    return detail;
+  }
+
+  @override
+  Future<void> confirm(int id) async {
+    confirmCalls++;
+    detail = _detail(SalesOrderStatusIds.pendingConfirm);
+  }
+
+  @override
+  Future<void> reserve(int id) async => reserveCalls++;
+
+  @override
+  Future<void> cancel(int id, {required String reason}) async => cancelCalls++;
+
+  @override
+  Future<int> createOutbound(int id, List<CreateOutboundLine> items) async {
+    outboundCalls++;
+    return 99;
+  }
+
+  @override
+  Future<SalesOrderPage> getPaged({
+    String? keyword,
+    int? statusId,
+    String? channel,
+    int page = 1,
+    int pageSize = 20,
+  }) async => const SalesOrderPage(total: 0, items: []);
+
+  @override
+  Future<CreatedSalesOrder> create(CreateSalesOrderInput input) =>
+      throw UnimplementedError();
+
+  @override
+  Future<List<SalesCustomerOption>> getCustomers() async => const [];
+
+  @override
+  Future<List<SalesWarehouseOption>> getWarehouses() async => const [];
+
+  @override
+  Future<List<SalesProductOption>> getProductVariants({String keyword = ''}) async =>
+      const [];
 }
 
 SalesOrderDetail _detail(int statusId) => SalesOrderDetail.fromJson({

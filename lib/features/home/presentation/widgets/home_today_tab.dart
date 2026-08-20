@@ -74,7 +74,7 @@ class HomeTodayTab extends StatelessWidget {
       _Shortcut('Thu mua', Icons.shopping_cart_outlined, AppColors.primary,
           menuCode: 'RICE_PURCHASE', tabIndex: 1),
       _Shortcut('Kho', Icons.warehouse_outlined, AppColors.info,
-          menuCode: 'INBOUND_ORDERS', tabIndex: 2),
+          menuCode: 'INVENTORIES', tabIndex: 2),
       _Shortcut('Đơn bán', Icons.receipt_long_outlined, AppColors.info,
           menuCode: 'SALE_ORDERS', route: AppRoutes.salesOrders),
       _Shortcut('Xuất kho / giao', Icons.local_shipping_outlined,

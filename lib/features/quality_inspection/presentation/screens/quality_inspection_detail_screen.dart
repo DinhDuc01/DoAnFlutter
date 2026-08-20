@@ -49,6 +49,13 @@ class _QualityInspectionDetailScreenState
   bool _loading = true;
   bool _changed = false;
 
+  bool get _canUpdate =>
+      AuthSessionStore.current?.hasPermission(
+        'QUALITY_INSPECTIONS',
+        'UPDATE',
+      ) ==
+      true;
+
   @override
   Set<String> get realtimeEntities => const {
         'QualityInspection',
@@ -146,7 +153,10 @@ class _QualityInspectionDetailScreenState
 
   Future<void> _openEdit() async {
     final detail = _detail;
-    if (detail == null) return;
+    // Fail closed at the action boundary as well as in the widget tree. The
+    // backend DTO has no inspection status; it explicitly identifies
+    // AWAITING_QC as the draft inspection awaiting a result.
+    if (detail == null || !_canUpdate || !detail.isDraft) return;
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => QualityInspectionEditScreen(
@@ -194,20 +204,18 @@ class _QualityInspectionDetailScreenState
           ],
         ),
       ),
-      bottomNavigationBar: detail == null ||
-              AuthSessionStore.current?.user.isWarehouseWorker == true
+      bottomNavigationBar: detail == null || !_canUpdate || !detail.isDraft
           ? null
           : SafeArea(
               minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
               child: FilledButton.icon(
+                key: const Key('quality_inspection_edit'),
                 onPressed: _openEdit,
                 icon: const Icon(Icons.fact_check_outlined),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                 ),
-                label: Text(
-                  detail.isDraft ? 'Kiểm định ngay' : 'Cập nhật phiếu',
-                ),
+                label: const Text('Kiểm định ngay'),
               ),
             ),
     );

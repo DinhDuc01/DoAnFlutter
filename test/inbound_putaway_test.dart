@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
+import 'package:stocklite/features/auth/models/auth_permission.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/inbound/data/inbound_order_repository.dart';
 import 'package:stocklite/features/inbound/models/bag_putaway_planner.dart';
@@ -14,7 +15,18 @@ void main() {
     AuthSessionStore.current = const AuthSession(
       accessToken: 'inbound-token',
       refreshToken: 'refresh',
-      user: AuthUser(id: 7, fullName: 'Thủ kho', email: 'kho@example.com'),
+      user: AuthUser(
+        id: 7,
+        fullName: 'Thủ kho',
+        email: 'kho@example.com',
+        permissions: [
+          UserPermission(
+            menuId: 1,
+            menuCode: 'INBOUND_ORDERS',
+            actions: {'READ', 'UPDATE'},
+          ),
+        ],
+      ),
     );
   });
   tearDown(() => AuthSessionStore.current = null);
@@ -368,6 +380,40 @@ void main() {
       expect(find.textContaining('Khu A / Ô A-01'), findsOneWidget);
       expect(find.textContaining('Xác nhận xếp'), findsOneWidget);
     });
+    testWidgets('READ-only session never starts the inbound mutation chain',
+        (tester) async {
+      AuthSessionStore.current = const AuthSession(
+        accessToken: 'read-token',
+        refreshToken: 'refresh',
+        user: AuthUser(
+          id: 8,
+          fullName: 'Read only',
+          email: 'read@example.com',
+          permissions: [
+            UserPermission(
+              menuId: 1,
+              menuCode: 'INBOUND_ORDERS',
+              actions: {'READ'},
+            ),
+          ],
+        ),
+      );
+      final repository = _FakeInboundRepository();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: InboundPutawayLineScreen(
+            line: line('Approved'),
+            repository: repository,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(repository.startedReceipts, isEmpty);
+      expect(repository.recordedQuantities, isEmpty);
+      expect(repository.suggestionCalls, 0);
+      expect(repository.submitCalls, 0);
+    });
   });
 }
 
@@ -383,6 +429,7 @@ class _FakeInboundRepository implements InboundOrderRepository {
   final List<int> startedReceipts = <int>[];
   final List<double> recordedQuantities = <double>[];
   int suggestionCalls = 0;
+  int submitCalls = 0;
 
   @override
   Future<List<InboundPutawayLine>> getPutawayPending() async => lines;
@@ -392,7 +439,9 @@ class _FakeInboundRepository implements InboundOrderRepository {
       const <StorageLocation>[];
 
   @override
-  Future<void> submit(int orderId) async {}
+  Future<void> submit(int orderId) async {
+    submitCalls++;
+  }
 
   @override
   Future<void> startReceipt(int orderId, int itemId) async {

@@ -9,6 +9,7 @@ import 'core/realtime/realtime_service.dart';
 import 'features/auth/data/auth_session_store.dart';
 import 'features/auth/data/api_auth_service.dart';
 import 'features/auth/data/token_refresh_coordinator.dart';
+import 'features/auth/data/startup_session_resolver.dart';
 import 'features/character/data/character_appearance_store.dart';
 
 Future<void> main() async {
@@ -21,28 +22,14 @@ Future<void> main() async {
 
   // Nạp lại phiên đăng nhập đã lưu để không phải đăng nhập lại mỗi lần mở app.
   await AuthSessionStore.load();
-  if (AuthSessionStore.current?.user.isMobileBlocked ?? false) {
-    await AuthSessionStore.clear();
-  }
-
-  // Quyền/menu có thể thay đổi sau lần đăng nhập trước. Làm mới session từ
-  // Backend trước khi dựng Home để các shortcut/guard không dùng permission cũ.
-  final cachedSession = AuthSessionStore.current;
-  if (cachedSession != null) {
-    try {
-      final refreshedSession =
-          await ApiAuthService().fetchSession(cachedSession);
-      if (refreshedSession.user.isMobileBlocked) {
-        await AuthSessionStore.clear();
-      } else {
-        await AuthSessionStore.save(refreshedSession);
-      }
-    } catch (_) {
-      // Giữ session cache khi mạng tạm thời lỗi; ApiClient vẫn tự xử lý 401
-      // bằng cơ chế refresh token khi request feature được thực hiện.
-    }
-  }
-  final isLoggedIn = AuthSessionStore.current != null;
+  final isLoggedIn = await resolveStartupSession(
+    cachedSession: AuthSessionStore.current,
+    authService: ApiAuthService(),
+    saveSession: AuthSessionStore.save,
+    clearSession: AuthSessionStore.clear,
+    stopNotifications: FcmService.instance.stopForUser,
+    stopRealtime: RealtimeService.instance.stop,
+  );
 
   // Khởi tạo Firebase + đăng ký handler thông báo đẩy khi app ở nền/đã tắt.
   await FcmService.instance.initApp();

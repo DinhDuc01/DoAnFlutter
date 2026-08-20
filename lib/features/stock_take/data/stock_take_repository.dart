@@ -20,10 +20,12 @@ class StockTakeOption {
 
 class StockTakeStatusOption {
   const StockTakeStatusOption({
+    this.id = 0,
     required this.code,
     required this.name,
   });
 
+  final int id;
   final String code;
   final String name;
 }
@@ -34,6 +36,7 @@ abstract class StockTakeRepository {
     required int length,
     String? search,
     int? warehouseId,
+    int? statusId,
     String? statusCode,
   });
 
