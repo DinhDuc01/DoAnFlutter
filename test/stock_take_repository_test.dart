@@ -100,7 +100,6 @@ void main() {
 
       final id = await ApiStockTakeRepository(apiClient: client).create(
         warehouseId: 3,
-        scope: StockTakeScope.column,
         locationId: 7,
         note: '  Kiểm cuối tháng  ',
       );
@@ -118,24 +117,23 @@ void main() {
       expect(body['stockTakeStatusId'], 0);
     });
 
-    test('only sends the scope field that matches the chosen scope', () async {
+    test('always asks for a COLUMN scope — kiểm kê không còn theo khu hay lô',
+        () async {
       final client = FakeApiClient(
         onPost: (_, __, ___) async => {
           'resources': {'id': '11'},
         },
       );
 
-      final id = await ApiStockTakeRepository(apiClient: client).create(
-        warehouseId: 3,
-        scope: StockTakeScope.zone,
-        zoneName: 'Khu A',
-      );
+      final id = await ApiStockTakeRepository(apiClient: client)
+          .create(warehouseId: 3, locationId: 12);
 
       expect(id, 11);
       final body = client.calls.single.body!;
-      expect(body['scopeType'], 'ZONE');
-      expect(body['zoneName'], 'Khu A');
-      expect(body.containsKey('locationId'), isFalse);
+      expect(body['scopeType'], 'COLUMN');
+      expect(body['locationId'], 12);
+      expect(body.containsKey('zoneName'), isFalse);
+      expect(body.containsKey('paddyLotId'), isFalse);
     });
   });
 
@@ -153,13 +151,22 @@ void main() {
             paddyLotBagId: 11,
             bagNo: 1,
             systemWeightKg: 50,
+            pickSequence: 1,
+            restowSequence: 2,
             counted: true,
             scannedByQr: true,
             countedWeightKg: 49.4,
           ),
-          StockTakeBag(id: 2, paddyLotBagId: 22, bagNo: 2, systemWeightKg: 50),
+          StockTakeBag(
+            id: 2,
+            paddyLotBagId: 22,
+            bagNo: 2,
+            systemWeightKg: 50,
+            pickSequence: 2,
+            restowSequence: 1,
+          ),
         ],
-      )..note = 'Thiếu 1 bao';
+      )..varianceReason = 'Thiếu 1 bao';
 
       await ApiStockTakeRepository(apiClient: client)
           .saveCounts(5, [line], note: '  Ca chiều  ');
@@ -172,9 +179,9 @@ void main() {
       final items = call.body?['items'] as List<dynamic>;
       final item = items.single as Map<String, dynamic>;
       expect(item['id'], 90);
-      // Chỉ bao ĐÃ tìm thấy mới được cộng vào kg thực tế.
-      expect(item['actualQuantity'], 49.4);
-      expect(item['qrScanned'], isTrue);
+      // Dòng theo bao không gửi tổng kg — backend tính lại từ chính các bao.
+      expect(item.containsKey('actualQuantity'), isFalse);
+      expect(item['varianceReason'], 'Thiếu 1 bao');
       final bags = item['bags'] as List<dynamic>;
       expect(bags, hasLength(2));
       expect((bags.first as Map<String, dynamic>)['countedWeightKg'], 49.4);
@@ -193,76 +200,6 @@ void main() {
     });
   });
 
-  group('ApiStockTakeRepository.scanBag', () {
-    test('asks the backend whether the scanned bag belongs to the slip',
-        () async {
-      final client = FakeApiClient(
-        onPost: (_, __, ___) async => {
-          'resources': {
-            'matched': true,
-            'message': 'Đã đếm bao',
-            'stockTakeItemId': 90,
-            'lotCode': 'LOT-A',
-            'bag': {'id': 5, 'paddyLotBagId': 55},
-          },
-        },
-      );
-
-      final result =
-          await ApiStockTakeRepository(apiClient: client).scanBag(4, '  BAG-0001  ');
-
-      expect(client.calls.single.path, '/api/v1/stocktakes/4/scan-bag');
-      expect(client.calls.single.body?['qrCode'], 'BAG-0001');
-      expect(result.matched, isTrue);
-      expect(result.bagId, 5);
-      expect(result.stockTakeItemId, 90);
-    });
-
-    test('an empty payload is reported as "not matched", never as counted',
-        () async {
-      final client = FakeApiClient(onPost: (_, __, ___) async => {});
-
-      final result =
-          await ApiStockTakeRepository(apiClient: client).scanBag(4, 'BAG-0001');
-
-      expect(result.matched, isFalse);
-      expect(result.bagId, isNull);
-    });
-  });
-
-  group('ApiStockTakeRepository.getLocations', () {
-    test('keeps only the locations of the selected warehouse', () async {
-      final client = FakeApiClient(
-        onGet: (_, __, ___) async => {
-          'resources': [
-            {'id': 1, 'warehouseId': 3, 'zoneName': 'Khu A', 'slotCode': 'A-01'},
-            {'id': 2, 'warehouseId': 9, 'zoneName': 'Khu B', 'slotCode': 'B-01'},
-            {'id': 0, 'warehouseId': 3, 'zoneName': 'Khu C'},
-          ],
-        },
-      );
-
-      final options =
-          await ApiStockTakeRepository(apiClient: client).getLocations(3);
-
-      expect(options, hasLength(1));
-      expect(options.single.id, 1);
-      expect(options.single.label, 'Khu A / A-01');
-    });
-
-    test('missing permission on the location catalog still allows a stocktake',
-        () async {
-      final client = FakeApiClient(
-        onGet: (_, __, ___) async =>
-            throw const ApiException(message: 'Không đủ quyền', statusCode: 403),
-      );
-
-      expect(
-        await ApiStockTakeRepository(apiClient: client).getLocations(3),
-        isEmpty,
-      );
-    });
-  });
 }
 
 Map<String, dynamic> _summary({required int id, required String code}) => {

@@ -360,8 +360,9 @@ void main() {
     });
   });
 
-  // Màn kiểm kê nay là StockTakeListScreen/StockTakeDetailScreen (kiểm theo
-  // BAO) — test nằm ở stock_take_screen_test.dart.
+  // Màn kiểm kê nay là StockTakeListScreen/StockTakeDetailScreen ở features/kho
+  // (kiểm theo BAO) — test model/repository nằm ở business_models_test.dart và
+  // stock_take_repository_test.dart.
 }
 
 void phoneTestWidgets(String description, WidgetTesterCallback callback) {

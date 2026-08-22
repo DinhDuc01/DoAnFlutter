@@ -5,9 +5,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/stock_take_repository.dart';
 import '../../models/inventory_stock.dart' show WarehouseOption;
 import '../../models/stock_take.dart';
+import '../widgets/qr_scan_screen.dart';
 import 'stock_take_detail_screen.dart';
 
 /// Danh sách phiếu kiểm kê + tạo phiếu mới theo phạm vi.
@@ -43,6 +45,10 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
   List<StockTakeSummaryRow> _rows = const [];
   Object? _error;
   bool _loading = true;
+
+  bool get _canCreate =>
+      AuthSessionStore.current?.user.hasPermission('STOCKTAKE', 'CREATE') ==
+      true;
 
   @override
   void initState() {
@@ -83,6 +89,8 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
   }
 
   Future<void> _createStockTake() async {
+    // Hiding the button is not sufficient: guard the mutation entry point too.
+    if (!_canCreate) return;
     final created = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
@@ -103,16 +111,19 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
           children: [
             AppGradientHeader(
               title: 'Kiểm kê kho',
-              subtitle: 'Đếm theo BAO, cân lại bao nghi ngờ, ghi nhận chất lượng',
+              subtitle:
+                  'Đếm theo BAO, cân lại bao nghi ngờ, ghi nhận chất lượng',
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: _createStockTake,
-                    color: Colors.white,
-                    icon: const Icon(Icons.add, size: 28),
-                    tooltip: 'Tạo phiếu mới',
-                  ),
+                  if (_canCreate)
+                    IconButton(
+                      key: const Key('stock_take_create_header'),
+                      onPressed: _createStockTake,
+                      color: Colors.white,
+                      icon: const Icon(Icons.add, size: 28),
+                      tooltip: 'Tạo phiếu mới',
+                    ),
                   IconButton(
                     onPressed: _load,
                     color: Colors.white,
@@ -126,12 +137,15 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createStockTake,
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add),
-        label: const Text('Phiếu mới'),
-      ),
+      floatingActionButton: _canCreate
+          ? FloatingActionButton.extended(
+              key: const Key('stock_take_create_fab'),
+              onPressed: _createStockTake,
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.add),
+              label: const Text('Phiếu mới'),
+            )
+          : null,
     );
   }
 
@@ -142,7 +156,8 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
       if (error is StockTakeException && error.isTransient) {
         return HNetworkState(message: error.message, onRetry: _load);
       }
-      return HErrorState(message: 'Không tải được phiếu kiểm kê: $error', onRetry: _load);
+      return HErrorState(
+          message: 'Không tải được phiếu kiểm kê: $error', onRetry: _load);
     }
     if (_rows.isEmpty) {
       return const HEmptyState(
@@ -179,13 +194,15 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 12, color: AppColors.textSecondaryFor(context)),
+                            fontSize: 12,
+                            color: AppColors.textSecondaryFor(context)),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         formatDate(row.createdDate, withTime: true),
                         style: TextStyle(
-                            fontSize: 11, color: AppColors.textSecondaryFor(context)),
+                            fontSize: 11,
+                            color: AppColors.textSecondaryFor(context)),
                       ),
                     ],
                   ),
@@ -223,12 +240,14 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
   final TextEditingController _noteController = TextEditingController();
 
   List<WarehouseOption> _warehouses = const [];
-  List<StockTakeLocationOption> _locations = const [];
+  List<StockTakeColumnOption> _columns = const [];
   int? _warehouseId;
-  StockTakeScope _scope = StockTakeScope.column;
-  String? _zoneName;
   int? _locationId;
+
+  /// Kiểm kê lại KHU CÁCH LY: danh sách chỉ liệt kê ô cách ly.
+  bool _quarantineOnly = false;
   bool _loading = true;
+  bool _loadingColumns = false;
   bool _saving = false;
   String? _error;
 
@@ -253,7 +272,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
         _warehouseId = warehouses.isNotEmpty ? warehouses.first.id : null;
         _loading = false;
       });
-      if (_warehouseId != null) await _loadLocations(_warehouseId!);
+      if (_warehouseId != null) await _loadColumns(_warehouseId!);
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -263,30 +282,89 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
     }
   }
 
-  Future<void> _loadLocations(int warehouseId) async {
-    final locations = await widget.repository.getLocations(warehouseId);
-    if (!mounted) return;
-    setState(() {
-      _locations = locations;
-      _locationId = null;
-      _zoneName = null;
-    });
+  /// Chỉ lấy cột ĐANG CÓ BAO — cột rỗng thì không có gì để đếm, đưa vào danh
+  /// sách chỉ làm thủ kho chọn nhầm.
+  Future<void> _loadColumns(int warehouseId) async {
+    setState(() => _loadingColumns = true);
+    try {
+      final options = await widget.repository.getScopeOptions(
+        warehouseId,
+        quarantineOnly: _quarantineOnly ? true : null,
+      );
+      if (!mounted) return;
+      setState(() {
+        _columns = options.columns;
+        _locationId = null;
+        _loadingColumns = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$error';
+        _loadingColumns = false;
+      });
+    }
   }
 
-  List<String> get _zones =>
-      {for (final l in _locations) if (l.zoneName.isNotEmpty) l.zoneName}.toList()
-        ..sort();
+  /// Quét tem QR dán trên cột — nhanh hơn mò trong danh sách khi đang đứng
+  /// giữa kho. Tem mang payload STOCKLITE|{kho}|LOCATION|{mã}, backend tự tách.
+  Future<void> _scanColumn() async {
+    final code = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
+        builder: (_) => const QrScanScreen(
+          title: 'Quét tem cột',
+          hint: 'Đưa camera vào tem QR dán trên cột',
+        ),
+      ),
+    );
+    if (code == null || code.trim().isEmpty || !mounted) return;
+
+    setState(() => _saving = true);
+    try {
+      final result = await widget.repository
+          .resolveScopeQr(code, warehouseId: _warehouseId);
+      if (!mounted) return;
+      if (!result.matched || result.locationId == null) {
+        setState(() {
+          _error = result.message;
+          _saving = false;
+        });
+        return;
+      }
+
+      final warehouseChanged =
+          result.warehouseId != null && result.warehouseId != _warehouseId;
+      setState(() {
+        _error = null;
+        _saving = false;
+        _warehouseId = result.warehouseId ?? _warehouseId;
+        _quarantineOnly = result.isQuarantine;
+      });
+      if (warehouseChanged || _quarantineOnly) {
+        // Nạp lại danh sách theo kho/loại ô mới nhưng GIỮ cột vừa quét.
+        await _loadColumns(_warehouseId!);
+      }
+      if (!mounted) return;
+      setState(() => _locationId = result.locationId);
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+            content: Text('${result.message} · ${result.bagCount} bao')));
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = '$error';
+        _saving = false;
+      });
+    }
+  }
 
   Future<void> _submit() async {
     if (_warehouseId == null) {
       setState(() => _error = 'Vui lòng chọn kho.');
       return;
     }
-    if (_scope == StockTakeScope.zone && (_zoneName ?? '').isEmpty) {
-      setState(() => _error = 'Vui lòng chọn khu cần kiểm.');
-      return;
-    }
-    if (_scope == StockTakeScope.column && _locationId == null) {
+    if (_locationId == null) {
       setState(() => _error = 'Vui lòng chọn cột cần kiểm.');
       return;
     }
@@ -298,9 +376,7 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
     try {
       final id = await widget.repository.create(
         warehouseId: _warehouseId!,
-        scope: _scope,
-        zoneName: _scope == StockTakeScope.zone ? _zoneName : null,
-        locationId: _scope == StockTakeScope.column ? _locationId : null,
+        locationId: _locationId!,
         note: _noteController.text,
       );
       if (!mounted) return;
@@ -325,129 +401,133 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                 padding: EdgeInsets.all(32),
                 child: Center(child: CircularProgressIndicator()),
               )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text('Tạo phiếu kiểm kê',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Backend sẽ chụp tồn kho và danh sách BAO trong phạm vi đã chọn.',
-                    style: TextStyle(
-                        fontSize: 12, color: AppColors.textSecondaryFor(context)),
-                  ),
-                  const SizedBox(height: 14),
-                  DropdownButtonFormField<int>(
-                    initialValue: _warehouseId,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Kho *',
-                      prefixIcon: Icon(Icons.warehouse_outlined),
+            : SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Kiểm kê một cột',
+                        style: TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Backend chụp danh sách BAO của cột, kèm thứ tự lấy ra từ trên xuống.',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondaryFor(context)),
                     ),
-                    items: [
-                      for (final w in _warehouses)
-                        DropdownMenuItem(value: w.id, child: Text(w.name)),
-                    ],
-                    onChanged: _saving
-                        ? null
-                        : (value) {
-                            if (value == null) return;
-                            setState(() => _warehouseId = value);
-                            _loadLocations(value);
-                          },
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<StockTakeScope>(
-                    initialValue: _scope,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Phạm vi *',
-                      prefixIcon: Icon(Icons.crop_free_rounded),
-                    ),
-                    items: [
-                      for (final scope in StockTakeScope.values)
-                        DropdownMenuItem(value: scope, child: Text(scope.label)),
-                    ],
-                    onChanged: _saving
-                        ? null
-                        : (value) => setState(() {
-                              _scope = value ?? StockTakeScope.column;
-                              _zoneName = null;
-                              _locationId = null;
-                            }),
-                  ),
-                  if (_scope == StockTakeScope.zone) ...[
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _zoneName,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Khu *',
-                        prefixIcon: Icon(Icons.grid_view_rounded),
-                      ),
-                      items: [
-                        for (final zone in _zones)
-                          DropdownMenuItem(value: zone, child: Text(zone)),
-                      ],
-                      onChanged: _saving
-                          ? null
-                          : (value) => setState(() => _zoneName = value),
+                    OutlinedButton.icon(
+                      onPressed: _saving ? null : _scanColumn,
+                      icon: const Icon(Icons.qr_code_scanner_rounded),
+                      label: const Text('Quét QR cột'),
                     ),
-                  ],
-                  if (_scope == StockTakeScope.column) ...[
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int>(
-                      initialValue: _locationId,
+                      initialValue: _warehouseId,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Cột *',
-                        prefixIcon: Icon(Icons.place_outlined),
+                        labelText: 'Kho *',
+                        prefixIcon: Icon(Icons.warehouse_outlined),
                       ),
                       items: [
-                        for (final location in _locations)
-                          DropdownMenuItem(
-                            value: location.id,
-                            child: Text(location.label,
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ),
+                        for (final w in _warehouses)
+                          DropdownMenuItem(value: w.id, child: Text(w.name)),
                       ],
                       onChanged: _saving
                           ? null
-                          : (value) => setState(() => _locationId = value),
+                          : (value) {
+                              if (value == null) return;
+                              setState(() => _warehouseId = value);
+                              _loadColumns(value);
+                            },
+                    ),
+                    const SizedBox(height: 12),
+                    if (_loadingColumns)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12),
+                        child: Center(child: CircularProgressIndicator()),
+                      )
+                    else if (_columns.isEmpty)
+                      Text('Kho này chưa có cột nào đang chứa bao.',
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              color: AppColors.textSecondaryFor(context)))
+                    else
+                      DropdownButtonFormField<int>(
+                        initialValue:
+                            _columns.any((c) => c.locationId == _locationId)
+                                ? _locationId
+                                : null,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Cột *',
+                          prefixIcon: Icon(Icons.place_outlined),
+                        ),
+                        items: [
+                          for (final column in _columns)
+                            DropdownMenuItem(
+                              value: column.locationId,
+                              child: Text(
+                                  '${column.isQuarantine ? '🚧 ' : ''}${column.label}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                        ],
+                        onChanged: _saving
+                            ? null
+                            : (value) => setState(() => _locationId = value),
+                      ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: _quarantineOnly,
+                      title: const Text('Kiểm kê lại KHU CÁCH LY',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w700)),
+                      subtitle: const Text(
+                          'Chỉ hiện ô cách ly; bao đạt sẽ được rút về khu thường.',
+                          style: TextStyle(fontSize: 11.5)),
+                      onChanged: _saving
+                          ? null
+                          : (value) {
+                              setState(() => _quarantineOnly = value);
+                              if (_warehouseId != null) {
+                                _loadColumns(_warehouseId!);
+                              }
+                            },
+                    ),
+                    TextField(
+                      controller: _noteController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Ghi chú',
+                        hintText: 'Lý do hoặc hướng dẫn kiểm kê',
+                      ),
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 10),
+                      Text(_error!,
+                          style: const TextStyle(
+                              color: AppColors.danger,
+                              fontWeight: FontWeight.w700)),
+                    ],
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: _saving ? null : _submit,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        minimumSize: const Size.fromHeight(48),
+                      ),
+                      child: _saving
+                          ? const SizedBox.square(
+                              dimension: 20,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text('Chụp danh sách bao & bắt đầu kiểm'),
                     ),
                   ],
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _noteController,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      labelText: 'Ghi chú',
-                      hintText: 'Lý do hoặc hướng dẫn kiểm kê',
-                    ),
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 10),
-                    Text(_error!,
-                        style: const TextStyle(
-                            color: AppColors.danger, fontWeight: FontWeight.w700)),
-                  ],
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: _saving ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      minimumSize: const Size.fromHeight(48),
-                    ),
-                    child: _saving
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Chụp tồn & bắt đầu kiểm'),
-                  ),
-                ],
+                ),
               ),
       ),
     );
