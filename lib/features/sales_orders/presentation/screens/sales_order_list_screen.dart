@@ -208,6 +208,10 @@ class _SalesOrderListScreenState extends State<SalesOrderListScreen>
 
   /// Mở form tạo đơn bán; tạo xong thì mở luôn chi tiết đơn vừa tạo.
   Future<void> _createOrder() async {
+    if (AuthSessionStore.current?.hasPermission('SALE_ORDERS', 'CREATE') !=
+        true) {
+      return;
+    }
     final created = await Navigator.of(context).push<CreatedSalesOrder>(
       MaterialPageRoute<CreatedSalesOrder>(
         builder: (_) => SalesOrderCreateScreen(repository: _repository),

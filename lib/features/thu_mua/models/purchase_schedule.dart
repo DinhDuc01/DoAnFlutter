@@ -129,8 +129,15 @@ class PurchaseSchedule {
 
   /// Lịch còn được lập thêm phiếu mua hay không.
   /// Ưu tiên cờ backend trả về; chỉ tự suy ra khi API cũ chưa có cờ này.
-  bool get canCreateReceipt =>
-      canCreateReceiptFlag ?? (!_isBlockedByStatus && !isFullyReceipted);
+  bool get canCreateReceipt {
+    if (canCreateReceiptFlag != null) return canCreateReceiptFlag!;
+    final code = statusCode?.trim().toUpperCase();
+    // Fail closed: a missing/unknown status cannot authorize receipt creation.
+    const eligibleStatuses = {'SCHEDULED', 'CONFIRMED'};
+    return eligibleStatuses.contains(code) &&
+        !_isBlockedByStatus &&
+        !isFullyReceipted;
+  }
 
   /// Lý do không lập được phiếu — hiển thị trên nút để người dùng hiểu vì sao bị khóa.
   String get blockedReason {

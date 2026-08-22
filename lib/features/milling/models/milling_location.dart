@@ -11,6 +11,9 @@ class MillingLocation {
     required this.currentOccupancy,
     this.allowedCategoryId,
     this.currentProductVariantId,
+    this.priority,
+    this.isOutboundStaging = false,
+    this.isLockedForOutbound = false,
     required this.isQuarantine,
     required this.isActive,
   });
@@ -24,6 +27,9 @@ class MillingLocation {
   final double currentOccupancy;
   final int? allowedCategoryId;
   final int? currentProductVariantId;
+  final int? priority;
+  final bool isOutboundStaging;
+  final bool isLockedForOutbound;
   final bool isQuarantine;
   final bool isActive;
 
@@ -60,6 +66,14 @@ class MillingLocation {
       currentProductVariantId:
           JsonReader.integer(json, 'currentProductVariantId') ??
               JsonReader.integer(json, 'CurrentProductVariantId'),
+      priority: JsonReader.integer(json, 'priority') ??
+          JsonReader.integer(json, 'Priority'),
+      isOutboundStaging: JsonReader.boolean(json, 'isOutboundStaging') ??
+          JsonReader.boolean(json, 'IsOutboundStaging') ??
+          false,
+      isLockedForOutbound: JsonReader.boolean(json, 'isLockedForOutbound') ??
+          JsonReader.boolean(json, 'IsLockedForOutbound') ??
+          false,
       isQuarantine: JsonReader.boolean(json, 'isQuarantine') ??
           JsonReader.boolean(json, 'IsQuarantine') ??
           false,

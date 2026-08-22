@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/stock_take_repository.dart';
 import '../../models/inventory_stock.dart' show WarehouseOption;
 import '../../models/stock_take.dart';
@@ -45,6 +46,10 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
   Object? _error;
   bool _loading = true;
 
+  bool get _canCreate =>
+      AuthSessionStore.current?.user.hasPermission('STOCKTAKE', 'CREATE') ==
+      true;
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +89,8 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
   }
 
   Future<void> _createStockTake() async {
+    // Hiding the button is not sufficient: guard the mutation entry point too.
+    if (!_canCreate) return;
     final created = await showModalBottomSheet<int>(
       context: context,
       isScrollControlled: true,
@@ -104,16 +111,19 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
           children: [
             AppGradientHeader(
               title: 'Kiểm kê kho',
-              subtitle: 'Đếm theo BAO, cân lại bao nghi ngờ, ghi nhận chất lượng',
+              subtitle:
+                  'Đếm theo BAO, cân lại bao nghi ngờ, ghi nhận chất lượng',
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    onPressed: _createStockTake,
-                    color: Colors.white,
-                    icon: const Icon(Icons.add, size: 28),
-                    tooltip: 'Tạo phiếu mới',
-                  ),
+                  if (_canCreate)
+                    IconButton(
+                      key: const Key('stock_take_create_header'),
+                      onPressed: _createStockTake,
+                      color: Colors.white,
+                      icon: const Icon(Icons.add, size: 28),
+                      tooltip: 'Tạo phiếu mới',
+                    ),
                   IconButton(
                     onPressed: _load,
                     color: Colors.white,
@@ -127,12 +137,15 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createStockTake,
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add),
-        label: const Text('Phiếu mới'),
-      ),
+      floatingActionButton: _canCreate
+          ? FloatingActionButton.extended(
+              key: const Key('stock_take_create_fab'),
+              onPressed: _createStockTake,
+              backgroundColor: AppColors.primary,
+              icon: const Icon(Icons.add),
+              label: const Text('Phiếu mới'),
+            )
+          : null,
     );
   }
 
@@ -143,7 +156,8 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
       if (error is StockTakeException && error.isTransient) {
         return HNetworkState(message: error.message, onRetry: _load);
       }
-      return HErrorState(message: 'Không tải được phiếu kiểm kê: $error', onRetry: _load);
+      return HErrorState(
+          message: 'Không tải được phiếu kiểm kê: $error', onRetry: _load);
     }
     if (_rows.isEmpty) {
       return const HEmptyState(
@@ -180,13 +194,15 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            fontSize: 12, color: AppColors.textSecondaryFor(context)),
+                            fontSize: 12,
+                            color: AppColors.textSecondaryFor(context)),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         formatDate(row.createdDate, withTime: true),
                         style: TextStyle(
-                            fontSize: 11, color: AppColors.textSecondaryFor(context)),
+                            fontSize: 11,
+                            color: AppColors.textSecondaryFor(context)),
                       ),
                     ],
                   ),
@@ -391,12 +407,14 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const Text('Kiểm kê một cột',
-                        style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
+                        style: TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 4),
                     Text(
                       'Backend chụp danh sách BAO của cột, kèm thứ tự lấy ra từ trên xuống.',
                       style: TextStyle(
-                          fontSize: 12, color: AppColors.textSecondaryFor(context)),
+                          fontSize: 12,
+                          color: AppColors.textSecondaryFor(context)),
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
@@ -433,12 +451,14 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                     else if (_columns.isEmpty)
                       Text('Kho này chưa có cột nào đang chứa bao.',
                           style: TextStyle(
-                              fontSize: 12.5, color: AppColors.textSecondaryFor(context)))
+                              fontSize: 12.5,
+                              color: AppColors.textSecondaryFor(context)))
                     else
                       DropdownButtonFormField<int>(
-                        initialValue: _columns.any((c) => c.locationId == _locationId)
-                            ? _locationId
-                            : null,
+                        initialValue:
+                            _columns.any((c) => c.locationId == _locationId)
+                                ? _locationId
+                                : null,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Cột *',
@@ -450,17 +470,20 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                               value: column.locationId,
                               child: Text(
                                   '${column.isQuarantine ? '🚧 ' : ''}${column.label}',
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
                             ),
                         ],
-                        onChanged:
-                            _saving ? null : (value) => setState(() => _locationId = value),
+                        onChanged: _saving
+                            ? null
+                            : (value) => setState(() => _locationId = value),
                       ),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
                       value: _quarantineOnly,
                       title: const Text('Kiểm kê lại KHU CÁCH LY',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w700)),
                       subtitle: const Text(
                           'Chỉ hiện ô cách ly; bao đạt sẽ được rút về khu thường.',
                           style: TextStyle(fontSize: 11.5)),
@@ -468,7 +491,9 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                           ? null
                           : (value) {
                               setState(() => _quarantineOnly = value);
-                              if (_warehouseId != null) _loadColumns(_warehouseId!);
+                              if (_warehouseId != null) {
+                                _loadColumns(_warehouseId!);
+                              }
                             },
                     ),
                     TextField(
@@ -483,7 +508,8 @@ class _CreateStockTakeSheetState extends State<_CreateStockTakeSheet> {
                       const SizedBox(height: 10),
                       Text(_error!,
                           style: const TextStyle(
-                              color: AppColors.danger, fontWeight: FontWeight.w700)),
+                              color: AppColors.danger,
+                              fontWeight: FontWeight.w700)),
                     ],
                     const SizedBox(height: 16),
                     FilledButton(

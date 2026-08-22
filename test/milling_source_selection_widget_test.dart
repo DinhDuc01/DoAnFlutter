@@ -4,8 +4,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/features/milling/data/milling_repository.dart';
 import 'package:stocklite/features/milling/models/milling_order.dart';
 import 'package:stocklite/features/milling/presentation/screens/milling_source_selection_screen.dart';
+import 'package:stocklite/features/auth/data/auth_session_store.dart';
+import 'package:stocklite/features/auth/models/auth_permission.dart';
+import 'package:stocklite/features/auth/models/auth_session.dart';
 
 void main() {
+  setUp(() {
+    AuthSessionStore.current = const AuthSession(
+      accessToken: 'test-token',
+      refreshToken: 'test-refresh',
+      user: AuthUser(
+        id: 1,
+        fullName: 'Tester',
+        email: 'tester@example.com',
+        permissions: [
+          UserPermission(
+            menuId: 61,
+            menuCode: 'MILLING_ORDERS',
+            actions: {'READ', 'UPDATE'},
+          ),
+        ],
+      ),
+    );
+  });
+
+  tearDown(() => AuthSessionStore.current = null);
+
   testWidgets('suggestion is explicit and never reserves or starts',
       (tester) async {
     final repository = _SourceRepository();
@@ -152,7 +176,11 @@ class _SourceRepository extends MockMillingRepository {
   }
 
   @override
-  Future<void> startOrder(int orderId) async {
+  Future<void> startOrder(
+    int orderId, {
+    required String machineRef,
+    int? operatorId,
+  }) async {
     startCalls++;
   }
 }

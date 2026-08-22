@@ -310,30 +310,31 @@ void main() {
 
     test('enriches schedule from detail + farmer endpoints', () async {
       final client = FakeApiClient(
-        onGet: (path, __, ___) async => path.contains('paddy-purchase-schedules')
-            ? {
-                'resources': {
-                  'id': 1,
-                  'farmerId': 2,
-                  'scheduleCode': 'TM-01',
-                  'riceVarietyName': 'ST25',
-                  'warehouseName': 'Kho A',
-                  'statusCode': 'CONFIRMED',
-                  'statusName': 'Đã xác nhận',
-                  'estimatedQtyKg': 1000,
-                  'receiptCount': 1,
-                  'receiptedWeightKg': 1000,
-                  'remainingQtyKg': 0,
-                  'canCreateReceipt': false,
-                },
-              }
-            : {
-                'resources': {
-                  'name': 'Nông hộ B',
-                  'phone': '0909',
-                  'address': 'Tiền Giang',
-                },
-              },
+        onGet: (path, __, ___) async =>
+            path.contains('paddy-purchase-schedules')
+                ? {
+                    'resources': {
+                      'id': 1,
+                      'farmerId': 2,
+                      'scheduleCode': 'TM-01',
+                      'riceVarietyName': 'ST25',
+                      'warehouseName': 'Kho A',
+                      'statusCode': 'CONFIRMED',
+                      'statusName': 'Đã xác nhận',
+                      'estimatedQtyKg': 1000,
+                      'receiptCount': 1,
+                      'receiptedWeightKg': 1000,
+                      'remainingQtyKg': 0,
+                      'canCreateReceipt': false,
+                    },
+                  }
+                : {
+                    'resources': {
+                      'name': 'Nông hộ B',
+                      'phone': '0909',
+                      'address': 'Tiền Giang',
+                    },
+                  },
       );
 
       final result = await PurchaseScheduleRepository(apiClient: client)
@@ -348,6 +349,43 @@ void main() {
       expect(result.receiptCount, 1);
       expect(result.canCreateReceipt, isFalse);
       expect(result.blockedReason, 'Lịch đã đủ phiếu mua');
+      expect(
+        client.calls.map((call) => call.path),
+        ['/api/v1/paddy-purchase-schedules/1', '/api/v1/farmers/2'],
+      );
+    });
+
+    test('keeps schedule detail when farmer enrichment is forbidden', () async {
+      final client = FakeApiClient(
+        onGet: (path, __, ___) async {
+          if (path.contains('paddy-purchase-schedules')) {
+            return {
+              'resources': {
+                'id': 1,
+                'farmerId': 2,
+                'scheduleCode': 'TM-01',
+                'riceVarietyName': 'ST25',
+                'warehouseName': 'Kho A',
+                'statusCode': 'CONFIRMED',
+                'statusName': 'Confirmed',
+                'estimatedQtyKg': 1000,
+              },
+            };
+          }
+          throw const ApiException(
+            message: 'Forbidden FARMERS READ',
+            statusCode: 403,
+          );
+        },
+      );
+
+      final result = await PurchaseScheduleRepository(apiClient: client)
+          .getScheduleDetails(_schedule());
+
+      expect(result.code, 'TM-01');
+      expect(result.riceVariety, 'ST25');
+      expect(result.warehouseName, 'Kho A');
+      expect(result.farmerPhone, isNull);
       expect(
         client.calls.map((call) => call.path),
         ['/api/v1/paddy-purchase-schedules/1', '/api/v1/farmers/2'],
@@ -425,7 +463,8 @@ void main() {
       );
 
       final page = await ApiQualityInspectionRepository(apiClient: client)
-          .loadPage(page: 2, pageSize: 20, search: 'LOT-02', passedInspection: true);
+          .loadPage(
+              page: 2, pageSize: 20, search: 'LOT-02', passedInspection: true);
 
       expect(page.items.single.lotCode, 'LOT-02');
       expect(page.items.single.isDraft, isTrue);
@@ -440,8 +479,16 @@ void main() {
             return {
               'isSucceeded': true,
               'resources': [
-                {'id': 1, 'inspectedAt': '2026-07-01T00:00:00Z', 'passedInspection': false},
-                {'id': 2, 'inspectedAt': '2026-08-01T00:00:00Z', 'passedInspection': true},
+                {
+                  'id': 1,
+                  'inspectedAt': '2026-07-01T00:00:00Z',
+                  'passedInspection': false
+                },
+                {
+                  'id': 2,
+                  'inspectedAt': '2026-08-01T00:00:00Z',
+                  'passedInspection': true
+                },
               ],
             };
           }
@@ -781,48 +828,308 @@ void main() {
       expect(location.isActive, isFalse);
     });
 
-    test('sends putaway suggestion contract without selecting a location',
-        () async {
+    test('matches Web output-location filtering and ranking', () async {
       final client = FakeApiClient(
-        onPost: (path, body, token) async {
-          expect(path, '/api/v1/putaway/suggestions');
+        onGet: (path, query, token) async {
           expect(token, 'token');
-          expect(body, {
-            'warehouseId': 2,
-            'productVariantId': 101,
-            'paddyLotId': null,
-            'requiredWeightKg': 3250.0,
-            'placementMode': 1,
-            'top': 5,
-          });
-          return {
-            'isSucceeded': true,
-            'resources': {
-              'suggestions': [
+          if (path == '/api/v1/product-variant') {
+            return {
+              'resources': [
                 {
-                  'locationId': 12,
-                  'locationCode': 'A01',
-                  'zoneName': 'Khu A',
-                  'currentOccupancyKg': 100,
-                  'maxCapacityKg': 5000,
-                  'freeCapacityKg': 4900,
-                  'isEmpty': false,
+                  'id': 101,
+                  'sku': 'GAO-ST24-10KG',
+                  'name': 'Gao ST24',
+                  'productCategoryName': 'Gao',
+                  'productCategoryId': 7,
+                  'weight': 10,
                 },
               ],
-            },
+            };
+          }
+          expect(path, '/api/v1/location');
+          return {
+            'resources': [
+              {
+                'id': 12,
+                'warehouseId': 2,
+                'slotCode': 'A01',
+                'zoneName': 'Khu A',
+                'maxCapacity': 5000,
+                'currentOccupancy': 100,
+                'currentProductVariantId': 101,
+                'allowedCategoryId': 7,
+                'priority': 0,
+                'isActive': true,
+              },
+              {
+                'id': 13,
+                'warehouseId': 99,
+                'slotCode': 'OTHER-WAREHOUSE',
+                'maxCapacity': 9000,
+                'currentOccupancy': 0,
+                'isActive': true,
+              },
+            ],
           };
         },
       );
 
-      final suggestions = await ApiMillingRepository(apiClient: client)
-          .getPutawaySuggestions(
-            warehouseId: 2,
-            productVariantId: 101,
-            requiredWeightKg: 3250,
-          );
+      final suggestions =
+          await ApiMillingRepository(apiClient: client).getPutawaySuggestions(
+        warehouseId: 2,
+        productVariantId: 101,
+        requiredWeightKg: 3250,
+      );
 
       expect(suggestions.single.locationId, 12);
-      expect(client.calls.single.path, '/api/v1/putaway/suggestions');
+      expect(client.calls.map((call) => call.path),
+          ['/api/v1/product-variant', '/api/v1/location']);
+      expect(client.calls.where((call) => call.method == 'POST'), isEmpty);
+    });
+
+    test('classifies milling output SKUs and excludes generic rice', () async {
+      final client = FakeApiClient(
+        onGet: (path, _, __) async {
+          expect(path, '/api/v1/product-variant');
+          return {
+            'resources': [
+              {
+                'id': 102,
+                'sku': 'PV-GAO-CHUNG',
+                'name': 'Gạo (chung)',
+                'isByproduct': false,
+              },
+              {
+                'id': 136,
+                'sku': 'GAO-ST24-10KG',
+                'name': 'Gạo ST24 đóng bao 10kg',
+                'weight': 10,
+                'isByproduct': false,
+              },
+              {
+                'id': 144,
+                'sku': 'TAM-ST24-5KG',
+                'name': 'Tấm ST24 đóng bao 5kg',
+                'weight': 5,
+                'isByproduct': true,
+              },
+              {
+                'id': 145,
+                'sku': 'CAM-ST24-20KG',
+                'name': 'Cám ST24 đóng bao 20kg',
+                'weight': 20,
+                'isByproduct': true,
+              },
+              {
+                'id': 146,
+                'sku': 'TRAU-ST24-25KG',
+                'name': 'Trấu ST24 đóng bao 25kg',
+                'weight': 25,
+                'isByproduct': true,
+              },
+              {
+                'id': 127,
+                'sku': 'LUA-ST24',
+                'name': 'Lúa ST24',
+                'isByproduct': false,
+              },
+            ],
+          };
+        },
+      );
+
+      final products =
+          await ApiMillingRepository(apiClient: client).getOutputProducts();
+
+      expect(
+        products.map((item) => '${item.sku}:${item.outputType}'),
+        unorderedEquals([
+          'CAM-ST24-20KG:BRAN',
+          'GAO-ST24-10KG:RICE',
+          'TAM-ST24-5KG:BROKEN',
+          'TRAU-ST24-25KG:HUSK',
+        ]),
+      );
+      expect(
+        {for (final item in products) item.sku: item.targetWeightKg},
+        {
+          'CAM-ST24-20KG': 20,
+          'GAO-ST24-10KG': 10,
+          'TAM-ST24-5KG': 5,
+          'TRAU-ST24-25KG': 25,
+        },
+      );
+    });
+
+    test('uses the real generic byproduct only for missing output types',
+        () async {
+      final client = FakeApiClient(
+        onGet: (path, _, __) async => {
+          'resources': [
+            {
+              'id': 103,
+              'sku': 'PV-PHUPHAM-CHUNG',
+              'name': 'Phụ phẩm (chung)',
+              'productCategoryId': 103,
+              'weight': 50,
+              'isByproduct': true,
+            },
+            {
+              'id': 136,
+              'sku': 'GAO-ST24-10KG',
+              'name': 'Gạo ST24 đóng bao 10kg',
+              'productCategoryId': 102,
+              'weight': 10,
+              'isByproduct': false,
+            },
+            {
+              'id': 144,
+              'sku': 'TAM-ST24-5KG',
+              'name': 'Tấm ST24 đóng bao 5kg',
+              'productCategoryId': 103,
+              'weight': 5,
+              'isByproduct': true,
+            },
+            {
+              'id': 127,
+              'sku': 'LUA-ST24',
+              'name': 'Lúa ST24',
+              'isByproduct': false,
+            },
+          ],
+        },
+      );
+
+      final products =
+          await ApiMillingRepository(apiClient: client).getOutputProducts();
+
+      expect(
+        products.map((item) => '${item.id}:${item.outputType}'),
+        unorderedEquals(['136:RICE', '144:BROKEN', '103:BRAN', '103:HUSK']),
+      );
+      expect(
+        products.where((item) => item.outputType == 'BROKEN').single.id,
+        144,
+      );
+      expect(products.where((item) => item.sku.startsWith('LUA-')), isEmpty);
+      expect(
+        products.where((item) => item.outputType == 'BRAN').single.name,
+        contains('Cám'),
+      );
+      expect(
+        products.where((item) => item.outputType == 'HUSK').single.name,
+        contains('Trấu'),
+      );
+    });
+
+    test('suggests an empty compatible location before byproduct weight entry',
+        () async {
+      final client = FakeApiClient(
+        onGet: (path, _, __) async => {
+          'resources': path == '/api/v1/product-variant'
+              ? [
+                  {
+                    'id': 103,
+                    'sku': 'PV-PHUPHAM-CHUNG',
+                    'name': 'Phụ phẩm (chung)',
+                    'productCategoryId': 103,
+                    'weight': 50,
+                    'isByproduct': true,
+                  }
+                ]
+              : [
+                  {
+                    'id': 58,
+                    'warehouseId': 9,
+                    'slotCode': 'C-C09',
+                    'maxCapacity': 10000,
+                    'currentOccupancy': 0,
+                    'allowedCategoryId': 103,
+                    'priority': 0,
+                    'isActive': true,
+                  }
+                ],
+        },
+      );
+
+      final suggestions =
+          await ApiMillingRepository(apiClient: client).getPutawaySuggestions(
+        warehouseId: 9,
+        productVariantId: 103,
+        requiredWeightKg: 0,
+      );
+
+      expect(suggestions.single.locationId, 58);
+      expect(suggestions.single.locationCode, 'C-C09');
+    });
+
+    test('returns no suggestion when no location has enough capacity',
+        () async {
+      final client = FakeApiClient(
+        onGet: (path, _, __) async => {
+          'resources': path == '/api/v1/product-variant'
+              ? [
+                  {
+                    'id': 101,
+                    'sku': 'GAO-01',
+                    'name': 'Gạo',
+                    'productCategoryName': 'Gạo',
+                  }
+                ]
+              : [
+                  {
+                    'id': 12,
+                    'warehouseId': 2,
+                    'maxCapacity': 100,
+                    'currentOccupancy': 90,
+                    'isActive': true,
+                  }
+                ],
+        },
+      );
+
+      final suggestions =
+          await ApiMillingRepository(apiClient: client).getPutawaySuggestions(
+        warehouseId: 2,
+        productVariantId: 101,
+        requiredWeightKg: 3250,
+      );
+
+      expect(suggestions, isEmpty);
+    });
+
+    test('does not return locations from another warehouse', () async {
+      final client = FakeApiClient(
+        onGet: (path, _, __) async => {
+          'resources': path == '/api/v1/product-variant'
+              ? [
+                  {
+                    'id': 101,
+                    'sku': 'GAO-01',
+                    'name': 'Gạo',
+                    'productCategoryName': 'Gạo',
+                  }
+                ]
+              : [
+                  {
+                    'id': 12,
+                    'warehouseId': 99,
+                    'maxCapacity': 1000,
+                    'currentOccupancy': 0,
+                    'isActive': true,
+                  }
+                ],
+        },
+      );
+
+      final suggestions =
+          await ApiMillingRepository(apiClient: client).getPutawaySuggestions(
+        warehouseId: 2,
+        productVariantId: 101,
+        requiredWeightKg: 25,
+      );
+
+      expect(suggestions, isEmpty);
     });
 
     test('builds complete outputs from local bags and selected locations',
@@ -1039,13 +1346,17 @@ void main() {
       final client = FakeApiClient(
         onPost: (path, body, token) async {
           expect(path, '/api/v1/milling-orders/21/start');
-          expect(body, isEmpty);
+          expect(body, {'machineRef': 'MILL-A1', 'operatorId': 5});
           expect(token, 'token');
           return {'isSucceeded': true};
         },
       );
 
-      await ApiMillingRepository(apiClient: client).startOrder(21);
+      await ApiMillingRepository(apiClient: client).startOrder(
+        21,
+        machineRef: 'MILL-A1',
+        operatorId: 5,
+      );
     });
   });
 }

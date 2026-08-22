@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:stocklite/core/routes/app_routes.dart';
+import 'package:stocklite/features/auth/data/auth_session_store.dart';
+import 'package:stocklite/features/auth/models/auth_permission.dart';
+import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/milling/data/milling_repository.dart';
 import 'package:stocklite/features/milling/presentation/screens/milling_preparation_screen.dart';
 import 'package:stocklite/features/home/presentation/widgets/home_today_tab.dart';
 
 void main() {
+  tearDown(() => AuthSessionStore.current = null);
+
   test('mock milling order calculates output totals', () async {
     final order = await MockMillingRepository().getActiveOrder();
     expect(order.totalRiceKg, 250);
@@ -14,8 +19,58 @@ void main() {
     expect(order.statusCode, 'MILLING');
   });
 
+  testWidgets('READ-only milling session cannot see mutation actions',
+      (tester) async {
+    AuthSessionStore.current = const AuthSession(
+      accessToken: 'test-token',
+      refreshToken: 'test-refresh',
+      user: AuthUser(
+        id: 21,
+        fullName: 'Read only',
+        email: 'readonly@test.local',
+        permissions: [
+          UserPermission(
+            menuId: 61,
+            menuCode: 'MILLING_ORDERS',
+            actions: {'READ'},
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MillingPreparationScreen(repository: MockMillingRepository()),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.byTooltip('Tạo lệnh xay'), findsNothing);
+    await tester.tap(find.textContaining('MO-2026-021').first);
+    await tester.pumpAndSettle();
+
+    expect(find.byTooltip('Sửa lệnh'), findsNothing);
+    expect(find.byKey(const Key('milling_enter_output_button')), findsNothing);
+  });
+
   testWidgets('MILLING detail opens the multi-output result screen',
       (tester) async {
+    AuthSessionStore.current = const AuthSession(
+      accessToken: 'test-token',
+      refreshToken: 'test-refresh',
+      user: AuthUser(
+        id: 20,
+        fullName: 'Milling worker',
+        email: 'milling@test.local',
+        permissions: [
+          UserPermission(
+            menuId: 61,
+            menuCode: 'MILLING_ORDERS',
+            actions: {'READ', 'UPDATE'},
+          ),
+        ],
+      ),
+    );
     tester.view.physicalSize = const Size(360, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(() {
@@ -32,9 +87,11 @@ void main() {
     await tester.tap(find.textContaining('MO-2026-021').first);
     await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('milling_enter_output_button')), findsOneWidget);
+    expect(
+        find.byKey(const Key('milling_enter_output_button')), findsOneWidget);
     expect(find.byKey(const Key('milling_output_section')), findsNothing);
-    expect(find.byKey(const Key('milling_weighing_confirm_sticky')), findsNothing);
+    expect(
+        find.byKey(const Key('milling_weighing_confirm_sticky')), findsNothing);
     await tester.tap(find.byKey(const Key('milling_enter_output_button')));
     await tester.pumpAndSettle();
     expect(find.text('Nhập kết quả xay'), findsOneWidget);
@@ -42,6 +99,23 @@ void main() {
 
   testWidgets('home milling shortcut opens the dedicated milling route',
       (tester) async {
+    AuthSessionStore.current = const AuthSession(
+      accessToken: 'test-token',
+      refreshToken: 'test-refresh',
+      user: AuthUser(
+        id: 20,
+        fullName: 'Milling worker',
+        email: 'milling@test.local',
+        roles: [UserRole(id: 9, code: 'MILLING', name: 'Milling')],
+        permissions: [
+          UserPermission(
+            menuId: 61,
+            menuCode: 'MILLING_ORDERS',
+            actions: {'READ'},
+          ),
+        ],
+      ),
+    );
     final observer = _RouteObserver();
     await tester.pumpWidget(
       MaterialApp(

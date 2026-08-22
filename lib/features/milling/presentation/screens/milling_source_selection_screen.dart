@@ -5,6 +5,7 @@ import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
 import '../widgets/milling_widgets.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 
 /// Phân bổ nguồn lúa cho lệnh xay — bám đúng ma trận của web:
 /// - `DRAFT`: giữ lúa lần đầu.
@@ -31,6 +32,10 @@ class MillingSourceSelectionScreen extends StatefulWidget {
 
 class _MillingSourceSelectionScreenState
     extends State<MillingSourceSelectionScreen> {
+  bool get _hasUpdatePermission =>
+      AuthSessionStore.current?.hasPermission('MILLING_ORDERS', 'UPDATE') ==
+      true;
+
   late Future<MillingSourceSuggestion> _future;
   List<MillingSourceColumn> _columns = const [];
   bool _submitting = false;
@@ -40,7 +45,8 @@ class _MillingSourceSelectionScreenState
         (sum, column) => sum + column.totalWeightKg,
       );
 
-  String get _statusCode => (widget.order.statusCode ?? '').trim().toUpperCase();
+  String get _statusCode =>
+      (widget.order.statusCode ?? '').trim().toUpperCase();
 
   bool get _isDraft => _statusCode == 'DRAFT';
 
@@ -48,9 +54,12 @@ class _MillingSourceSelectionScreenState
 
   /// Lệnh đang xay đã khóa nguồn nên luôn chỉ xem, kể cả khi gọi không kèm cờ.
   bool get _isLocked =>
-      widget.readOnly || _statusCode == 'IN_PROGRESS' || _statusCode == 'MILLING';
+      widget.readOnly ||
+      _statusCode == 'IN_PROGRESS' ||
+      _statusCode == 'MILLING';
 
-  bool get _canEdit => !_isLocked && (_isDraft || _isReserved);
+  bool get _canEdit =>
+      _hasUpdatePermission && !_isLocked && (_isDraft || _isReserved);
 
   String get _title {
     if (_isLocked) return 'Nguồn lúa đã giữ';
@@ -100,7 +109,9 @@ class _MillingSourceSelectionScreenState
   }
 
   Future<void> _reserve(MillingSourceSuggestion suggestion) async {
-    if (_submitting || _selectedWeight + 0.0005 < suggestion.requiredWeightKg) {
+    if (!_hasUpdatePermission ||
+        _submitting ||
+        _selectedWeight + 0.0005 < suggestion.requiredWeightKg) {
       return;
     }
     setState(() => _submitting = true);
@@ -279,7 +290,11 @@ class _MillingSourceSelectionScreenState
 }
 
 class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.order, required this.requiredWeightKg, required this.selectedWeightKg, required this.missingWeightKg});
+  const _SummaryCard(
+      {required this.order,
+      required this.requiredWeightKg,
+      required this.selectedWeightKg,
+      required this.missingWeightKg});
   final MillingOrder order;
   final double requiredWeightKg;
   final double selectedWeightKg;
@@ -289,12 +304,18 @@ class _SummaryCard extends StatelessWidget {
   Widget build(BuildContext context) => Card(
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(order.millingCode, style: const TextStyle(fontWeight: FontWeight.w900)),
-            Text('${order.warehouseName ?? order.warehouseZone} · ${order.riceVarietyName ?? 'Chưa rõ giống'}'),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(order.millingCode,
+                style: const TextStyle(fontWeight: FontWeight.w900)),
+            Text(
+                '${order.warehouseName ?? order.warehouseZone} · ${order.riceVarietyName ?? 'Chưa rõ giống'}'),
             const SizedBox(height: 8),
-            Text('Cần: ${requiredWeightKg.toStringAsFixed(1)} kg · Đã chọn: ${selectedWeightKg.toStringAsFixed(1)} kg'),
-            if (missingWeightKg > 0) Text('Còn thiếu: ${missingWeightKg.toStringAsFixed(1)} kg', style: const TextStyle(color: Colors.red)),
+            Text(
+                'Cần: ${requiredWeightKg.toStringAsFixed(1)} kg · Đã chọn: ${selectedWeightKg.toStringAsFixed(1)} kg'),
+            if (missingWeightKg > 0)
+              Text('Còn thiếu: ${missingWeightKg.toStringAsFixed(1)} kg',
+                  style: const TextStyle(color: Colors.red)),
           ]),
         ),
       );
@@ -314,13 +335,16 @@ class _ColumnCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectable = column.bags.where((bag) => bag.selectable).toList();
-    final allSelected = selectable.isNotEmpty && selectable.every((bag) => bag.selected);
+    final allSelected =
+        selectable.isNotEmpty && selectable.every((bag) => bag.selected);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text('Cột ${column.locationCode ?? column.locationId}', style: const TextStyle(fontWeight: FontWeight.w900))),
+            Expanded(
+                child: Text('Cột ${column.locationCode ?? column.locationId}',
+                    style: const TextStyle(fontWeight: FontWeight.w900))),
             Text('${column.totalWeightKg.toStringAsFixed(1)} kg'),
           ]),
           if (enabled)
@@ -328,22 +352,33 @@ class _ColumnCard extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               value: allSelected,
               title: const Text('Chọn tất cả bao hợp lệ'),
-              onChanged: selectable.isEmpty ? null : (_) => onChanged([
-                for (final bag in column.bags)
-                  bag.selectable ? bag.copyWith(selected: !allSelected) : bag,
-              ]),
+              onChanged: selectable.isEmpty
+                  ? null
+                  : (_) => onChanged([
+                        for (final bag in column.bags)
+                          bag.selectable
+                              ? bag.copyWith(selected: !allSelected)
+                              : bag,
+                      ]),
             ),
           for (final bag in column.bags)
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
               dense: true,
               value: bag.selected,
-              title: Text('Bao #${bag.bagNo} · ${bag.weightKg.toStringAsFixed(1)} kg'),
-              subtitle: Text(bag.selectable ? 'Có thể giữ' : 'Không khả dụng: ${bag.status}'),
-              onChanged: enabled && bag.selectable ? (_) => onChanged([
-                for (final item in column.bags)
-                  item.id == bag.id ? item.copyWith(selected: !item.selected) : item,
-              ]) : null,
+              title: Text(
+                  'Bao #${bag.bagNo} · ${bag.weightKg.toStringAsFixed(1)} kg'),
+              subtitle: Text(bag.selectable
+                  ? 'Có thể giữ'
+                  : 'Không khả dụng: ${bag.status}'),
+              onChanged: enabled && bag.selectable
+                  ? (_) => onChanged([
+                        for (final item in column.bags)
+                          item.id == bag.id
+                              ? item.copyWith(selected: !item.selected)
+                              : item,
+                      ])
+                  : null,
             ),
         ]),
       ),

@@ -8,6 +8,8 @@ abstract class MillingRepository {
 
   Future<List<MillingFilterOption>> getWarehouses() async => const [];
 
+  Future<List<MillingOperator>> getMillingOperators() async => const [];
+
   Future<List<MillingProductOption>> getOutputProducts() async => const [];
 
   Future<List<MillingPaddyLotOption>> getPaddyLots() async => const [];
@@ -18,7 +20,8 @@ abstract class MillingRepository {
     required int warehouseId,
     required int productVariantId,
     required double requiredWeightKg,
-  }) async => const [];
+  }) async =>
+      const [];
 
   Future<MillingSourceSuggestion> getSourceSuggestion(int orderId) async =>
       const MillingSourceSuggestion(requiredWeightKg: 0, columns: []);
@@ -38,7 +41,11 @@ abstract class MillingRepository {
     throw UnsupportedError('Milling repository chưa hỗ trợ giữ lúa.');
   }
 
-  Future<void> startOrder(int orderId) async {
+  Future<void> startOrder(
+    int orderId, {
+    required String machineRef,
+    int? operatorId,
+  }) async {
     throw UnsupportedError('Milling repository chưa hỗ trợ bắt đầu xay.');
   }
 
@@ -152,7 +159,14 @@ class MockMillingRepository implements MillingRepository {
       int orderId, List<MillingSourceColumn> columns) async {}
 
   @override
-  Future<void> startOrder(int orderId) async {}
+  Future<List<MillingOperator>> getMillingOperators() async => const [];
+
+  @override
+  Future<void> startOrder(
+    int orderId, {
+    required String machineRef,
+    int? operatorId,
+  }) async {}
 
   @override
   Future<void> cancelOrder(int orderId) async {}
@@ -168,7 +182,8 @@ class MockMillingRepository implements MillingRepository {
     required int warehouseId,
     required int productVariantId,
     required double requiredWeightKg,
-  }) async => [
+  }) async =>
+      [
         const MillingPutawaySuggestion(
           locationId: 1,
           locationCode: 'K1-A01',

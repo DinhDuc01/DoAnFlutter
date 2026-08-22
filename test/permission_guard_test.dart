@@ -39,7 +39,7 @@ void main() {
   );
 
   group('PermissionBuilder Widget Tests', () {
-    testWidgets('blocks disabled milling feature even with permission',
+    testWidgets('shows milling action when permission is granted',
         (widgetTester) async {
       await widgetTester.pumpWidget(
         MaterialApp(
@@ -54,7 +54,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Nút Sửa Lệnh Xay'), findsNothing);
+      expect(find.text('Nút Sửa Lệnh Xay'), findsOneWidget);
     });
 
     testWidgets('renders fallback when user lacks required action permission',
@@ -97,7 +97,75 @@ void main() {
   });
 
   group('PermissionGuard & PermissionDeniedScreen Tests', () {
-    testWidgets('PermissionGuard blocks disabled milling route',
+    testWidgets('route guard requires READ instead of any menu action',
+        (widgetTester) async {
+      const mutationOnly = AuthSession(
+        accessToken: 'token',
+        refreshToken: 'refresh',
+        user: AuthUser(
+          id: 4,
+          fullName: 'Mutation only',
+          email: 'mutation@test.local',
+          permissions: [
+            UserPermission(
+              menuId: 41,
+              menuCode: 'SALE_ORDERS',
+              actions: {'CREATE', 'UPDATE'},
+            ),
+          ],
+          menus: [
+            UserMenu(id: 41, code: 'SALE_ORDERS', name: 'Sales orders'),
+          ],
+        ),
+      );
+
+      await widgetTester.pumpWidget(
+        const MaterialApp(
+          home: PermissionGuard(
+            menuCode: 'SALE_ORDERS',
+            session: mutationOnly,
+            child: Scaffold(body: Text('sales-content')),
+          ),
+        ),
+      );
+
+      expect(find.text('sales-content'), findsNothing);
+      expect(find.byType(PermissionDeniedScreen), findsOneWidget);
+    });
+
+    testWidgets('route guard permits explicit READ', (widgetTester) async {
+      const readSession = AuthSession(
+        accessToken: 'token',
+        refreshToken: 'refresh',
+        user: AuthUser(
+          id: 5,
+          fullName: 'Reader',
+          email: 'reader@test.local',
+          permissions: [
+            UserPermission(
+              menuId: 41,
+              menuCode: 'SALE_ORDERS',
+              actions: {'READ'},
+            ),
+          ],
+        ),
+      );
+
+      await widgetTester.pumpWidget(
+        const MaterialApp(
+          home: PermissionGuard(
+            menuCode: 'SALE_ORDERS',
+            session: readSession,
+            child: Scaffold(body: Text('sales-content')),
+          ),
+        ),
+      );
+
+      expect(find.text('sales-content'), findsOneWidget);
+      expect(find.byType(PermissionDeniedScreen), findsNothing);
+    });
+
+    testWidgets('PermissionGuard permits milling route with READ',
         (widgetTester) async {
       await widgetTester.pumpWidget(
         MaterialApp(
@@ -109,11 +177,12 @@ void main() {
         ),
       );
 
-      expect(find.text('Màn hình Xay xát'), findsNothing);
-      expect(find.byType(PermissionDeniedScreen), findsOneWidget);
+      expect(find.text('Màn hình Xay xát'), findsOneWidget);
+      expect(find.byType(PermissionDeniedScreen), findsNothing);
     });
 
-    testWidgets('PermissionGuard renders PermissionDeniedScreen when unpermitted',
+    testWidgets(
+        'PermissionGuard renders PermissionDeniedScreen when unpermitted',
         (widgetTester) async {
       await widgetTester.pumpWidget(
         MaterialApp(

@@ -105,6 +105,20 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   String get _headerTitle =>
       widget.draft != null ? 'Chỉnh sửa phiếu mua lúa' : 'Tạo phiếu mua lúa';
 
+  bool get _canMutate {
+    final session = AuthSessionStore.current;
+    if (widget.draft == null) {
+      return session?.hasPermission('RICE_PURCHASE', 'CREATE') == true;
+    }
+    final draft = widget.draft!;
+    final status = draft.status.trim().toUpperCase();
+    final isDraft = status == 'DRAFT' || status.contains('NHÁP');
+    return isDraft &&
+        !draft.isConfirmed &&
+        (draft.paddyLotId ?? 0) <= 0 &&
+        session?.hasPermission('RICE_PURCHASE', 'UPDATE') == true;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -638,6 +652,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
   }
 
   Future<void> _confirmInbound() async {
+    if (!_canMutate) return;
     final receipt = _receipt;
     if (receipt == null || _isSubmitting) return;
 
@@ -1197,7 +1212,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
           ),
           const SizedBox(height: 14),
           FilledButton(
-            onPressed: _isSubmitting ? null : _confirmInbound,
+            onPressed: _isSubmitting || !_canMutate ? null : _confirmInbound,
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
               disabledBackgroundColor:
@@ -1222,7 +1237,8 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (AuthSessionStore.current?.user.isWarehouseWorker == true) {
+    if (AuthSessionStore.current?.user.isWarehouseWorker == true ||
+        !_canMutate) {
       return Scaffold(
         backgroundColor: AppColors.backgroundFor(context),
         appBar: AppBar(title: const Text('Lịch thu mua')),

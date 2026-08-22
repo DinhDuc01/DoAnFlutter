@@ -49,11 +49,7 @@ class PermissionBuilder extends StatelessWidget {
     final currentSession = session ?? AuthSessionStore.current;
     final bool permitted;
 
-    // Xay xát đang tạm khóa hoàn toàn trên Mobile cho mọi role.
-    // Không cho phép bypass bằng cách mở shortcut/route trực tiếp.
-    if (menuCode.trim().toUpperCase() == 'MILLING_ORDERS') {
-      permitted = false;
-    } else if (currentSession == null) {
+    if (currentSession == null) {
       permitted = false;
     } else if (action != null && action!.trim().isNotEmpty) {
       permitted = currentSession.hasPermission(menuCode, action!);
@@ -97,15 +93,14 @@ class PermissionGuard extends StatelessWidget {
     final currentSession = session ?? AuthSessionStore.current;
     final bool permitted;
 
-    // Xay xát đang tạm khóa hoàn toàn trên Mobile cho mọi role.
-    if (menuCode.trim().toUpperCase() == 'MILLING_ORDERS') {
-      permitted = false;
-    } else if (currentSession == null) {
+    if (currentSession == null) {
       permitted = false;
     } else if (action != null && action!.trim().isNotEmpty) {
       permitted = currentSession.hasPermission(menuCode, action!);
     } else {
-      permitted = currentSession.hasMenuAccess(menuCode);
+      // A screen guard always requires explicit READ. Menu presence or a
+      // mutation-only permission must not make list/detail content accessible.
+      permitted = currentSession.hasReadAccess(menuCode);
     }
 
     if (permitted) {

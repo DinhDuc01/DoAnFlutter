@@ -51,8 +51,19 @@ class _QualityInspectionEditScreenState
 
   QualityLot? _lot;
   bool _loadingLot = false;
+  bool _confirming = false;
   bool _saving = false;
   String? _error;
+
+  bool get _canUpdate =>
+      AuthSessionStore.current?.hasPermission(
+        'QUALITY_INSPECTIONS',
+        'UPDATE',
+      ) ==
+      true;
+
+  bool get _canEditDraft => _canUpdate && widget.inspection.isDraft;
+  bool get _busy => _confirming || _saving;
 
   /// Phiếu đã tách lô cách ly — backend khóa lô/kết quả/kg (giống web).
   bool get _lockedSplit => widget.inspection.wasSplit;
@@ -148,7 +159,8 @@ class _QualityInspectionEditScreenState
 
   /// [passed] = true khi bấm "Lưu & duyệt đạt", false khi "Lưu & cách ly lô".
   Future<void> _save(bool passed) async {
-    if (_saving) return;
+    // A direct route must not bypass the detail CTA guard.
+    if (_busy || !_canEditDraft) return;
     FocusScope.of(context).unfocus();
 
     // Phiếu đã tách cách ly: giữ nguyên kết quả và kg đã tách, backend từ chối
@@ -180,10 +192,16 @@ class _QualityInspectionEditScreenState
       }
     }
 
+    setState(() => _confirming = true);
     final confirmed = await _confirm(effectivePassed, affectedWeightKg);
-    if (confirmed != true || !mounted) return;
+    if (!mounted) return;
+    if (confirmed != true) {
+      setState(() => _confirming = false);
+      return;
+    }
 
     setState(() {
+      _confirming = false;
       _saving = true;
       _error = null;
     });
@@ -294,15 +312,17 @@ class _QualityInspectionEditScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (AuthSessionStore.current?.user.isWarehouseWorker == true) {
+    if (!_canEditDraft) {
       return Scaffold(
         backgroundColor: AppColors.backgroundFor(context),
         appBar: AppBar(title: const Text('Chất lượng & cách ly')),
-        body: const Center(
+        body: Center(
           child: Padding(
-            padding: EdgeInsets.all(24),
+            padding: const EdgeInsets.all(24),
             child: Text(
-              'Nhân viên kho chỉ được xem thông tin chất lượng và cách ly.',
+              !_canUpdate
+                  ? 'Bạn không có quyền cập nhật phiếu kiểm định.'
+                  : 'Phiếu này không còn ở trạng thái chờ kiểm định và chỉ được phép xem.',
               textAlign: TextAlign.center,
             ),
           ),
@@ -329,7 +349,7 @@ class _QualityInspectionEditScreenState
                 color: Colors.white,
                 icon: const Icon(Icons.arrow_back_rounded),
                 onPressed:
-                    _saving ? null : () => Navigator.of(context).pop(false),
+                    _busy ? null : () => Navigator.of(context).pop(false),
               ),
             ),
             Expanded(
@@ -371,7 +391,8 @@ class _QualityInspectionEditScreenState
           children: [
             Expanded(
               child: OutlinedButton(
-                onPressed: _saving ? null : () => _save(false),
+                key: const Key('quality_inspection_save_failed'),
+                onPressed: _busy ? null : () => _save(false),
                 style: OutlinedButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                   foregroundColor: AppColors.warning,
@@ -384,7 +405,8 @@ class _QualityInspectionEditScreenState
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
-                  onPressed: _saving ? null : () => _save(true),
+                  key: const Key('quality_inspection_save_passed'),
+                  onPressed: _busy ? null : () => _save(true),
                   style: FilledButton.styleFrom(
                     minimumSize: const Size.fromHeight(48),
                   ),

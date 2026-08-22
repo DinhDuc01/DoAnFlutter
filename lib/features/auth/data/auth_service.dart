@@ -19,10 +19,22 @@ abstract class AuthService {
 
 /// Lớp ngoại lệ (Exception) tùy chỉnh dùng để biểu diễn các lỗi xảy ra trong quá trình xác thực.
 class AuthException implements Exception {
-  const AuthException(this.message);
+  const AuthException(
+    this.message, {
+    this.statusCode,
+    this.isTransient = false,
+    this.invalidSession = false,
+  });
 
   /// Thông điệp lỗi chi tiết (ví dụ: "Sai mật khẩu", "Tài khoản không tồn tại").
   final String message;
+
+  /// Preserves the HTTP classification so startup can fail closed for
+  /// authentication/authorization failures without treating a temporary
+  /// network outage as an expired session.
+  final int? statusCode;
+  final bool isTransient;
+  final bool invalidSession;
 
   @override
   String toString() => message;

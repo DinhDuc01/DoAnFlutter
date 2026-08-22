@@ -275,6 +275,8 @@ class ProductVariantStock {
     this.productName,
     this.description,
     this.categoryName,
+    this.categoryId,
+    this.isByproduct = false,
     this.unitName,
     this.costPrice = 0,
     this.salePrice = 0,
@@ -293,9 +295,7 @@ class ProductVariantStock {
         JsonReader.string(json, 'sKU') ??
         '';
     return ProductVariantStock(
-      id: JsonReader.integer(json, 'id') ??
-          JsonReader.integer(json, 'Id') ??
-          0,
+      id: JsonReader.integer(json, 'id') ?? JsonReader.integer(json, 'Id') ?? 0,
       name: JsonReader.string(json, 'name') ??
           JsonReader.string(json, 'Name') ??
           JsonReader.string(json, 'productName') ??
@@ -307,6 +307,11 @@ class ProductVariantStock {
           JsonReader.string(json, 'Description'),
       categoryName: JsonReader.string(json, 'productCategoryName') ??
           JsonReader.string(json, 'ProductCategoryName'),
+      categoryId: JsonReader.integer(json, 'productCategoryId') ??
+          JsonReader.integer(json, 'ProductCategoryId'),
+      isByproduct: JsonReader.boolean(json, 'isByproduct') ??
+          JsonReader.boolean(json, 'IsByproduct') ??
+          false,
       unitName: JsonReader.string(json, 'unitOfMeasureName') ??
           JsonReader.string(json, 'UnitOfMeasureName'),
       costPrice: JsonReader.decimal(json, 'costPrice') ??
@@ -336,6 +341,8 @@ class ProductVariantStock {
   final String? productName;
   final String? description;
   final String? categoryName;
+  final int? categoryId;
+  final bool isByproduct;
   final String? unitName;
   final double costPrice;
   final double salePrice;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../../sales_orders/data/sales_order_repository.dart';
 import '../../../sales_orders/models/sales_order.dart';
 import '../../../thu_mua/data/paddy_variety_api.dart';
@@ -32,6 +33,13 @@ class MillingCreateOrderScreen extends StatefulWidget {
 }
 
 class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
+  bool get _hasSubmitPermission =>
+      AuthSessionStore.current?.hasPermission(
+        'MILLING_ORDERS',
+        widget.order == null ? 'CREATE' : 'UPDATE',
+      ) ==
+      true;
+
   late final MillingRepository _repository;
   late final SalesOrderRepository _salesOrderRepository;
   final PaddyVarietyApi _varietyApi = PaddyVarietyApi();
@@ -39,7 +47,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
 
   final _formKey = GlobalKey<FormState>();
   final _inputController = TextEditingController(); // Nhập gạo dự kiến (kg)
-  final _yieldController = TextEditingController(text: '0.68'); // Mặc định giống web
+  final _yieldController =
+      TextEditingController(text: '0.68'); // Mặc định giống web
   final _reasonController = TextEditingController();
   final _moistureController = TextEditingController();
   final _millingCostController = TextEditingController();
@@ -65,25 +74,33 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiMillingRepository();
-    _salesOrderRepository = widget.salesOrderRepository ?? ApiSalesOrderRepository();
+    _salesOrderRepository =
+        widget.salesOrderRepository ?? ApiSalesOrderRepository();
     if (widget.order != null) {
       _selectedWarehouseId = widget.order!.warehouseId;
       _selectedRiceVarietyId = widget.order!.riceVarietyId;
       _selectedSalesOrderId = widget.order!.salesOrderId;
-      _millingSource = widget.order!.salesOrderId != null ? 'sales_order' : 'production_plan';
-      _inputController.text = widget.order!.totalRiceOutputKg.toStringAsFixed(1);
+      _millingSource = widget.order!.salesOrderId != null
+          ? 'sales_order'
+          : 'production_plan';
+      _inputController.text =
+          widget.order!.totalRiceOutputKg.toStringAsFixed(1);
       _yieldController.text = widget.order!.yieldRateUsed.toStringAsFixed(2);
       _reasonController.text = widget.order!.reason ?? '';
-      _moistureController.text = widget.order!.moisturePercent?.toString() ?? '';
+      _moistureController.text =
+          widget.order!.moisturePercent?.toString() ?? '';
       _millingCostController.text = widget.order!.millingCost?.toString() ?? '';
-      _incidentalCostController.text = widget.order!.incidentalCost?.toString() ?? '';
+      _incidentalCostController.text =
+          widget.order!.incidentalCost?.toString() ?? '';
       _expectedCompletionDate = widget.order!.expectedCompletionDate;
       _initialAutoFilled = true;
     } else if (widget.args != null) {
-      _millingSource = widget.args!.isSalesOrder ? 'sales_order' : 'production_plan';
+      _millingSource =
+          widget.args!.isSalesOrder ? 'sales_order' : 'production_plan';
       _selectedSalesOrderId = widget.args!.salesOrderId;
       if (widget.args!.remainingRiceKg != null) {
-        _inputController.text = widget.args!.remainingRiceKg!.toStringAsFixed(1);
+        _inputController.text =
+            widget.args!.remainingRiceKg!.toStringAsFixed(1);
       }
     }
     _loadData();
@@ -92,7 +109,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
   }
 
   void _loadData() {
-    final salesOrderId = widget.order?.salesOrderId ?? widget.args?.salesOrderId;
+    final salesOrderId =
+        widget.order?.salesOrderId ?? widget.args?.salesOrderId;
     _dataFuture = Future.wait([
       _repository.getPaddyLots(),
       widget.riceVarietiesLoader != null
@@ -170,7 +188,9 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
       return 'Nhập khối lượng lớn hơn 0';
     }
     final paddy = _calculatedPaddyInput;
-    if (_selectedLot != null && paddy != null && paddy > _selectedLot!.remainingWeightKg) {
+    if (_selectedLot != null &&
+        paddy != null &&
+        paddy > _selectedLot!.remainingWeightKg) {
       return 'Cần ${paddy.toStringAsFixed(1)} kg lúa, vượt quá ${_selectedLot!.remainingWeightKg.toStringAsFixed(1)} kg khả dụng';
     }
     return null;
@@ -189,14 +209,20 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
   }
 
   Future<void> _submit() async {
+    if (!_hasSubmitPermission) {
+      setState(
+          () => _submitError = 'Bạn không có quyền thực hiện thao tác này.');
+      return;
+    }
     if (!_canEditOrder) {
-      setState(() => _submitError = 'Chỉ có thể cập nhật lệnh ở trạng thái Nháp.');
+      setState(
+          () => _submitError = 'Chỉ có thể cập nhật lệnh ở trạng thái Nháp.');
       return;
     }
     FocusScope.of(context).unfocus();
     setState(() => _submitError = null);
     if (!_formKey.currentState!.validate()) return;
-    
+
     final warehouseId = _selectedWarehouseId;
     if (warehouseId == null) {
       setState(() => _submitError = 'Vui lòng chọn kho thực hiện.');
@@ -216,8 +242,10 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
 
     final invalidOptional =
         (_moistureController.text.trim().isNotEmpty && moisture == null) ||
-        (_millingCostController.text.trim().isNotEmpty && millingCost == null) ||
-        (_incidentalCostController.text.trim().isNotEmpty && incidentalCost == null);
+            (_millingCostController.text.trim().isNotEmpty &&
+                millingCost == null) ||
+            (_incidentalCostController.text.trim().isNotEmpty &&
+                incidentalCost == null);
     if (invalidOptional) {
       setState(() => _submitError = 'Kiểm tra các giá trị số đã nhập.');
       return;
@@ -301,7 +329,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                 leading: IconButton(
                   tooltip: 'Quay lại',
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                  icon:
+                      const Icon(Icons.arrow_back_rounded, color: Colors.white),
                 ),
               ),
               const Expanded(
@@ -328,7 +357,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
         child: Column(
           children: [
             AppGradientHeader(
-              title: widget.order != null ? 'Cập nhật lệnh xay' : 'Tạo lệnh xay',
+              title:
+                  widget.order != null ? 'Cập nhật lệnh xay' : 'Tạo lệnh xay',
               subtitle: 'Đồng bộ cấu hình theo giống và độ ẩm',
               leading: IconButton(
                 tooltip: 'Quay lại',
@@ -345,7 +375,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                   }
                   if (snapshot.hasError) {
                     return HErrorState(
-                      message: 'Không tải được cấu hình từ hệ thống: ${snapshot.error}',
+                      message:
+                          'Không tải được cấu hình từ hệ thống: ${snapshot.error}',
                       onRetry: _retryData,
                     );
                   }
@@ -353,12 +384,15 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                   final lots = data[0] as List<MillingPaddyLotOption>;
                   final varieties = data[1] as List<RiceVarietyOption>;
                   final salesOrdersPage = data[2] as SalesOrderPage;
-                  final salesOrders = List<SalesOrderSummary>.from(salesOrdersPage.items);
+                  final salesOrders =
+                      List<SalesOrderSummary>.from(salesOrdersPage.items);
                   final warehouses = data[3] as List<MillingFilterOption>;
-                  final detailSo = (data.length > 4) ? data[4] as SalesOrderDetail? : null;
+                  final detailSo =
+                      (data.length > 4) ? data[4] as SalesOrderDetail? : null;
 
                   if (widget.order?.salesOrderId != null &&
-                      !salesOrders.any((so) => so.id == widget.order!.salesOrderId) &&
+                      !salesOrders
+                          .any((so) => so.id == widget.order!.salesOrderId) &&
                       detailSo == null) {
                     salesOrders.add(SalesOrderSummary(
                       id: widget.order!.salesOrderId!,
@@ -377,7 +411,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                     ));
                   }
 
-                  if (detailSo != null && !salesOrders.any((so) => so.id == detailSo.id)) {
+                  if (detailSo != null &&
+                      !salesOrders.any((so) => so.id == detailSo.id)) {
                     salesOrders.add(SalesOrderSummary(
                       id: detailSo.id,
                       soCode: detailSo.soCode,
@@ -405,14 +440,17 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
 
                   // Perform one-time auto-fill check
                   if (!_initialAutoFilled && _selectedSalesOrderId != null) {
-                    final index = salesOrders.indexWhere((so) => so.id == _selectedSalesOrderId);
+                    final index = salesOrders
+                        .indexWhere((so) => so.id == _selectedSalesOrderId);
                     if (index != -1) {
                       final matchingSo = salesOrders[index];
                       _selectedWarehouseId ??= matchingSo.warehouseId;
                       _selectedRiceVarietyId ??= matchingSo.riceVarietyId;
                       if (_inputController.text.isEmpty &&
                           matchingSo.remainingMillingRiceKg > 0) {
-                        _inputController.text = matchingSo.remainingMillingRiceKg.toStringAsFixed(1);
+                        _inputController.text = matchingSo
+                            .remainingMillingRiceKg
+                            .toStringAsFixed(1);
                       }
                       _initialAutoFilled = true;
                     }
@@ -444,7 +482,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
       for (final salesOrder in salesOrders) salesOrder.id: salesOrder,
     }.values.toList();
     final isEditing = widget.order != null;
-    final isSalesOrderLocked = _millingSource == 'sales_order' && _selectedSalesOrderId != null;
+    final isSalesOrderLocked =
+        _millingSource == 'sales_order' && _selectedSalesOrderId != null;
     final filteredLots = _filteredLots(lots);
     // Luôn giữ đơn đang được gắn trong danh sách: mở màn xay xát từ một đơn
     // bán thì đơn đó phải hiện và được chọn sẵn, kể cả khi đơn không còn nằm
@@ -468,8 +507,10 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                 labelText: 'Nguồn lệnh *',
               ),
               items: const [
-                DropdownMenuItem(value: 'production_plan', child: Text('Kế hoạch sản xuất')),
-                DropdownMenuItem(value: 'sales_order', child: Text('Đơn bán cần xay')),
+                DropdownMenuItem(
+                    value: 'production_plan', child: Text('Kế hoạch sản xuất')),
+                DropdownMenuItem(
+                    value: 'sales_order', child: Text('Đơn bán cần xay')),
               ],
               onChanged: _submitting || isEditing || isSalesOrderLocked
                   ? null
@@ -483,7 +524,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
             if (_millingSource == 'sales_order') ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<int>(
-                value: filteredSalesOrders.any((so) => so.id == _selectedSalesOrderId)
+                value: filteredSalesOrders
+                        .any((so) => so.id == _selectedSalesOrderId)
                     ? _selectedSalesOrderId
                     : null,
                 isExpanded: true,
@@ -499,23 +541,26 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                         ))
                     .toList(),
                 validator: (value) =>
-                    _millingSource == 'sales_order' && value == null ? 'Chọn đơn bán' : null,
+                    _millingSource == 'sales_order' && value == null
+                        ? 'Chọn đơn bán'
+                        : null,
                 onChanged: _submitting || isSalesOrderLocked
                     ? null
                     : (value) {
                         setState(() {
                           _selectedSalesOrderId = value;
                           if (value != null) {
-                            final selectedSo =
-                                filteredSalesOrders.firstWhere((so) => so.id == value);
+                            final selectedSo = filteredSalesOrders
+                                .firstWhere((so) => so.id == value);
                             if (selectedSo.warehouseId != null) {
                               _selectedWarehouseId = selectedSo.warehouseId;
                             }
                             if (selectedSo.riceVarietyId != null) {
                               _selectedRiceVarietyId = selectedSo.riceVarietyId;
                             }
-                            _inputController.text =
-                                selectedSo.remainingMillingRiceKg.toStringAsFixed(1);
+                            _inputController.text = selectedSo
+                                .remainingMillingRiceKg
+                                .toStringAsFixed(1);
                           }
                         });
                       },
@@ -533,7 +578,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
               items: warehouses.entries
                   .map((entry) => DropdownMenuItem<int>(
                         value: entry.key,
-                        child: Text(entry.value, overflow: TextOverflow.ellipsis),
+                        child:
+                            Text(entry.value, overflow: TextOverflow.ellipsis),
                       ))
                   .toList(),
               validator: (value) => value == null ? 'Chọn kho' : null,
@@ -541,7 +587,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                   ? null
                   : (value) => setState(() {
                         _selectedWarehouseId = value;
-                        if (_selectedLot?.warehouseId != value) _selectedLot = null;
+                        if (_selectedLot?.warehouseId != value)
+                          _selectedLot = null;
                       }),
             ),
             if (_selectedWarehouseId == null)
@@ -563,14 +610,16 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
               items: uniqueVarieties
                   .map((variety) => DropdownMenuItem<int>(
                         value: variety.id,
-                        child: Text(variety.name, overflow: TextOverflow.ellipsis),
+                        child:
+                            Text(variety.name, overflow: TextOverflow.ellipsis),
                       ))
                   .toList(),
               onChanged: _submitting || isSalesOrderLocked
                   ? null
                   : (value) => setState(() {
                         _selectedRiceVarietyId = value;
-                        if (_selectedLot != null && _selectedLot!.riceVarietyId != value) {
+                        if (_selectedLot != null &&
+                            _selectedLot!.riceVarietyId != value) {
                           _selectedLot = null;
                         }
                       }),
@@ -579,7 +628,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
           _section('Sản lượng & Yield', Icons.percent_rounded, [
             TextFormField(
               controller: _yieldController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 labelText: 'Yield áp dụng *',
                 hintText: 'Ví dụ: 0.68',
@@ -590,7 +640,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _inputController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: const InputDecoration(
                 labelText: 'Gạo dự kiến (kg) *',
                 hintText: 'Nhập sản lượng gạo đầu ra mong muốn',
@@ -619,7 +670,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
           if (widget.order == null)
             _section('Phân bổ lô lúa', Icons.scale_rounded, [
               DropdownButtonFormField<MillingPaddyLotOption>(
-                value: filteredLots.contains(_selectedLot) ? _selectedLot : null,
+                value:
+                    filteredLots.contains(_selectedLot) ? _selectedLot : null,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Phân bổ lô/cột đầu vào',
@@ -661,7 +713,9 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
-                    color: _selectedLot == null ? AppColors.warning : AppColors.success,
+                    color: _selectedLot == null
+                        ? AppColors.warning
+                        : AppColors.success,
                   ),
                 ),
               ),
@@ -669,8 +723,10 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
           _section('Thời gian & Chi phí', Icons.event_note_rounded, [
             TextFormField(
               controller: _moistureController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Độ ẩm (%) · tùy chọn'),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration:
+                  const InputDecoration(labelText: 'Độ ẩm (%) · tùy chọn'),
               enabled: !_submitting,
             ),
             const SizedBox(height: 10),
@@ -684,15 +740,19 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
             const SizedBox(height: 10),
             TextFormField(
               controller: _millingCostController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Chi phí xay · tùy chọn'),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration:
+                  const InputDecoration(labelText: 'Chi phí xay · tùy chọn'),
               enabled: !_submitting,
             ),
             const SizedBox(height: 10),
             TextFormField(
               controller: _incidentalCostController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Chi phí phát sinh · tùy chọn'),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                  labelText: 'Chi phí phát sinh · tùy chọn'),
               enabled: !_submitting,
             ),
           ]),
@@ -700,7 +760,8 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
             TextFormField(
               controller: _reasonController,
               maxLines: 1,
-              decoration: const InputDecoration(labelText: 'Ghi chú cho lệnh xay'),
+              decoration:
+                  const InputDecoration(labelText: 'Ghi chú cho lệnh xay'),
               enabled: !_submitting,
             ),
           ]),
@@ -716,9 +777,12 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
           SizedBox(
             height: 50,
             child: FilledButton.icon(
-              onPressed: _submitting ? null : _submit,
+              onPressed: _submitting || !_hasSubmitPermission ? null : _submit,
               icon: _submitting
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.add_task_rounded),
               label: Text(_submitting
                   ? 'Đang lưu...'

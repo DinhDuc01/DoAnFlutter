@@ -12,7 +12,8 @@ class ApiMillingRepository implements MillingRepository {
     ApiClient? apiClient,
     ProductVariantApi? productVariantApi,
   })  : _apiClient = apiClient ?? ApiClient(),
-        _productVariantApi = productVariantApi ?? ProductVariantApi();
+        _productVariantApi =
+            productVariantApi ?? ProductVariantApi(apiClient: apiClient);
 
   final ApiClient _apiClient;
   final ProductVariantApi _productVariantApi;
@@ -51,6 +52,26 @@ class ApiMillingRepository implements MillingRepository {
             id: JsonReader.integer(item, 'id')!,
             name: JsonReader.string(item, 'name') ?? 'Kho',
             code: JsonReader.string(item, 'code'),
+          ),
+    ];
+  }
+
+  @override
+  Future<List<MillingOperator>> getMillingOperators() async {
+    final response = await _apiClient.get(
+      '/api/v1/user',
+      token: _currentToken(),
+    );
+    final resources = JsonReader.list(response, 'resources') ?? const [];
+    return [
+      for (final item in resources.whereType<Map<String, dynamic>>())
+        if ((JsonReader.integer(item, 'id') ?? 0) > 0)
+          MillingOperator(
+            id: JsonReader.integer(item, 'id')!,
+            name: (JsonReader.string(item, 'name') ??
+                    JsonReader.string(item, 'username') ??
+                    'Nhân viên')
+                .trim(),
           ),
     ];
   }
@@ -168,11 +189,17 @@ class ApiMillingRepository implements MillingRepository {
   }
 
   @override
-  Future<void> startOrder(int orderId) async {
+  Future<void> startOrder(
+    int orderId, {
+    required String machineRef,
+    int? operatorId,
+  }) async {
+    final body = <String, dynamic>{'machineRef': machineRef.trim()};
+    if (operatorId != null) body['operatorId'] = operatorId;
     final response = await _apiClient.post(
       '/api/v1/milling-orders/$orderId/start',
       token: _currentToken(),
-      body: const {},
+      body: body,
     );
     _ensureSucceeded(response, 'Không bắt đầu được lệnh xay.');
   }
@@ -236,10 +263,12 @@ class ApiMillingRepository implements MillingRepository {
       _validateCreateInput(lot, inputWeightKg, expectedYield);
     } else {
       if (!expectedYield.isFinite || expectedYield <= 0 || expectedYield > 1) {
-        throw const MillingApiException('Tỷ lệ thu hồi phải trong khoảng 1-100%.');
+        throw const MillingApiException(
+            'Tỷ lệ thu hồi phải trong khoảng 1-100%.');
       }
       if (!targetRiceKg.isFinite || targetRiceKg <= 0) {
-        throw const MillingApiException('Khối lượng gạo dự kiến phải lớn hơn 0.');
+        throw const MillingApiException(
+            'Khối lượng gạo dự kiến phải lớn hơn 0.');
       }
     }
     final body = <String, dynamic>{
@@ -288,10 +317,13 @@ class ApiMillingRepository implements MillingRepository {
     required int productVariantId,
     required double requiredWeightKg,
   }) async {
-    if (warehouseId <= 0 || productVariantId <= 0 ||
-        !requiredWeightKg.isFinite || requiredWeightKg <= 0) {
+    if (warehouseId <= 0 ||
+        productVariantId <= 0 ||
+        !requiredWeightKg.isFinite ||
+        requiredWeightKg < 0) {
       throw const MillingApiException('Thông tin gợi ý vị trí không hợp lệ.');
     }
+    /*
     final json = await _apiClient.post(
       '/api/v1/putaway/suggestions',
       token: _currentToken(),
@@ -304,7 +336,26 @@ class ApiMillingRepository implements MillingRepository {
         'top': 5,
       },
     );
-    final resources = JsonReader.map(json, 'resources') ?? JsonReader.map(json, 'data');
+    _ensureSucceeded(json, 'Không lấy được gợi ý vị trí nhập kho.');
+    final rootResources = JsonReader.map(json, 'resources');
+    final resources = JsonReader.map(rootResources ?? const {}, 'data') ??
+        rootResources ??
+        JsonReader.map(json, 'data');
+    final responseWarehouseId =
+        JsonReader.integer(resources ?? const {}, 'warehouseId');
+    final responseProductVariantId =
+        JsonReader.integer(resources ?? const {}, 'productVariantId');
+    if (responseWarehouseId != null && responseWarehouseId != warehouseId) {
+      throw const MillingApiException(
+        'Backend trả gợi ý không đúng kho của lệnh xay.',
+      );
+    }
+    if (responseProductVariantId != null &&
+        responseProductVariantId != productVariantId) {
+      throw const MillingApiException(
+        'Backend trả gợi ý không đúng SKU đầu ra.',
+      );
+    }
     final rows = JsonReader.list(resources ?? const {}, 'suggestions') ??
         JsonReader.list(json, 'suggestions') ??
         JsonReader.list(json, 'resources') ??
@@ -314,6 +365,63 @@ class ApiMillingRepository implements MillingRepository {
       for (final item in rows.whereType<Map<String, dynamic>>())
         MillingPutawaySuggestion.fromJson(item),
     ].where((suggestion) => suggestion.locationId > 0).toList();
+    */
+    // Match the production Web milling screen: rank the real /location data
+    // locally. Legacy priority 0 is treated as default priority 3; the generic
+    // putaway endpoint rejects that same production data with HTTP 422.
+    final products = await getOutputProducts();
+    final variant =
+        products.where((item) => item.id == productVariantId).firstOrNull;
+    if (variant == null) {
+      throw const MillingApiException('Khong tim thay SKU dau ra da chon.');
+    }
+
+    final suitable = (await getLocations()).where((location) {
+      final remaining = (location.maxCapacity ?? 0) - location.currentOccupancy;
+      return location.warehouseId == warehouseId &&
+          location.isActive &&
+          !location.isQuarantine &&
+          !location.isOutboundStaging &&
+          !location.isLockedForOutbound &&
+          (location.allowedCategoryId == null ||
+              location.allowedCategoryId == variant.productCategoryId) &&
+          (location.currentProductVariantId == null ||
+              location.currentProductVariantId == productVariantId) &&
+          remaining + 0.0005 >= requiredWeightKg;
+    }).toList()
+      ..sort((a, b) {
+        final sameA = a.currentProductVariantId == productVariantId ? 0 : 1;
+        final sameB = b.currentProductVariantId == productVariantId ? 0 : 1;
+        final priorityA = (a.priority ?? 0) > 0 ? a.priority! : 3;
+        final priorityB = (b.priority ?? 0) > 0 ? b.priority! : 3;
+        final remainingA = (a.maxCapacity ?? 0) - a.currentOccupancy;
+        final remainingB = (b.maxCapacity ?? 0) - b.currentOccupancy;
+        final sameOrder = sameA.compareTo(sameB);
+        if (sameOrder != 0) return sameOrder;
+        final priorityOrder = priorityA.compareTo(priorityB);
+        if (priorityOrder != 0) return priorityOrder;
+        final capacityOrder = remainingA.compareTo(remainingB);
+        return capacityOrder != 0 ? capacityOrder : a.id.compareTo(b.id);
+      });
+
+    return [
+      for (final location in suitable.take(5))
+        MillingPutawaySuggestion(
+          locationId: location.id,
+          locationCode: location.slotCode,
+          zoneName: location.zoneName,
+          currentOccupancyKg: location.currentOccupancy,
+          maxCapacityKg: location.maxCapacity ?? 0,
+          freeCapacityKg:
+              (location.maxCapacity ?? 0) - location.currentOccupancy,
+          currentProductVariantId: location.currentProductVariantId,
+          isEmpty: location.currentProductVariantId == null &&
+              location.currentOccupancy <= 0,
+          reason: location.currentProductVariantId == productVariantId
+              ? 'Cung loai san pham'
+              : 'Vi tri trong',
+        ),
+    ];
   }
 
   @override
@@ -331,7 +439,8 @@ class ApiMillingRepository implements MillingRepository {
     String? reason,
   }) async {
     if (!expectedYield.isFinite || expectedYield <= 0 || expectedYield > 1) {
-      throw const MillingApiException('Tỷ lệ thu hồi phải trong khoảng 1-100%.');
+      throw const MillingApiException(
+          'Tỷ lệ thu hồi phải trong khoảng 1-100%.');
     }
     if (!targetRiceKg.isFinite || targetRiceKg <= 0) {
       throw const MillingApiException('Khối lượng gạo dự kiến phải lớn hơn 0.');
@@ -383,16 +492,47 @@ class ApiMillingRepository implements MillingRepository {
   @override
   Future<List<MillingProductOption>> getOutputProducts() async {
     final products = await _productVariantApi.activeVariants();
-    return [
+    final options = <MillingProductOption>[
       for (final product in products)
-        MillingProductOption(
-          id: product.id,
-          name: product.name,
-          sku: product.sku,
-          outputType: _outputType(product.name, product.categoryName),
-          targetWeightKg: product.weightKg > 0 ? product.weightKg : null,
-        ),
+        if (!_isGenericRiceVariant(product) &&
+            _outputType(product) != 'UNKNOWN')
+          MillingProductOption(
+            id: product.id,
+            name: product.name,
+            sku: product.sku,
+            outputType: _outputType(product),
+            targetWeightKg: product.weightKg > 0 ? product.weightKg : null,
+            productCategoryId: product.categoryId,
+          ),
     ];
+
+    // Production may only expose PV-PHUPHAM-CHUNG for bran and husk. Reuse
+    // that real backend variant instead of showing unrelated rice/paddy SKUs.
+    final genericByproduct =
+        products.where(_isGenericByproductVariant).firstOrNull;
+    if (genericByproduct != null) {
+      const fallbackLabels = {
+        'BROKEN': 'Tấm (SKU phụ phẩm chung)',
+        'BRAN': 'Cám (SKU phụ phẩm chung)',
+        'HUSK': 'Trấu (SKU phụ phẩm chung)',
+      };
+      for (final entry in fallbackLabels.entries) {
+        if (options.any((item) => item.outputType == entry.key)) continue;
+        options.add(
+          MillingProductOption(
+            id: genericByproduct.id,
+            name: entry.value,
+            sku: genericByproduct.sku,
+            outputType: entry.key,
+            targetWeightKg: genericByproduct.weightKg > 0
+                ? genericByproduct.weightKg
+                : null,
+            productCategoryId: genericByproduct.categoryId,
+          ),
+        );
+      }
+    }
+    return options;
   }
 
   @override
@@ -611,12 +751,59 @@ class ApiMillingRepository implements MillingRepository {
     throw MillingApiException(JsonReader.string(json, 'message') ?? fallback);
   }
 
-  static String _outputType(String name, [String? categoryName]) {
-    final value = '$name ${categoryName ?? ''}'.toLowerCase();
-    if (value.contains('cám') || value.contains('bran')) return 'BRAN';
-    if (value.contains('tấm') || value.contains('broken')) return 'BROKEN';
-    if (value.contains('trấu') || value.contains('husk')) return 'HUSK';
-    return 'RICE';
+  static String _outputType(ProductVariantStock product) {
+    final sku = _normalizeVietnamese(product.sku).trim();
+    final text = _normalizeVietnamese(
+      '${product.sku} ${product.name} ${product.productName ?? ''} '
+      '${product.categoryName ?? ''}',
+    );
+
+    // Keep the same stable SKU convention as the Web form. Normalized names
+    // are only a fallback for older records without a standardized SKU.
+    if (sku.startsWith('TAM-') || text.contains(' TAM ')) return 'BROKEN';
+    if (sku.startsWith('CAM-') || text.contains(' CAM ')) return 'BRAN';
+    if (sku.startsWith('TRAU-') || text.contains(' TRAU ')) return 'HUSK';
+    if (text.contains('BROKEN')) return 'BROKEN';
+    if (text.contains('BRAN')) return 'BRAN';
+    if (text.contains('HUSK')) return 'HUSK';
+    if (!product.isByproduct &&
+        (sku.startsWith('GAO-') ||
+            text.contains(' GAO ') ||
+            text.contains('RICE'))) {
+      return 'RICE';
+    }
+    return 'UNKNOWN';
+  }
+
+  static bool _isGenericRiceVariant(ProductVariantStock product) {
+    final sku = _normalizeVietnamese(product.sku).trim();
+    final name = _normalizeVietnamese(product.name).trim();
+    return sku == 'PV-GAO-CHUNG' ||
+        sku == 'GAO-CHUNG' ||
+        name == 'GAO (CHUNG)' ||
+        name == 'GAO CHUNG';
+  }
+
+  static bool _isGenericByproductVariant(ProductVariantStock product) {
+    if (!product.isByproduct) return false;
+    final sku = _normalizeVietnamese(product.sku).trim();
+    final name = _normalizeVietnamese(product.name).trim();
+    return sku == 'PV-PHUPHAM-CHUNG' ||
+        sku == 'PHUPHAM-CHUNG' ||
+        name == 'PHU PHAM (CHUNG)' ||
+        name == 'PHU PHAM CHUNG';
+  }
+
+  static String _normalizeVietnamese(String value) {
+    const accented =
+        'ÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ';
+    const plain =
+        'AAAAAAAAAAAAAAAAAEEEEEEEEEEEIIIIIOOOOOOOOOOOOOOOOOUUUUUUUUUUUYYYYYD';
+    var result = value.trim().toUpperCase();
+    for (var index = 0; index < accented.length; index++) {
+      result = result.replaceAll(accented[index], plain[index]);
+    }
+    return ' ${result.replaceAll(RegExp(r'\s+'), ' ')} ';
   }
 
   String _currentToken() {

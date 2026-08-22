@@ -6,19 +6,18 @@ import '../../../../core/realtime/realtime_service.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/format.dart';
+import '../../../../core/widgets/app_pagination.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../../products/presentation/screens/product_detail_screen.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/inventory_stock_repository.dart';
 import '../../models/inventory_stock.dart';
 
 /// Tab "Kho" — tồn kho THẬT theo lô và vị trí.
 ///
-/// Trước đây tab này đọc phiếu kiểm kê nháp (`getDraftCheck`) rồi hiển thị như
-/// thể đó là tồn kho, nên có phiếu nháp là số liệu sai hẳn; số lượng còn bị
-/// `round()` về int nên mất phần lẻ kg. Nay đọc thẳng `/inventories/advanced`
-/// + `/inventories/summary`, giữ nguyên phần lẻ, và tách kiểm kê thành hành
-/// động phụ ở cuối màn.
+/// Hỗ trợ phân trang chuẩn với AppPagination, tìm kiếm debounce, lọc đa dạng,
+/// và hiển thị KPI tồn kho trực quan.
 class KhoTab extends StatefulWidget {
   const KhoTab({this.repository, super.key});
 
@@ -65,9 +64,7 @@ class _KhoTabState extends State<KhoTab> {
     'Location',
   };
 
-  /// Số dòng mỗi lượt tải. Nhỏ hơn màn web (10/trang) vì thẻ mobile cao hơn,
-  /// nhưng đủ để lần cuộn đầu tiên không phải chờ lượt gọi thứ hai.
-  static const int _pageSize = 30;
+  static const int _pageSize = 20;
 
   InventoryStockFilter _filter = const InventoryStockFilter();
   _LotTypeTab _lotTab = _LotTypeTab.all;
@@ -77,25 +74,19 @@ class _KhoTabState extends State<KhoTab> {
   InventoryStockPage? _page;
   Object? _error;
   bool _loading = true;
-  bool _loadingMore = false;
+  int _pageNumber = 1;
 
-  /// Mỗi lần đổi bộ lọc/tải lại tăng một nấc. Kết quả của lượt tải cũ về muộn
-  /// sẽ mang số cũ và bị bỏ qua, tránh trộn dữ liệu của hai bộ lọc khác nhau.
   int _requestId = 0;
 
   @override
   void initState() {
     super.initState();
     _repository = widget.repository ?? ApiInventoryStockRepository();
-    _scrollController.addListener(_onScroll);
-    // Lần tải đầu KHÔNG bật showLoading: _loading đã mặc định true, gọi
-    // setState trong initState sẽ ném lỗi setState-during-build.
     _load(showLoading: false);
-    _realtimeSubscription = RealtimeService.instance.onEntitiesChanged.listen((changed) {
+    _realtimeSubscription =
+        RealtimeService.instance.onEntitiesChanged.listen((changed) {
       if (changed.isEmpty || changed.any(_entities.contains)) {
-        // Giữ nguyên số dòng đang xem: người dùng cuộn sâu rồi mà một biến
-        // động tồn kho kéo họ về 30 dòng đầu thì rất khó chịu.
-        _load(showLoading: false, keepLoaded: true);
+        _load(showLoading: false);
       }
     });
   }
@@ -109,18 +100,13 @@ class _KhoTabState extends State<KhoTab> {
     super.dispose();
   }
 
-  /// Tải lại từ đầu. Dùng cho lần đầu, đổi bộ lọc, realtime, kéo làm mới.
-  ///
-  /// [keepLoaded] = true thì lấy lại đúng số dòng đang hiển thị thay vì co về
-  /// một trang, để lần tải lại do realtime không cuốn người dùng lên đầu.
-  Future<void> _load({bool showLoading = true, bool keepLoaded = false}) async {
+  int get _totalPages =>
+      (_page?.totalRecords ?? 0) <= 0
+          ? 1
+          : (((_page!.totalRecords) + _pageSize - 1) ~/ _pageSize);
+
+  Future<void> _load({bool showLoading = true}) async {
     final requestId = ++_requestId;
-    final loaded = _page?.lines.length ?? 0;
-    // Chặn trên để một màn đang mở rất nhiều dòng không kéo về cả nghìn bản ghi
-    // mỗi lần có biến động tồn kho.
-    final length = keepLoaded && loaded > _pageSize
-        ? (loaded > 300 ? 300 : loaded)
-        : _pageSize;
     if (showLoading && mounted) {
       setState(() {
         _loading = true;
@@ -128,67 +114,57 @@ class _KhoTabState extends State<KhoTab> {
       });
     }
     try {
-      final page = await _repository.load(filter: _filter, length: length);
+      final start = (_pageNumber - 1) * _pageSize;
+      final page = await _repository.load(
+        filter: _filter,
+        start: start,
+        length: _pageSize,
+      );
       if (!mounted || requestId != _requestId) return;
+
+      if (page.lines.isEmpty && page.totalRecords > 0 && _pageNumber > 1) {
+        final lastPage = (page.totalRecords + _pageSize - 1) ~/ _pageSize;
+        final target = lastPage < _pageNumber ? lastPage : _pageNumber - 1;
+        _pageNumber = target < 1 ? 1 : target;
+        await _load(showLoading: false);
+        return;
+      }
+
       setState(() {
         _page = page;
         _error = null;
         _loading = false;
-        _loadingMore = false;
       });
+      _scrollToTop();
     } catch (error) {
       if (!mounted || requestId != _requestId) return;
       setState(() {
         _error = error;
         _loading = false;
-        _loadingMore = false;
       });
     }
   }
 
-  /// Tải thêm một trang và nối vào cuối danh sách.
-  Future<void> _loadMore() async {
-    final page = _page;
-    if (page == null || _loadingMore || _loading || !page.hasMore) return;
-
-    final requestId = _requestId;
-    setState(() => _loadingMore = true);
-    try {
-      final next = await _repository.load(
-        filter: _filter,
-        start: page.lines.length,
-        length: _pageSize,
-      );
-      if (!mounted || requestId != _requestId) return;
-      setState(() {
-        _page = page.append(next);
-        _loadingMore = false;
-      });
-    } catch (error) {
-      if (!mounted || requestId != _requestId) return;
-      setState(() => _loadingMore = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Không tải thêm được: $error')),
-      );
-    }
-  }
-
-  void _onScroll() {
+  void _scrollToTop() {
     if (!_scrollController.hasClients) return;
-    final position = _scrollController.position;
-    // Nạp trước khi chạm đáy để danh sách không bị khựng giữa chừng.
-    if (position.pixels >= position.maxScrollExtent - 400) {
-      unawaited(_loadMore());
-    }
+    _scrollController.jumpTo(0);
+  }
+
+  void _goToPage(int page) {
+    if (page == _pageNumber) return;
+    setState(() => _pageNumber = page);
+    _load();
   }
 
   void _applyFilter(InventoryStockFilter next) {
-    setState(() => _filter = next);
+    setState(() {
+      _filter = next;
+      _pageNumber = 1;
+    });
     _load();
   }
 
   void _onSearchChanged(String value) {
-    // Gõ tới đâu gọi API tới đó sẽ dội request; chờ người dùng ngừng gõ.
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 450), () {
       _applyFilter(_filter.copyWith(keyword: value));
@@ -370,9 +346,6 @@ class _KhoTabState extends State<KhoTab> {
         : _filter.copyWith(warehouseId: chosen));
   }
 
-  /// Chọn trạng thái lô để lọc — đây là cách xem "chỉ các lô đang cách ly"
-  /// theo TRẠNG THÁI LÔ, khác với chip "Cách ly" (lọc theo tồn đang bị giữ ở
-  /// vị trí cách ly). Hai điều kiện có thể dùng cùng lúc.
   Future<void> _pickLotStatus(List<LotStatusOption> statuses) async {
     final chosen = await showModalBottomSheet<int?>(
       context: context,
@@ -424,6 +397,11 @@ class _KhoTabState extends State<KhoTab> {
     }
 
     final page = _page!;
+    final hasPaddyLots =
+        AuthSessionStore.current?.user.hasReadAccess('PADDY_LOTS') == true;
+    final hasStockTake =
+        AuthSessionStore.current?.user.hasReadAccess('STOCKTAKE') == true;
+
     return RefreshIndicator(
       onRefresh: () => _load(showLoading: false),
       child: ListView(
@@ -449,7 +427,7 @@ class _KhoTabState extends State<KhoTab> {
               title: 'Tồn theo lô & vị trí',
               icon: Icons.grid_view_rounded,
               action: Text(
-                '${page.lines.length}/${page.totalRecords}',
+                'Trang $_pageNumber/$_totalPages • ${page.totalRecords} dòng',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -458,57 +436,43 @@ class _KhoTabState extends State<KhoTab> {
               ),
             ),
             for (final line in page.lines) _lineCard(line),
-            if (page.hasMore)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 8),
-                child: _loadingMore
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(8),
-                          child: SizedBox.square(
-                            dimension: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          ),
-                        ),
-                      )
-                    // Cuộn gần đáy là tự tải; nút này chỉ để dự phòng khi
-                    // danh sách chưa đủ dài để cuộn.
-                    : OutlinedButton.icon(
-                        onPressed: _loadMore,
-                        icon: const Icon(Icons.expand_more_rounded),
-                        label: Text(
-                          'Tải thêm (còn '
-                          '${page.totalRecords - page.lines.length} dòng)',
-                        ),
-                      ),
-              )
-            else if (page.lines.length > _pageSize)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 8),
-                child: Text(
-                  'Đã hiện hết ${page.lines.length} dòng.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondaryFor(context),
-                  ),
-                ),
+            if (page.totalRecords > 0) ...[
+              const SizedBox(height: 6),
+              AppPagination(
+                page: _pageNumber,
+                totalPages: _totalPages,
+                total: page.totalRecords,
+                enabled: !_loading,
+                onChanged: _goToPage,
               ),
+              const SizedBox(height: 12),
+            ],
           ],
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.paddyLots),
-            icon: const Icon(Icons.account_tree_outlined),
-            label: const Text('Lô & truy vết'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () =>
-                Navigator.of(context).pushNamed(AppRoutes.stocktake),
-            icon: const Icon(Icons.fact_check_outlined),
-            label: const Text('Kiểm kê kho'),
-          ),
+          if (hasPaddyLots || hasStockTake) ...[
+            Row(
+              children: [
+                if (hasPaddyLots)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.paddyLots),
+                      icon: const Icon(Icons.account_tree_outlined),
+                      label: const Text('Lô & truy vết'),
+                    ),
+                  ),
+                if (hasPaddyLots && hasStockTake) const SizedBox(width: 8),
+                if (hasStockTake)
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () =>
+                          Navigator.of(context).pushNamed(AppRoutes.stocktake),
+                      icon: const Icon(Icons.fact_check_outlined),
+                      label: const Text('Kiểm kê kho'),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -658,14 +622,14 @@ class _KhoTabState extends State<KhoTab> {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     formatKg(line.quantityOnHand),
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w900,
                       color: AppColors.primary,
                     ),

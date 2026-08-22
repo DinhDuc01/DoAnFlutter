@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/account/presentation/screens/change_password_screen.dart';
 import '../../features/account/presentation/screens/personal_info_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/data/auth_session_store.dart';
 import '../../features/thu_mua/presentation/screens/thu_mua_success_screen.dart';
 import '../../features/thu_mua/presentation/screens/purchase_schedule_detail_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -57,6 +58,12 @@ class AppRoutes {
     return {
       login: (_) => const LoginScreen(),
       home: (context) {
+        final session = AuthSessionStore.current;
+        if (session == null ||
+            session.accessToken.trim().isEmpty ||
+            session.user.isMobileBlocked) {
+          return const LoginScreen();
+        }
         final initialIndex = ModalRoute.of(context)?.settings.arguments;
         return HomeScreen(
           initialIndex: initialIndex is int ? initialIndex.clamp(0, 5) : 0,
@@ -92,7 +99,10 @@ class AppRoutes {
       },
       productDetail: (_) => const PermissionGuard(
           menuCode: 'PRODUCT', child: ProductDetailScreen()),
-      scanQr: (_) => const ScanQrScreen(),
+      // Backend QrController resolves scanned payloads with
+      // PRODUCT_VARIANTS + READ. Guard before mounting the camera widget.
+      scanQr: (_) => const PermissionGuard(
+          menuCode: 'PRODUCT_VARIANTS', child: ScanQrScreen()),
       reports: (_) =>
           const PermissionGuard(menuCode: 'REPORTS', child: ReportsScreen()),
       personalInfo: (_) => const PersonalInfoScreen(),

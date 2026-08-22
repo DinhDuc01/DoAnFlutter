@@ -7,7 +7,9 @@ import 'core/api/api_client.dart';
 import 'core/notifications/fcm_service.dart';
 import 'core/realtime/realtime_service.dart';
 import 'features/auth/data/auth_session_store.dart';
+import 'features/auth/data/api_auth_service.dart';
 import 'features/auth/data/token_refresh_coordinator.dart';
+import 'features/auth/data/startup_session_resolver.dart';
 import 'features/character/data/character_appearance_store.dart';
 
 Future<void> main() async {
@@ -20,10 +22,14 @@ Future<void> main() async {
 
   // Nạp lại phiên đăng nhập đã lưu để không phải đăng nhập lại mỗi lần mở app.
   await AuthSessionStore.load();
-  if (AuthSessionStore.current?.user.isMobileBlocked ?? false) {
-    await AuthSessionStore.clear();
-  }
-  final isLoggedIn = AuthSessionStore.current != null;
+  final isLoggedIn = await resolveStartupSession(
+    cachedSession: AuthSessionStore.current,
+    authService: ApiAuthService(),
+    saveSession: AuthSessionStore.save,
+    clearSession: AuthSessionStore.clear,
+    stopNotifications: FcmService.instance.stopForUser,
+    stopRealtime: RealtimeService.instance.stop,
+  );
 
   // Khởi tạo Firebase + đăng ký handler thông báo đẩy khi app ở nền/đã tắt.
   await FcmService.instance.initApp();

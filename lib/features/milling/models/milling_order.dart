@@ -14,6 +14,13 @@ class MillingFilterOption {
   final String? color;
 }
 
+class MillingOperator {
+  const MillingOperator({required this.id, required this.name});
+
+  final int id;
+  final String name;
+}
+
 /// A single recorded bag produced by a milling order.
 class MillingBag {
   const MillingBag({
@@ -34,6 +41,7 @@ class MillingProductOption {
     required this.sku,
     required this.outputType,
     this.targetWeightKg,
+    this.productCategoryId,
   });
 
   final int id;
@@ -41,6 +49,7 @@ class MillingProductOption {
   final String sku;
   final String outputType;
   final double? targetWeightKg;
+  final int? productCategoryId;
 }
 
 class MillingPaddyLotOption {
@@ -418,8 +427,8 @@ class MillingOrder {
     final mappedInputWeightKg = actualPaddyInputKg ??
         (consumedInputKg > 0 ? consumedInputKg : computedPaddyKg);
     final statusId = JsonReader.integer(json, 'statusId') ?? 0;
-    final statusCode = JsonReader.string(json, 'statusCode') ??
-        _statusCodeFromId(statusId);
+    final statusCode =
+        JsonReader.string(json, 'statusCode') ?? _statusCodeFromId(statusId);
 
     return MillingOrder(
       id: id,
