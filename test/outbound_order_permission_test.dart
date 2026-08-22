@@ -16,7 +16,8 @@ void main() {
     testWidgets('READ-only user sees no mutation CTAs on detail screen',
         (tester) async {
       AuthSessionStore.current = _session(const {'READ'});
-      final repository = _FakeOutboundRepository(_order(statusId: OutboundStatusIds.draft));
+      final repository =
+          _FakeOutboundRepository(_order(statusId: OutboundStatusIds.draft));
 
       await _pumpDetail(tester, repository);
 
@@ -34,7 +35,8 @@ void main() {
     testWidgets('UPDATE shows allocate and cancel for DRAFT status',
         (tester) async {
       AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
-      final repository = _FakeOutboundRepository(_order(statusId: OutboundStatusIds.draft));
+      final repository =
+          _FakeOutboundRepository(_order(statusId: OutboundStatusIds.draft));
 
       await _pumpDetail(tester, repository);
 
@@ -50,7 +52,8 @@ void main() {
     testWidgets('UPDATE shows pick, pack, cancel for PICKING status',
         (tester) async {
       AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
-      final repository = _FakeOutboundRepository(_order(statusId: OutboundStatusIds.picking));
+      final repository =
+          _FakeOutboundRepository(_order(statusId: OutboundStatusIds.picking));
 
       await _pumpDetail(tester, repository);
 
@@ -66,7 +69,8 @@ void main() {
     testWidgets('UPDATE shows dispatch and cancel for PACKED status',
         (tester) async {
       AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
-      final repository = _FakeOutboundRepository(_order(statusId: OutboundStatusIds.packed));
+      final repository =
+          _FakeOutboundRepository(_order(statusId: OutboundStatusIds.packed));
 
       await _pumpDetail(tester, repository);
 
@@ -79,14 +83,17 @@ void main() {
       expect(find.byKey(const Key('outbound_fail_delivery')), findsNothing);
     });
 
-    testWidgets('UPDATE shows complete-delivery and fail-delivery for DISPATCHED status',
+    testWidgets(
+        'UPDATE shows complete-delivery and fail-delivery for DISPATCHED status',
         (tester) async {
       AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
-      final repository = _FakeOutboundRepository(_order(statusId: OutboundStatusIds.dispatched));
+      final repository = _FakeOutboundRepository(
+          _order(statusId: OutboundStatusIds.dispatched));
 
       await _pumpDetail(tester, repository);
 
-      expect(find.byKey(const Key('outbound_complete_delivery')), findsOneWidget);
+      expect(
+          find.byKey(const Key('outbound_complete_delivery')), findsOneWidget);
       expect(find.byKey(const Key('outbound_fail_delivery')), findsOneWidget);
       expect(find.byKey(const Key('outbound_allocate')), findsNothing);
       expect(find.byKey(const Key('outbound_pick')), findsNothing);
@@ -113,15 +120,58 @@ void main() {
         expect(find.byKey(const Key('outbound_pick')), findsNothing);
         expect(find.byKey(const Key('outbound_pack')), findsNothing);
         expect(find.byKey(const Key('outbound_dispatch')), findsNothing);
-        expect(find.byKey(const Key('outbound_complete_delivery')), findsNothing);
+        expect(
+            find.byKey(const Key('outbound_complete_delivery')), findsNothing);
         expect(find.byKey(const Key('outbound_fail_delivery')), findsNothing);
         expect(find.byKey(const Key('outbound_cancel')), findsNothing);
       });
     }
 
+    testWidgets('COMPLETED hides live scale and shows recorded outbound result',
+        (tester) async {
+      AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
+      final repository = _FakeOutboundRepository(
+        _order(statusId: OutboundStatusIds.completed),
+      );
+
+      await _pumpDetail(tester, repository);
+
+      expect(find.byKey(const Key('outbound_scale_status')), findsNothing);
+      expect(find.text('Kết quả xuất kho'), findsOneWidget);
+      expect(find.text('Cân & đóng bao'), findsNothing);
+      expect(find.text('Đã xuất'), findsOneWidget);
+      expect(find.byKey(const Key('outbound_progress_steps')), findsOneWidget);
+      expect(find.text('Tiến trình xử lý'), findsOneWidget);
+      for (final label in const [
+        'Phân bổ lô',
+        'Lấy hàng',
+        'Đóng gói',
+        'Xuất kho',
+        'Giao hàng',
+      ]) {
+        expect(find.text(label), findsOneWidget);
+      }
+    });
+
+    testWidgets('PICKING keeps live scale status and weighing summary',
+        (tester) async {
+      AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
+      final repository = _FakeOutboundRepository(
+        _order(statusId: OutboundStatusIds.picking),
+      );
+
+      await _pumpDetail(tester, repository);
+
+      expect(find.byKey(const Key('outbound_scale_status')), findsOneWidget);
+      expect(find.text('Cân & đóng bao'), findsOneWidget);
+      expect(find.text('Thực lấy'), findsOneWidget);
+      expect(find.text('Kết quả xuất kho'), findsNothing);
+    });
+
     testWidgets('cancelling dialog does not invoke cancel API', (tester) async {
       AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
-      final repository = _FakeOutboundRepository(_order(statusId: OutboundStatusIds.draft));
+      final repository =
+          _FakeOutboundRepository(_order(statusId: OutboundStatusIds.draft));
       await _pumpDetail(tester, repository);
 
       await tester.tap(find.byKey(const Key('outbound_cancel')));
@@ -140,13 +190,15 @@ void main() {
     testWidgets('confirming cancel calls repository once and reloads detail',
         (tester) async {
       AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
-      final repository = _FakeOutboundRepository(_order(statusId: OutboundStatusIds.draft));
+      final repository =
+          _FakeOutboundRepository(_order(statusId: OutboundStatusIds.draft));
       await _pumpDetail(tester, repository);
 
       await tester.tap(find.byKey(const Key('outbound_cancel')));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField), 'Khách đổi kế hoạch giao hàng');
+      await tester.enterText(
+          find.byType(TextField), 'Khách đổi kế hoạch giao hàng');
       await tester.tap(find.byKey(const Key('reason_confirm')));
       await tester.pumpAndSettle();
 
@@ -182,7 +234,9 @@ AuthSession _session(Set<String> actions) {
       fullName: 'Kho Quản lý',
       email: 'kho@example.com',
       roles: const [UserRole(id: 2, code: 'WAREHOUSE', name: 'Kho')],
-      menus: const [UserMenu(id: 10, code: 'OUTBOUND_ORDERS', name: 'Phiếu xuất kho')],
+      menus: const [
+        UserMenu(id: 10, code: 'OUTBOUND_ORDERS', name: 'Phiếu xuất kho')
+      ],
       permissions: [
         UserPermission(
           menuId: 10,
@@ -254,7 +308,8 @@ class _FakeOutboundRepository implements OutboundOrderRepository {
   }
 
   @override
-  Future<List<OutboundAllocationCandidate>> getAllocationCandidates(int id) async {
+  Future<List<OutboundAllocationCandidate>> getAllocationCandidates(
+      int id) async {
     return const [];
   }
 
@@ -280,7 +335,8 @@ class _FakeOutboundRepository implements OutboundOrderRepository {
   }
 
   @override
-  Future<void> confirmDispatch(int id, {DateTime? dueDate, String? note}) async {
+  Future<void> confirmDispatch(int id,
+      {DateTime? dueDate, String? note}) async {
     confirmDispatchCalls++;
   }
 

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
+import '../../../auth/data/auth_session_store.dart';
+import '../../../auth/models/auth_session.dart';
 import '../../data/api_milling_repository.dart';
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
@@ -22,6 +24,130 @@ class MillingPreparationScreen extends StatefulWidget {
   @override
   State<MillingPreparationScreen> createState() =>
       _MillingPreparationScreenState();
+}
+
+class _MillingStartInput {
+  const _MillingStartInput({required this.machineRef, this.operatorId});
+
+  final String machineRef;
+  final int? operatorId;
+}
+
+class _MillingStartDialog extends StatefulWidget {
+  const _MillingStartDialog({
+    required this.currentUser,
+    required this.operatorsFuture,
+  });
+
+  final AuthUser? currentUser;
+  final Future<List<MillingOperator>> operatorsFuture;
+
+  @override
+  State<_MillingStartDialog> createState() => _MillingStartDialogState();
+}
+
+class _MillingStartDialogState extends State<_MillingStartDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _machineController = TextEditingController();
+  int? _operatorId;
+  List<MillingOperator> _operators = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _operatorId = widget.currentUser?.id;
+    widget.operatorsFuture.then((operators) {
+      if (mounted) setState(() => _operators = operators);
+    });
+  }
+
+  @override
+  void dispose() {
+    _machineController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    Navigator.of(context).pop(
+      _MillingStartInput(
+        machineRef: _machineController.text.trim(),
+        operatorId: _operatorId,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.currentUser;
+    return AlertDialog(
+      title: const Text('Bắt đầu lệnh xay'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _machineController,
+              autofocus: true,
+              decoration: const InputDecoration(
+                labelText: 'Mã máy xay *',
+                hintText: 'Ví dụ: MAY-XAY-01',
+              ),
+              maxLength: 255,
+              validator: (value) {
+                final text = value?.trim() ?? '';
+                if (text.isEmpty) return 'Vui lòng nhập mã máy xay.';
+                if (text.length > 255) return 'Mã máy tối đa 255 ký tự.';
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<int?>(
+              value: _operatorId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Người vận hành',
+              ),
+              items: [
+                const DropdownMenuItem<int?>(
+                  value: null,
+                  child: Text('Chốt khi hoàn thành'),
+                ),
+                if (user != null)
+                  DropdownMenuItem<int?>(
+                    value: user.id,
+                    child: Text(
+                      user.fullName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ..._operators.where((item) => item.id != user?.id).map(
+                      (item) => DropdownMenuItem<int?>(
+                        value: item.id,
+                        child: Text(
+                          item.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+              ],
+              onChanged: (value) => setState(() => _operatorId = value),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Bắt đầu xay')),
+      ],
+    );
+  }
 }
 
 /// Các entity khiến màn xay xát phải tải lại: lệnh xay, lô/bao lúa dùng làm
@@ -125,13 +251,17 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen>
 
   bool _argsProcessed = false;
 
+  bool get _canCreate =>
+      AuthSessionStore.current?.hasPermission('MILLING_ORDERS', 'CREATE') ==
+      true;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_argsProcessed) {
       _argsProcessed = true;
       final routeArgs = ModalRoute.of(context)?.settings.arguments;
-      if (routeArgs is MillingPlanArgs) {
+      if (routeArgs is MillingPlanArgs && _canCreate) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) _openCreate(routeArgs);
         });
@@ -140,6 +270,7 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen>
   }
 
   Future<void> _openCreate([MillingPlanArgs? args]) async {
+    if (!_canCreate) return;
     final createdId = await Navigator.of(context).push<int>(
       MaterialPageRoute<int>(
         builder: (_) => MillingCreateOrderScreen(
@@ -214,15 +345,16 @@ class _MillingPreparationScreenState extends State<MillingPreparationScreen>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    tooltip: 'Tạo lệnh xay',
-                    constraints:
-                        const BoxConstraints.tightFor(width: 40, height: 40),
-                    padding: EdgeInsets.zero,
-                    onPressed: _openCreate,
-                    icon:
-                        const Icon(Icons.add_task_rounded, color: Colors.white),
-                  ),
+                  if (_canCreate)
+                    IconButton(
+                      tooltip: 'Tạo lệnh xay',
+                      constraints:
+                          const BoxConstraints.tightFor(width: 40, height: 40),
+                      padding: EdgeInsets.zero,
+                      onPressed: _openCreate,
+                      icon: const Icon(Icons.add_task_rounded,
+                          color: Colors.white),
+                    ),
                   IconButton(
                     tooltip: 'Làm mới',
                     constraints:
@@ -749,6 +881,10 @@ class _MillingOrderDetailScreen extends StatefulWidget {
 
 class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
     with RealtimeReloadMixin {
+  bool get _canUpdate =>
+      AuthSessionStore.current?.hasPermission('MILLING_ORDERS', 'UPDATE') ==
+      true;
+
   @override
   Set<String> get realtimeEntities => _millingRealtimeEntities;
 
@@ -775,7 +911,8 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
   Future<void> _silentReload() async {
     if (_actionBusy) return;
     try {
-      final order = await widget.repository.getMillingOrderDetail(widget.orderId);
+      final order =
+          await widget.repository.getMillingOrderDetail(widget.orderId);
       if (!mounted) return;
       setState(() {
         _future = Future<MillingOrder>.value(order);
@@ -787,6 +924,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
 
   Future<void> _reserve(MillingOrder order, {bool readOnly = false}) async {
     if (_actionBusy) return;
+    if (!readOnly && !_canUpdate) return;
     final statusCode = (order.statusCode ?? '').trim().toUpperCase();
     if (!const ['DRAFT', 'RESERVED', 'IN_PROGRESS', 'MILLING']
         .contains(statusCode)) {
@@ -806,7 +944,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
 
   /// Hủy lệnh xay — chỉ Nháp hoặc Đã giữ lúa, đúng như web.
   Future<void> _cancel(MillingOrder order) async {
-    if (_actionBusy) return;
+    if (_actionBusy || !_canUpdate) return;
     final statusCode = (order.statusCode ?? '').trim().toUpperCase();
     if (!const ['DRAFT', 'RESERVED'].contains(statusCode)) return;
 
@@ -826,7 +964,8 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626)),
             child: const Text('Hủy lệnh'),
           ),
         ],
@@ -854,7 +993,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
   }
 
   Future<void> _start(MillingOrder order) async {
-    if (_actionBusy) return;
+    if (_actionBusy || !_canUpdate) return;
     final statusCode = (order.statusCode ?? '').trim().toUpperCase();
     if (statusCode != 'RESERVED') {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -864,9 +1003,16 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
       );
       return;
     }
+    final input = await _showStartDialog();
+    if (input == null || !mounted) return;
+
     setState(() => _actionBusy = true);
     try {
-      await widget.repository.startOrder(order.id);
+      await widget.repository.startOrder(
+        order.id,
+        machineRef: input.machineRef,
+        operatorId: input.operatorId,
+      );
       if (!mounted) return;
       _reload();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -883,7 +1029,19 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
     }
   }
 
+  Future<_MillingStartInput?> _showStartDialog() {
+    final currentUser = AuthSessionStore.current?.user;
+    return showDialog<_MillingStartInput>(
+      context: context,
+      builder: (dialogContext) => _MillingStartDialog(
+        currentUser: currentUser,
+        operatorsFuture: widget.repository.getMillingOperators(),
+      ),
+    );
+  }
+
   Future<void> _editDraft(MillingOrder order) async {
+    if (!_canUpdate || !_isDraft(order)) return;
     final updated = await Navigator.of(context).push<dynamic>(
       MaterialPageRoute<dynamic>(
         builder: (_) => MillingCreateOrderScreen(
@@ -904,13 +1062,13 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
   /// - Hoàn tất / Đã hủy: chỉ xem
   Widget _actionBar(MillingOrder order, MillingStatusView status) {
     final secondary = <Widget>[
-      if (status.canReserve && _isDraft(order))
+      if (_canUpdate && status.canReserve && _isDraft(order))
         OutlinedButton.icon(
           onPressed: _actionBusy ? null : () => _editDraft(order),
           icon: const Icon(Icons.edit_rounded),
           label: const Text('Sửa lệnh'),
         ),
-      if (status.canReserve && !_isDraft(order))
+      if (_canUpdate && status.canReserve && !_isDraft(order))
         OutlinedButton.icon(
           onPressed: _actionBusy ? null : () => _reserve(order),
           icon: const Icon(Icons.swap_horiz_rounded),
@@ -918,12 +1076,11 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
         ),
       if (status.canViewSource)
         OutlinedButton.icon(
-          onPressed:
-              _actionBusy ? null : () => _reserve(order, readOnly: true),
+          onPressed: _actionBusy ? null : () => _reserve(order, readOnly: true),
           icon: const Icon(Icons.visibility_outlined),
           label: const Text('Xem nguồn lúa'),
         ),
-      if (status.canCancel)
+      if (_canUpdate && status.canCancel)
         OutlinedButton.icon(
           onPressed: _actionBusy ? null : () => _cancel(order),
           icon: const Icon(Icons.cancel_outlined),
@@ -936,13 +1093,13 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
     ];
 
     final Widget primary;
-    if (status.canStart) {
+    if (_canUpdate && status.canStart) {
       primary = MillingPrimaryButton(
         label: 'Bắt đầu xay',
         isLoading: _actionBusy,
         onPressed: () => _start(order),
       );
-    } else if (status.canContinueWeighing) {
+    } else if (_canUpdate && status.canContinueWeighing) {
       primary = MillingPrimaryButton(
         key: const Key('milling_enter_output_button'),
         label: 'Nhập kết quả xay',
@@ -955,7 +1112,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
           ),
         ),
       );
-    } else if (_isDraft(order)) {
+    } else if (_canUpdate && _isDraft(order)) {
       primary = MillingPrimaryButton(
         label: 'Giữ lúa',
         isLoading: _actionBusy,
@@ -1022,7 +1179,8 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
         }
         final status = MillingStatusView.fromOrder(order);
         final confirmedRice = _confirmedRiceWeighing ?? order.outputsRiceKg;
-        final isDraft = (order.statusCode ?? '').trim().toUpperCase() == 'DRAFT';
+        final isDraft =
+            (order.statusCode ?? '').trim().toUpperCase() == 'DRAFT';
 
         return Scaffold(
           backgroundColor: millingBackground,
@@ -1034,7 +1192,7 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
                 onPressed: _reload,
                 icon: const Icon(Icons.refresh_rounded),
               ),
-              if (isDraft)
+              if (isDraft && _canUpdate)
                 IconButton(
                   tooltip: 'Sửa lệnh',
                   onPressed: () => _editDraft(order),
@@ -1115,8 +1273,8 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
             ],
           ),
         );
-        },
-      );
+      },
+    );
   }
 }
 

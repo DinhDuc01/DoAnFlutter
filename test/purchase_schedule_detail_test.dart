@@ -73,4 +73,42 @@ void main() {
     expect(find.textContaining('6.200đ/kg'), findsOneWidget);
     expect(find.text('Tạo phiếu mua từ lịch'), findsOneWidget);
   });
+
+  testWidgets('warehouse user can view schedule detail without mutation CTA',
+      (tester) async {
+    AuthSessionStore.current = const AuthSession(
+      accessToken: 'warehouse-token',
+      refreshToken: 'warehouse-refresh',
+      user: AuthUser(
+        id: 12,
+        fullName: 'Warehouse User',
+        email: 'warehouse@example.com',
+        roles: [
+          UserRole(id: 1012, code: 'WAREHOUSE', name: 'Warehouse'),
+        ],
+        permissions: [
+          UserPermission(
+            menuId: 1,
+            menuCode: 'RICE_PURCHASE',
+            actions: {'READ'},
+          ),
+        ],
+      ),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PurchaseScheduleDetailScreen(
+          initialSchedule: schedule,
+          repository: _FakePurchaseScheduleRepository(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chi tiết lịch thu mua'), findsOneWidget);
+    expect(find.textContaining('IR50404'), findsOneWidget);
+    expect(find.text('Tạo phiếu mua từ lịch'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 }

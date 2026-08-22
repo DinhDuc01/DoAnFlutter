@@ -104,17 +104,27 @@ class PurchaseScheduleRepository {
 
     if (schedule.farmerId <= 0) return result;
 
-    final json = await _apiClient.get(
-      '/api/v1/farmers/${schedule.farmerId}',
-      token: token,
-    );
-    final farmer = JsonReader.map(json, 'resources');
-    if (farmer == null) return result;
+    try {
+      // Farmer contact is optional enrichment. The schedule detail itself is
+      // authorized by RICE_PURCHASE + READ, while this endpoint separately
+      // requires FARMERS + READ. A read-only warehouse user may legitimately
+      // have the former without the latter.
+      final json = await _apiClient.get(
+        '/api/v1/farmers/${schedule.farmerId}',
+        token: token,
+      );
+      final farmer = JsonReader.map(json, 'resources');
+      if (farmer == null) return result;
 
-    return result.copyWith(
-      farmerName: JsonReader.string(farmer, 'name'),
-      farmerPhone: JsonReader.string(farmer, 'phone'),
-      farmerAddress: JsonReader.string(farmer, 'address'),
-    );
+      return result.copyWith(
+        farmerName: JsonReader.string(farmer, 'name'),
+        farmerPhone: JsonReader.string(farmer, 'phone'),
+        farmerAddress: JsonReader.string(farmer, 'address'),
+      );
+    } on ApiException {
+      // Keep authorized schedule data when optional FARMERS enrichment is
+      // forbidden or unavailable instead of breaking the whole detail screen.
+      return result;
+    }
   }
 }

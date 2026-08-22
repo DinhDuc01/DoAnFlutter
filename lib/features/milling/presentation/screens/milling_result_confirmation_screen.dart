@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/api/api_client.dart';
 import '../../../../core/routes/app_routes.dart';
+import '../../../auth/data/auth_session_store.dart';
 import '../../data/api_milling_repository.dart';
 import '../../data/milling_repository.dart';
 import '../../models/milling_location.dart';
@@ -31,6 +32,10 @@ class MillingResultConfirmationScreen extends StatefulWidget {
 
 class _MillingResultConfirmationScreenState
     extends State<MillingResultConfirmationScreen> {
+  bool get _canUpdate =>
+      AuthSessionStore.current?.hasPermission('MILLING_ORDERS', 'UPDATE') ==
+      true;
+
   bool _isCompleting = false;
   String? _errorMessage;
   String? _loadingLocationType;
@@ -42,6 +47,7 @@ class _MillingResultConfirmationScreenState
 
   /// Vị trí nhập kho backend gợi ý cho từng dòng đầu ra (khóa theo `form.type`).
   final Map<String, List<MillingPutawaySuggestion>> _formSuggestions = {};
+  final Map<String, String> _suggestionErrors = {};
   final Map<String, MillingLocation> _pickedLocations = {};
   final Set<String> _suggestingTypes = <String>{};
   final Map<String, Timer> _suggestDebounce = {};
@@ -77,7 +83,8 @@ class _MillingResultConfirmationScreenState
         if (form.productVariantId != null) _refreshOutputLocation(form);
       }
     } catch (error) {
-      if (mounted) setState(() => _productsError = 'Không tải được SKU: $error');
+      if (mounted)
+        setState(() => _productsError = 'Không tải được SKU: $error');
     }
   }
 
@@ -86,8 +93,11 @@ class _MillingResultConfirmationScreenState
   /// bằng vị trí phù hợp đầu tiên, và bỏ chọn nếu vị trí cũ không còn hợp lệ.
   Future<void> _refreshOutputLocation(_MillingOutputForm form) async {
     final variantId = form.productVariantId;
-    final weight = form.outputWeightKg ?? 0;
-    if (variantId == null || variantId <= 0 || weight <= 0) {
+    // Web dùng sản lượng dự kiến của lệnh để tìm vị trí ngay khi chọn SKU
+    // gạo; các loại đầu ra khác chỉ gọi lại khi đã có khối lượng thực tế.
+    final weight = form.outputWeightKg ??
+        (form.type == 'RICE' ? widget.order.totalRiceOutputKg : 0);
+    if (variantId == null || variantId <= 0 || !weight.isFinite || weight < 0) {
       if (mounted) {
         setState(() {
           _formSuggestions.remove(form.type);
@@ -109,17 +119,30 @@ class _MillingResultConfirmationScreenState
       );
       if (!mounted) return;
       setState(() {
+        _suggestionErrors.remove(form.type);
         _formSuggestions[form.type] = suggestions;
         final ids = suggestions.map((item) => item.locationId).toSet();
+        if (suggestions.isEmpty) {
+          // Vị trí cũ không còn được Backend xác nhận thì không được giữ lại
+          // để tránh gửi nhầm locationId khi lưu kết quả.
+          form.locationId = null;
+          _pickedLocations.remove(form.type);
+        }
         if (suggestions.isNotEmpty &&
             (form.locationId == null || !ids.contains(form.locationId))) {
           form.locationId = suggestions.first.locationId;
           _pickedLocations.remove(form.type);
         }
       });
-    } catch (_) {
-      // Không lấy được gợi ý thì vẫn cho chọn tay ở bảng vị trí bên dưới.
-      if (mounted) setState(() => _formSuggestions.remove(form.type));
+    } catch (error) {
+      // Không biến response lỗi thành "không có gợi ý". UI vẫn cho
+      // chọn tay, nhưng phải nói rõ Backend không gợi ý được.
+      if (mounted) {
+        setState(() {
+          _formSuggestions.remove(form.type);
+          _suggestionErrors[form.type] = '$error';
+        });
+      }
     } finally {
       if (mounted) setState(() => _suggestingTypes.remove(form.type));
     }
@@ -141,10 +164,12 @@ class _MillingResultConfirmationScreenState
     final id = form.locationId;
     if (id == null) return 'Chọn vị trí nhập kho *';
     for (final suggestion in _formSuggestions[form.type] ?? const []) {
-      if (suggestion.locationId == id) return 'Vị trí: ${suggestion.displayName}';
+      if (suggestion.locationId == id)
+        return 'Vị trí: ${suggestion.displayName}';
     }
     final picked = _pickedLocations[form.type];
-    if (picked != null && picked.id == id) return 'Vị trí: ${picked.displayName}';
+    if (picked != null && picked.id == id)
+      return 'Vị trí: ${picked.displayName}';
     return 'Vị trí #$id';
   }
 
@@ -174,17 +199,32 @@ class _MillingResultConfirmationScreenState
     final types = <String>{};
     for (final form in _outputForms) {
       if (!types.add(form.type)) errors.add('${form.label} bị trùng.');
-      if (form.productVariantId == null) errors.add('${form.label}: chưa chọn SKU.');
-      if (form.locationId == null) errors.add('${form.label}: chưa chọn vị trí.');
-      if (form.bagCount == null || form.bagCount! <= 0) errors.add('${form.label}: số bao phải lớn hơn 0.');
-      if (form.kgPerBag == null || !form.kgPerBag!.isFinite || form.kgPerBag! <= 0) errors.add('${form.label}: kg/bao không hợp lệ.');
-      if (form.outputWeightKg == null || !form.outputWeightKg!.isFinite || form.outputWeightKg! <= 0) errors.add('${form.label}: khối lượng thực tế không hợp lệ.');
+      if (form.productVariantId == null)
+        errors.add('${form.label}: chưa chọn SKU.');
+      if (form.locationId == null)
+        errors.add('${form.label}: chưa chọn vị trí.');
+      if (form.bagCount == null || form.bagCount! <= 0)
+        errors.add('${form.label}: số bao phải lớn hơn 0.');
+      if (form.kgPerBag == null ||
+          !form.kgPerBag!.isFinite ||
+          form.kgPerBag! <= 0)
+        errors.add('${form.label}: kg/bao không hợp lệ.');
+      if (form.outputWeightKg == null ||
+          !form.outputWeightKg!.isFinite ||
+          form.outputWeightKg! <= 0)
+        errors.add('${form.label}: khối lượng thực tế không hợp lệ.');
     }
-    final total = _outputForms.fold<double>(0, (sum, form) => sum + (form.outputWeightKg ?? 0));
-    if (total > widget.order.inputWeightKg * 1.02) errors.add('Tổng đầu ra vượt khối lượng lúa đầu vào.');
-    final rice = _outputForms.where((form) => form.type == 'RICE').fold<double>(0, (sum, form) => sum + (form.outputWeightKg ?? 0));
-    final yieldValue = widget.order.inputWeightKg > 0 ? rice / widget.order.inputWeightKg : 0;
-    if ((yieldValue - widget.order.yieldRateUsed).abs() > 0.02 && _noteController.text.trim().isEmpty) {
+    final total = _outputForms.fold<double>(
+        0, (sum, form) => sum + (form.outputWeightKg ?? 0));
+    if (total > widget.order.inputWeightKg * 1.02)
+      errors.add('Tổng đầu ra vượt khối lượng lúa đầu vào.');
+    final rice = _outputForms
+        .where((form) => form.type == 'RICE')
+        .fold<double>(0, (sum, form) => sum + (form.outputWeightKg ?? 0));
+    final yieldValue =
+        widget.order.inputWeightKg > 0 ? rice / widget.order.inputWeightKg : 0;
+    if ((yieldValue - widget.order.yieldRateUsed).abs() > 0.02 &&
+        _noteController.text.trim().isEmpty) {
       errors.add('Yield gạo lệch trên 2%; cần nhập ghi chú.');
     }
     return errors;
@@ -206,7 +246,9 @@ class _MillingResultConfirmationScreenState
                 'unitCost': null,
               },
         ],
-        'note': _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        'note': _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
       };
 
   double _formTotal(String type) => _outputForms
@@ -215,16 +257,20 @@ class _MillingResultConfirmationScreenState
 
   Widget _draftSummary() {
     final rice = _formTotal('RICE');
-    final byproduct = _formTotal('BROKEN') + _formTotal('BRAN') + _formTotal('HUSK');
+    final byproduct =
+        _formTotal('BROKEN') + _formTotal('BRAN') + _formTotal('HUSK');
     final total = rice + byproduct;
     final loss = widget.order.inputWeightKg - total;
-    final yieldValue = widget.order.inputWeightKg > 0 ? rice / widget.order.inputWeightKg * 100 : 0;
+    final yieldValue = widget.order.inputWeightKg > 0
+        ? rice / widget.order.inputWeightKg * 100
+        : 0;
     return Card(
       key: const Key('milling_output_summary'),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Wrap(spacing: 16, runSpacing: 8, children: [
-          Text('Lúa đầu vào: ${widget.order.inputWeightKg.toStringAsFixed(1)} kg'),
+          Text(
+              'Lúa đầu vào: ${widget.order.inputWeightKg.toStringAsFixed(1)} kg'),
           Text('Gạo: ${rice.toStringAsFixed(1)} kg'),
           Text('Phụ phẩm: ${byproduct.toStringAsFixed(1)} kg'),
           Text('Tổng đầu ra: ${total.toStringAsFixed(1)} kg'),
@@ -236,6 +282,10 @@ class _MillingResultConfirmationScreenState
   }
 
   Future<void> _showLocalPreview() async {
+    if (!_canUpdate) {
+      setState(() => _errorMessage = 'Bạn không có quyền hoàn tất lệnh xay.');
+      return;
+    }
     final errors = _validateOutputDrafts();
     if (errors.isNotEmpty) {
       setState(() => _errorMessage = errors.first);
@@ -248,13 +298,15 @@ class _MillingResultConfirmationScreenState
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: ListView(shrinkWrap: true, children: [
-            const Text('Xác nhận kết quả xay', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+            const Text('Xác nhận kết quả xay',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
             _draftSummary(),
             for (final form in _outputForms)
               ListTile(
                 title: Text(form.label),
-                subtitle: Text('SKU ${form.productVariantId} · Vị trí ${form.locationId} · ${form.outputWeightKg} kg'),
+                subtitle: Text(
+                    'SKU ${form.productVariantId} · Vị trí ${form.locationId} · ${form.outputWeightKg} kg'),
               ),
             FilledButton(
               onPressed: () => _completeFromForms(sheetContext),
@@ -284,6 +336,13 @@ class _MillingResultConfirmationScreenState
       ];
 
   Future<void> _completeFromForms(BuildContext sheetContext) async {
+    if (!_canUpdate) {
+      Navigator.of(sheetContext).pop();
+      if (mounted) {
+        setState(() => _errorMessage = 'Bạn không có quyền hoàn tất lệnh xay.');
+      }
+      return;
+    }
     final errors = _validateOutputDrafts();
     if (errors.isNotEmpty) {
       Navigator.of(sheetContext).pop();
@@ -298,7 +357,8 @@ class _MillingResultConfirmationScreenState
         note: _noteController.text,
         outputForms: _currentOutputValues(),
       );
-      final detail = await widget.repository.getMillingOrderDetail(widget.order.id);
+      final detail =
+          await widget.repository.getMillingOrderDetail(widget.order.id);
       if ((detail.statusCode ?? '').trim().toUpperCase() != 'COMPLETED') {
         throw StateError('Backend chưa xác nhận COMPLETED.');
       }
@@ -319,14 +379,18 @@ class _MillingResultConfirmationScreenState
     final candidates = _products
         .where((item) => item.outputType.trim().toUpperCase() == form.type)
         .toList();
-    final productItems = candidates.isEmpty ? _products : candidates;
+    // Do not expose unrelated paddy/rice SKUs when a by-product has no
+    // dedicated variant. Repository supplies the real generic fallback.
+    final productItems = candidates;
     return Card(
       key: Key('milling_output_card_${form.type.toLowerCase()}'),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text(form.label, style: const TextStyle(fontWeight: FontWeight.w900))),
+            Expanded(
+                child: Text(form.label,
+                    style: const TextStyle(fontWeight: FontWeight.w900))),
             if (form.isByproduct)
               IconButton(
                 tooltip: 'Xóa ${form.label}',
@@ -353,10 +417,24 @@ class _MillingResultConfirmationScreenState
                 ),
             ],
             onChanged: (value) {
+              MillingProductOption? selectedProduct;
+              for (final item in _products) {
+                if (item.id == value) {
+                  selectedProduct = item;
+                  break;
+                }
+              }
               setState(() {
                 form.productVariantId = value;
                 form.locationId = null;
                 _pickedLocations.remove(form.type);
+                // Trọng lượng quy cách được Backend trả cùng SKU. Chỉ tự
+                // điền khi có giá trị thật; người dùng vẫn có thể chỉnh lại.
+                final targetWeight = selectedProduct?.targetWeightKg;
+                if (targetWeight != null && targetWeight > 0) {
+                  form.kgPerBagController.text = targetWeight
+                      .toStringAsFixed(targetWeight % 1 == 0 ? 0 : 2);
+                }
               });
               // Đổi SKU là lấy lại gợi ý và tự chọn vị trí phù hợp, như web.
               _refreshOutputLocation(form);
@@ -367,18 +445,12 @@ class _MillingResultConfirmationScreenState
             onPressed: _suggestingTypes.contains(form.type)
                 ? null
                 : () async {
-                    final suggestions =
-                        _formSuggestions[form.type] ?? const <MillingPutawaySuggestion>[];
-                    // Chỉ tải danh sách vị trí thô khi backend không gợi ý được.
-                    var locations = const <MillingLocation>[];
-                    if (suggestions.isEmpty) {
-                      locations = (await widget.repository.getLocations())
-                          .where((item) =>
-                              item.warehouseId == widget.order.warehouseId &&
-                              item.isActive &&
-                              !item.isQuarantine)
-                          .toList();
-                    }
+                    final suggestions = _formSuggestions[form.type] ??
+                        const <MillingPutawaySuggestion>[];
+                    // Chỉ dùng các vị trí do Backend Putaway Suggestions trả về.
+                    // Không fallback sang GET /location vì endpoint đó trả danh
+                    // sách rộng của kho, có thể khiến người dùng chọn sai vị trí.
+                    const locations = <MillingLocation>[];
                     if (!mounted) return;
                     final selected = await showModalBottomSheet<int>(
                       context: context,
@@ -412,11 +484,45 @@ class _MillingResultConfirmationScreenState
                   : _locationLabel(form),
             ),
           ),
-          TextField(controller: form.bagController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Số bao *'), onChanged: (_) { setState(() {}); _scheduleLocationRefresh(form); }),
-          TextField(controller: form.kgPerBagController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Kg/bao *'), onChanged: (_) { setState(() {}); _scheduleLocationRefresh(form); }),
-          TextField(controller: form.weightController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Khối lượng thực tế (kg) *'), onChanged: (_) { setState(() {}); _scheduleLocationRefresh(form); }),
+          if (_suggestionErrors[form.type] case final error?)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Không lấy được gợi ý tự động: $error',
+                style: const TextStyle(color: Colors.redAccent, fontSize: 12),
+              ),
+            ),
+          TextField(
+              controller: form.bagController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Số bao *'),
+              onChanged: (_) {
+                setState(() {});
+                _scheduleLocationRefresh(form);
+              }),
+          TextField(
+              controller: form.kgPerBagController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Kg/bao *'),
+              onChanged: (_) {
+                setState(() {});
+                _scheduleLocationRefresh(form);
+              }),
+          TextField(
+              controller: form.weightController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration:
+                  const InputDecoration(labelText: 'Khối lượng thực tế (kg) *'),
+              onChanged: (_) {
+                setState(() {});
+                _scheduleLocationRefresh(form);
+              }),
           if (form.bagCount != null && form.kgPerBag != null)
-            Text('Theo bao: ${(form.bagCount! * form.kgPerBag!).toStringAsFixed(2)} kg', style: const TextStyle(color: Color(0xFF64748B))),
+            Text(
+                'Theo bao: ${(form.bagCount! * form.kgPerBag!).toStringAsFixed(2)} kg',
+                style: const TextStyle(color: Color(0xFF64748B))),
         ]),
       ),
     );
@@ -453,7 +559,8 @@ class _MillingResultConfirmationScreenState
       if (!_outputLocationIds.containsKey(output.type)) {
         return 'Vui lòng chọn vị trí nhập kho cho ${output.label}.';
       }
-      if (output.bags.any((bag) => !bag.weightKg.isFinite || bag.weightKg <= 0)) {
+      if (output.bags
+          .any((bag) => !bag.weightKg.isFinite || bag.weightKg <= 0)) {
         return 'Khối lượng bao ${output.label} không hợp lệ.';
       }
     }
@@ -491,23 +598,9 @@ class _MillingResultConfirmationScreenState
       } catch (_) {
         // Fallback read-only locations are loaded below.
       }
-      var locations = const <MillingLocation>[];
-      if (suggestions.isEmpty) {
-        locations = (await widget.repository.getLocations())
-            .where(
-              (location) =>
-                  location.warehouseId == widget.order.warehouseId &&
-                  location.isActive &&
-                  !location.isQuarantine &&
-                  (location.maxCapacity == null ||
-                      location.maxCapacity! - location.currentOccupancy >=
-                          output.totalWeightKg) &&
-                  (location.currentProductVariantId == null ||
-                      location.currentProductVariantId ==
-                          output.productVariantId),
-            )
-            .toList();
-      }
+      // Không dùng GET /location làm fallback. Chỉ vị trí được Backend
+      // Putaway Suggestions xác định là phù hợp mới được phép chọn.
+      const locations = <MillingLocation>[];
       if (!mounted) return;
       final selectedId = await showModalBottomSheet<int>(
         context: context,
@@ -523,7 +616,8 @@ class _MillingResultConfirmationScreenState
       }
     } catch (error) {
       if (mounted) {
-        setState(() => _errorMessage = 'Không tải được vị trí nhập kho: $error');
+        setState(
+            () => _errorMessage = 'Không tải được vị trí nhập kho: $error');
       }
     } finally {
       if (mounted) setState(() => _loadingLocationType = null);
@@ -543,7 +637,8 @@ class _MillingResultConfirmationScreenState
         outputLocationIds: Map<String, int>.of(_outputLocationIds),
         note: _noteController.text,
       );
-      final detail = await widget.repository.getMillingOrderDetail(widget.order.id);
+      final detail =
+          await widget.repository.getMillingOrderDetail(widget.order.id);
       if ((detail.statusCode ?? '').trim().toUpperCase() != 'COMPLETED') {
         throw const MillingApiException(
           'Backend chưa xác nhận lệnh đã hoàn tất. Vui lòng tải lại.',
@@ -661,12 +756,17 @@ class _MillingResultConfirmationScreenState
             ],
           ),
           const SizedBox(height: 12),
-          const Text('Các đầu ra', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+          const Text('Các đầu ra',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
           _draftSummary(),
           const SizedBox(height: 8),
           Wrap(spacing: 8, children: [
-            for (final item in const [('BROKEN', 'Tấm'), ('BRAN', 'Cám'), ('HUSK', 'Trấu')])
+            for (final item in const [
+              ('BROKEN', 'Tấm'),
+              ('BRAN', 'Cám'),
+              ('HUSK', 'Trấu')
+            ])
               OutlinedButton(
                 onPressed: _outputForms.any((form) => form.type == item.$1)
                     ? null
@@ -709,14 +809,15 @@ class _MillingResultConfirmationScreenState
       ),
       bottomNavigationBar: MillingPrimaryButton(
         label: 'Tiếp tục xác nhận',
-        onPressed: _showLocalPreview,
+        onPressed: _canUpdate ? _showLocalPreview : null,
       ),
     );
   }
 }
 
 class _MillingOutputForm {
-  _MillingOutputForm({required this.type, required this.label, required this.isByproduct});
+  _MillingOutputForm(
+      {required this.type, required this.label, required this.isByproduct});
 
   factory _MillingOutputForm.fromValue(MillingOutputFormValue value) {
     final label = switch (value.type) {
@@ -725,7 +826,10 @@ class _MillingOutputForm {
       MillingOutputType.bran => 'Cám',
       MillingOutputType.husk => 'Trấu',
     };
-    return _MillingOutputForm(type: value.type.code, label: label, isByproduct: value.type.isByproduct)
+    return _MillingOutputForm(
+        type: value.type.code,
+        label: label,
+        isByproduct: value.type.isByproduct)
       ..productVariantId = value.productVariantId
       ..locationId = value.locationId
       ..bagController.text = value.bagCount?.toString() ?? ''
@@ -743,8 +847,10 @@ class _MillingOutputForm {
   final weightController = TextEditingController();
 
   int? get bagCount => int.tryParse(bagController.text.trim());
-  double? get kgPerBag => double.tryParse(kgPerBagController.text.trim().replaceAll(',', '.'));
-  double? get outputWeightKg => double.tryParse(weightController.text.trim().replaceAll(',', '.'));
+  double? get kgPerBag =>
+      double.tryParse(kgPerBagController.text.trim().replaceAll(',', '.'));
+  double? get outputWeightKg =>
+      double.tryParse(weightController.text.trim().replaceAll(',', '.'));
 
   void dispose() {
     bagController.dispose();
@@ -786,10 +892,13 @@ class _OutputLocationCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(
-          output.type == 'RICE' ? Icons.rice_bowl_outlined : Icons.inventory_2_outlined,
+          output.type == 'RICE'
+              ? Icons.rice_bowl_outlined
+              : Icons.inventory_2_outlined,
           color: selectedLocationId == null ? Colors.orange : millingGreen,
         ),
-        title: Text('${output.label} · ${output.totalWeightKg.toStringAsFixed(1)} kg'),
+        title: Text(
+            '${output.label} · ${output.totalWeightKg.toStringAsFixed(1)} kg'),
         subtitle: Text('$selected · ${output.bags.length} bao'),
         trailing: isLoading
             ? const SizedBox(

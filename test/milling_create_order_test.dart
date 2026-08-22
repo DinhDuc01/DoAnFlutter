@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:stocklite/core/api/api_client.dart';
 import 'package:stocklite/features/auth/data/auth_session_store.dart';
+import 'package:stocklite/features/auth/models/auth_permission.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/milling/data/api_milling_repository.dart';
 import 'package:stocklite/features/milling/data/milling_repository.dart';
@@ -20,7 +21,18 @@ void main() {
       AuthSessionStore.current = const AuthSession(
         accessToken: 'access-token',
         refreshToken: 'refresh-token',
-        user: AuthUser(id: 1, fullName: 'Tester', email: 'test@example.com'),
+        user: AuthUser(
+          id: 1,
+          fullName: 'Tester',
+          email: 'test@example.com',
+          permissions: [
+            UserPermission(
+              menuId: 61,
+              menuCode: 'MILLING_ORDERS',
+              actions: {'READ', 'CREATE', 'UPDATE'},
+            ),
+          ],
+        ),
       );
     });
 

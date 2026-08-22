@@ -398,9 +398,9 @@ class _KhoTabState extends State<KhoTab> {
 
     final page = _page!;
     final hasPaddyLots =
-        AuthSessionStore.current?.user.hasMenuAccess('PADDY_LOTS') == true;
+        AuthSessionStore.current?.user.hasReadAccess('PADDY_LOTS') == true;
     final hasStockTake =
-        AuthSessionStore.current?.user.hasMenuAccess('STOCKTAKE') == true;
+        AuthSessionStore.current?.user.hasReadAccess('STOCKTAKE') == true;
 
     return RefreshIndicator(
       onRefresh: () => _load(showLoading: false),

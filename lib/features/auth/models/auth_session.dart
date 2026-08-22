@@ -31,6 +31,10 @@ class AuthSession {
   /// Kiểm tra người dùng có quyền xem/truy cập Menu hay không (quyền READ hoặc có menu trong danh sách).
   bool hasMenuAccess(String menuCode) => user.hasMenuAccess(menuCode);
 
+  /// Route/list/detail access is stricter than menu visibility: the session
+  /// must explicitly contain the READ action for the requested menu.
+  bool hasReadAccess(String menuCode) => user.hasReadAccess(menuCode);
+
   /// Tạo bản sao phiên với cặp token mới (dùng sau khi làm mới token)
   /// hoặc thông tin người dùng mới (dùng sau khi cập nhật hồ sơ).
   AuthSession copyWith({
@@ -100,7 +104,7 @@ class AuthUser {
     return roles.any((r) => r.code == 'ADMIN' || r.code == '1001');
   }
 
-  /// Mobile không phục vụ tài khoản quản trị, kiểm toán hoặc nhân viên xay xát.
+  /// Mobile không phục vụ tài khoản quản trị hoặc kiểm toán.
   /// Backend có thể trả role dưới dạng `code` hoặc chỉ có `name`,
   /// vì vậy kiểm tra cả hai trường. OWNER/Chủ cơ sở không bị chặn.
   bool get isMobileBlocked {
@@ -112,8 +116,6 @@ class AuthUser {
     return roleIds.contains(1001) ||
         values.contains('ADMIN') ||
         values.contains('QUẢN TRỊ VIÊN') ||
-        values.contains('MILLING') ||
-        values.contains('NHÂN VIÊN XAY XÁT') ||
         values.contains('AUDITOR') ||
         values.contains('KIỂM TOÁN VIÊN');
   }
@@ -148,6 +150,10 @@ class AuthUser {
     );
     return perm.hasAction(targetAction);
   }
+
+  /// Returns true only when Backend granted READ for [menuCode].
+  /// Having CREATE/UPDATE/DELETE alone must not open a feature route.
+  bool hasReadAccess(String menuCode) => hasPermission(menuCode, 'READ');
 
   /// Kiểm tra người dùng có thể mở/xem Menu chức năng hay không.
   bool hasMenuAccess(String menuCode) {

@@ -36,6 +36,28 @@ void main() {
   });
 
   group('AuthUser & AuthSession Permission Helpers', () {
+    test('explicit READ access rejects mutation-only permissions', () {
+      const user = AuthUser(
+        id: 99,
+        fullName: 'Mutation only',
+        email: 'mutation@test.local',
+        permissions: [
+          UserPermission(
+            menuId: 41,
+            menuCode: 'SALE_ORDERS',
+            actions: {'CREATE', 'UPDATE'},
+          ),
+        ],
+        menus: [
+          UserMenu(id: 41, code: 'SALE_ORDERS', name: 'Sales orders'),
+        ],
+      );
+
+      expect(user.hasMenuAccess('SALE_ORDERS'), isTrue);
+      expect(user.hasReadAccess('SALE_ORDERS'), isFalse);
+      expect(user.hasPermission('SALE_ORDERS', 'UPDATE'), isTrue);
+    });
+
     test('merges duplicate permissions by menu code and unions actions', () {
       final user = AuthUser.fromJson({
         'permissions': [
@@ -444,7 +466,8 @@ void main() {
       expect(harness.realtimeStopped, isFalse);
     });
 
-    test('blocked Milling role never restores a mobile session', () async {
+    test('Milling role restores a mobile session when no denied role exists',
+        () async {
       const millingSession = AuthSession(
         accessToken: 'milling-access',
         refreshToken: 'milling-refresh',
@@ -467,9 +490,9 @@ void main() {
         stopRealtime: harness.stopRealtime,
       );
 
-      expect(result, isFalse);
-      expect(service.fetchCalls, 0);
-      expect(harness.cleared, isTrue);
+      expect(result, isTrue);
+      expect(service.fetchCalls, 1);
+      expect(harness.cleared, isFalse);
     });
   });
 }

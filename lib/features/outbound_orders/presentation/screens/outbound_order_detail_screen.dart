@@ -395,9 +395,8 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
           children: [
             AppGradientHeader(
               overline: order == null ? null : 'Đơn bán ${order.soCode}',
-              title: order == null
-                  ? 'Chi tiết phiếu xuất'
-                  : 'Phiếu #${order.id}',
+              title:
+                  order == null ? 'Chi tiết phiếu xuất' : 'Phiếu #${order.id}',
               subtitle: order?.customerName ?? 'Đang tải dữ liệu…',
               leading: IconButton(
                 onPressed:
@@ -408,8 +407,14 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Trạng thái cân luôn nhìn thấy được, không phải mở form.
-                  const ScaleStatusChip(),
+                  // Cân chỉ liên quan khi phiếu đang ở bước lấy hàng/đóng bao.
+                  // Khi phiếu đã hoàn tất (hoặc ở trạng thái khác), màn hình chỉ
+                  // hiển thị số liệu đã ghi nhận, không gợi ý kết nối cân nữa.
+                  if (order?.canPack == true)
+                    const KeyedSubtree(
+                      key: Key('outbound_scale_status'),
+                      child: ScaleStatusChip(),
+                    ),
                   IconButton(
                     onPressed: _busy ? null : () => _load(),
                     color: Colors.white,
@@ -479,7 +484,19 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
             ),
           ],
           const SizedBox(height: 14),
-          _pipeline(order),
+          Text(
+            'Tiến trình xử lý',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textSecondaryFor(context),
+            ),
+          ),
+          const SizedBox(height: 10),
+          KeyedSubtree(
+            key: const Key('outbound_progress_steps'),
+            child: _pipeline(order),
+          ),
         ],
       ),
     );
@@ -541,13 +558,25 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
 
   Widget _summaryCard(OutboundOrderDetail order) {
     final diff = order.weightDiffKg;
+    final isCompleted = order.statusId == OutboundStatusIds.completed;
+    final isWeighingStage = order.canPack;
     return AppCard(
+      key: const Key('outbound_summary_card'),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppSectionHeader(
-            title: 'Cân & đóng bao',
-            icon: Icons.scale_outlined,
+          AppSectionHeader(
+            key: const Key('outbound_summary_title'),
+            title: isWeighingStage
+                ? 'Cân & đóng bao'
+                : isCompleted
+                    ? 'Kết quả xuất kho'
+                    : 'Thông tin xuất kho',
+            icon: isWeighingStage
+                ? Icons.scale_outlined
+                : isCompleted
+                    ? Icons.fact_check_outlined
+                    : Icons.inventory_2_outlined,
           ),
           Row(
             children: [
@@ -560,7 +589,7 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
               const SizedBox(width: 8),
               Expanded(
                 child: AppStatTile(
-                  label: 'Thực lấy',
+                  label: isCompleted ? 'Đã xuất' : 'Thực lấy',
                   value: formatKg(order.pickedKg),
                   tone: AppTone.info,
                 ),

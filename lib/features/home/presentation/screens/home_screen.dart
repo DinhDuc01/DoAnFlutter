@@ -38,9 +38,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final session = AuthSessionStore.current;
     _sections = [
       HomeSection.home,
-      if (session?.hasMenuAccess('RICE_PURCHASE') == true) HomeSection.purchase,
-      if (session?.hasMenuAccess('INVENTORIES') == true) HomeSection.warehouse,
-      if (session?.hasMenuAccess('OUTBOUND_ORDERS') == true)
+      if (session?.hasReadAccess('RICE_PURCHASE') == true) HomeSection.purchase,
+      if (session?.hasReadAccess('INVENTORIES') == true) HomeSection.warehouse,
+      if (session?.hasReadAccess('OUTBOUND_ORDERS') == true)
         HomeSection.outbound,
       HomeSection.notifications,
       HomeSection.account,

@@ -92,10 +92,13 @@ class HomeTodayTab extends StatelessWidget {
           menuCode: 'QUALITY_INSPECTIONS', route: AppRoutes.qualityInspections),
       _Shortcut('Nhập kho', Icons.move_to_inbox_outlined, AppColors.primaryDark,
           menuCode: 'INBOUND_ORDERS', route: AppRoutes.inboundPutaway),
+      _Shortcut('Xay xát', Icons.precision_manufacturing_outlined,
+          AppColors.accentTeal,
+          menuCode: 'MILLING_ORDERS', route: AppRoutes.milling),
     ];
 
     final visibleItems =
-        items.where((item) => session.hasMenuAccess(item.menuCode)).toList();
+        items.where((item) => session.hasReadAccess(item.menuCode)).toList();
 
     return GridView.builder(
       shrinkWrap: true,

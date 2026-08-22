@@ -6,6 +6,7 @@ import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/app_pagination.dart';
 import '../../../../core/widgets/app_ui.dart';
+import '../../../../core/widgets/permission_guard.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../../scan/presentation/screens/scan_qr_screen.dart';
 import '../../data/paddy_lot_repository.dart';
@@ -181,20 +182,27 @@ class _PaddyLotListScreenState extends State<PaddyLotListScreen>
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  IconButton(
-                    // Mở thẳng màn quét ở chế độ "tra cứu lô": quét xong (bằng
-                    // camera hoặc từ ảnh trong máy) là vào ngay chi tiết lô.
-                    onPressed: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const ScanQrScreen(autoOpenLot: true),
-                        ),
-                      );
-                      if (mounted) _load();
-                    },
-                    color: Colors.white,
-                    tooltip: 'Quét QR lô',
-                    icon: const Icon(Icons.qr_code_scanner),
+                  PermissionBuilder(
+                    menuCode: 'PRODUCT_VARIANTS',
+                    action: 'READ',
+                    child: IconButton(
+                      // Mở thẳng màn quét ở chế độ "tra cứu lô": quét xong (bằng
+                      // camera hoặc từ ảnh trong máy) là vào ngay chi tiết lô.
+                      onPressed: () async {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => const PermissionGuard(
+                              menuCode: 'PRODUCT_VARIANTS',
+                              child: ScanQrScreen(autoOpenLot: true),
+                            ),
+                          ),
+                        );
+                        if (mounted) _load();
+                      },
+                      color: Colors.white,
+                      tooltip: 'Quét QR lô',
+                      icon: const Icon(Icons.qr_code_scanner),
+                    ),
                   ),
                   IconButton(
                     onPressed: _load,
