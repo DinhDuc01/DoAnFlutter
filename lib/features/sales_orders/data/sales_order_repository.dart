@@ -189,13 +189,30 @@ class SalesProductOption {
     this.sku,
     this.salePrice = 0,
     this.unitName,
+    this.productCategoryId,
+    this.productCategoryName,
   });
+
+  /// Các ID danh mục được Backend seed và Web dùng cho hàng được phép bán.
+  /// Đơn bán Mobile chỉ nhận Gạo thành phẩm và Phụ phẩm, không nhận Lúa thô
+  /// hoặc danh mục không xác định.
+  static const int rawPaddyCategoryId = 101;
+  static const int finishedRiceCategoryId = 102;
+  static const int byproductCategoryId = 103;
 
   final int id;
   final String name;
   final String? sku;
   final double salePrice;
   final String? unitName;
+  final int? productCategoryId;
+  final String? productCategoryName;
+
+  bool get isRawPaddy => productCategoryId == rawPaddyCategoryId;
+
+  bool get isAllowedSalesProduct =>
+      productCategoryId == finishedRiceCategoryId ||
+      productCategoryId == byproductCategoryId;
 
   String get label =>
       (sku ?? '').trim().isEmpty ? name : '$name · ${sku!.trim()}';
@@ -394,7 +411,7 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
       () => _api.get('/api/v1/product-variant/search',
           query: query, token: _token),
     );
-    return [
+    final products = [
       for (final row in _rows(json))
         if ((JsonReader.integer(row, 'id') ?? 0) > 0)
           SalesProductOption(
@@ -406,8 +423,18 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
             salePrice: JsonReader.decimal(row, 'salePrice') ?? 0,
             unitName: JsonReader.string(row, 'unitOfMeasureName') ??
                 JsonReader.string(row, 'unitName'),
+            productCategoryId: JsonReader.integer(row, 'productCategoryId') ??
+                JsonReader.integer(row, 'ProductCategoryId'),
+            productCategoryName:
+                JsonReader.string(row, 'productCategoryName') ??
+                    JsonReader.string(row, 'ProductCategoryName'),
           ),
     ];
+
+    // Đồng bộ Web: chỉ cho bán Gạo thành phẩm (102) và Phụ phẩm (103).
+    // Dùng allow-list category từ Backend thay vì đoán bằng tên/SKU; record thiếu
+    // category cũng bị loại để không vô tình đưa nguyên liệu vào đơn bán.
+    return products.where((product) => product.isAllowedSalesProduct).toList();
   }
 
   /// Đọc danh sách từ nhiều dạng bao ngoài: `resources` là List, hoặc là Map

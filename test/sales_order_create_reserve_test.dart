@@ -197,7 +197,8 @@ void main() {
       expect(find.byKey(const Key('sales_order_confirm')), findsNothing);
       expect(find.byKey(const Key('sales_order_reserve')), findsNothing);
       expect(find.byKey(const Key('sales_order_cancel')), findsNothing);
-      expect(find.byKey(const Key('sales_order_create_outbound')), findsNothing);
+      expect(
+          find.byKey(const Key('sales_order_create_outbound')), findsNothing);
       expect(repository.mutationCalls, 0);
     });
 
@@ -234,7 +235,8 @@ void main() {
         detail: _detail(SalesOrderStatusIds.reserved),
       );
       await _pumpDetail(tester, repository);
-      expect(find.byKey(const Key('sales_order_create_outbound')), findsOneWidget);
+      expect(
+          find.byKey(const Key('sales_order_create_outbound')), findsOneWidget);
       expect(find.byKey(const Key('sales_order_cancel')), findsOneWidget);
 
       for (final status in [
@@ -268,6 +270,61 @@ void main() {
       await tester.tap(find.byType(TextButton).last);
       await tester.pump();
       expect(repository.cancelCalls, 0);
+    });
+  });
+
+  group('ApiSalesOrderRepository.getProductVariants', () {
+    test('loại lúa thô nhưng giữ gạo thành phẩm và phụ phẩm', () async {
+      final client = FakeApiClient(
+        onGet: (_, __, ___) async => {
+          'isSucceeded': true,
+          'resources': {
+            'dataSource': [
+              {
+                'id': 127,
+                'sku': 'LUA-ST24',
+                'name': 'Lúa ST24',
+                'productCategoryId': 101,
+                'productCategoryName': 'Lúa thô',
+              },
+              {
+                'id': 136,
+                'sku': 'GAO-ST24-10KG',
+                'name': 'Gạo ST24 đóng bao 10kg',
+                'productCategoryId': 102,
+                'productCategoryName': 'Gạo thành phẩm',
+              },
+              {
+                'id': 144,
+                'sku': 'TAM-ST24-5KG',
+                'name': 'Tấm ST24 đóng bao 5kg',
+                'productCategoryId': 103,
+                'productCategoryName': 'Phụ phẩm',
+              },
+              {
+                'id': 201,
+                'sku': 'BAO-PP-01',
+                'name': 'Bao đóng gói',
+                'productCategoryId': 104,
+                'productCategoryName': 'Vật tư',
+              },
+              {
+                'id': 202,
+                'sku': 'UNKNOWN-01',
+                'name': 'Thiếu danh mục',
+              },
+            ],
+          },
+        },
+      );
+
+      final products =
+          await ApiSalesOrderRepository(apiClient: client).getProductVariants();
+
+      expect(products.map((item) => item.id), [136, 144]);
+      expect(products.any((item) => item.isRawPaddy), isFalse);
+      expect(products.every((item) => item.isAllowedSalesProduct), isTrue);
+      expect(client.calls.single.path, '/api/v1/product-variant/search');
     });
   });
 }
@@ -348,7 +405,8 @@ class _FakeDetailRepository implements SalesOrderRepository {
     String? channel,
     int page = 1,
     int pageSize = 20,
-  }) async => const SalesOrderPage(total: 0, items: []);
+  }) async =>
+      const SalesOrderPage(total: 0, items: []);
 
   @override
   Future<CreatedSalesOrder> create(CreateSalesOrderInput input) =>
@@ -361,7 +419,8 @@ class _FakeDetailRepository implements SalesOrderRepository {
   Future<List<SalesWarehouseOption>> getWarehouses() async => const [];
 
   @override
-  Future<List<SalesProductOption>> getProductVariants({String keyword = ''}) async =>
+  Future<List<SalesProductOption>> getProductVariants(
+          {String keyword = ''}) async =>
       const [];
 }
 

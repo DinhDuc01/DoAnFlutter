@@ -206,6 +206,14 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
       return null;
     }
 
+    if (_lines.any((line) => !line.product.isAllowedSalesProduct)) {
+      setState(() {
+        _formError =
+            'Đơn bán chỉ được sử dụng SKU gạo thành phẩm hoặc phụ phẩm.';
+      });
+      return null;
+    }
+
     final items = <CreateSalesOrderLine>[];
     for (final line in _lines) {
       final quantity = parseDecimal(line.quantity.text);
