@@ -8,6 +8,7 @@ import '../../../../core/widgets/state_widgets.dart';
 import '../../../auth/data/auth_session_store.dart';
 import '../../data/quality_inspection_repository.dart';
 import '../../models/quality_inspection.dart';
+import 'quality_inspection_bag_session_screen.dart';
 import 'quality_inspection_edit_screen.dart';
 import 'quality_inspection_screen.dart'
     show
@@ -50,6 +51,7 @@ class _QualityInspectionDetailScreenState
   bool _changed = false;
 
   bool get _canUpdate =>
+      AuthSessionStore.current?.user.hasRole('PURCHASING') == true &&
       AuthSessionStore.current?.hasPermission(
         'QUALITY_INSPECTIONS',
         'UPDATE',
@@ -119,6 +121,11 @@ class _QualityInspectionDetailScreenState
         paddyLotId: detail.paddyLotId,
         lotCode: detail.lotCode ?? preview.lotCode,
         lotStatusCode: preview.lotStatusCode,
+        inspectionType: detail.inspectionType ?? preview.inspectionType,
+        completedAt: detail.completedAt,
+        completedBy: detail.completedBy ?? preview.completedBy,
+        targetedBagCount: detail.targetedBagCount ?? preview.targetedBagCount,
+        targetedWeightKg: detail.targetedWeightKg ?? preview.targetedWeightKg,
         inspectorId: detail.inspectorId,
         inspectorName: detail.inspectorName,
         inspectedAt: detail.inspectedAt,
@@ -156,7 +163,9 @@ class _QualityInspectionDetailScreenState
     // Fail closed at the action boundary as well as in the widget tree. The
     // backend DTO has no inspection status; it explicitly identifies
     // AWAITING_QC as the draft inspection awaiting a result.
-    if (detail == null || !_canUpdate || !detail.isDraft) return;
+    if (detail == null || detail.isSession || !_canUpdate || !detail.isDraft) {
+      return;
+    }
     final saved = await Navigator.of(context).push<bool>(
       MaterialPageRoute<bool>(
         builder: (_) => QualityInspectionEditScreen(
@@ -169,6 +178,24 @@ class _QualityInspectionDetailScreenState
     if (saved == true) {
       _changed = true;
       if (mounted) await _load(showLoading: false);
+    }
+  }
+
+  Future<void> _openBagSession() async {
+    final detail = _detail;
+    if (detail == null || !detail.isSession) return;
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute<bool>(
+        builder: (_) => QualityInspectionBagSessionScreen(
+          inspectionId: detail.id,
+          title: detail.lotLabel,
+          repository: _repository,
+        ),
+      ),
+    );
+    if (changed == true && mounted) {
+      _changed = true;
+      await _load(showLoading: false);
     }
   }
 
@@ -204,20 +231,39 @@ class _QualityInspectionDetailScreenState
           ],
         ),
       ),
-      bottomNavigationBar: detail == null || !_canUpdate || !detail.isDraft
+      bottomNavigationBar: detail == null
           ? null
-          : SafeArea(
-              minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: FilledButton.icon(
-                key: const Key('quality_inspection_edit'),
-                onPressed: _openEdit,
-                icon: const Icon(Icons.fact_check_outlined),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
-                label: const Text('Kiểm định ngay'),
-              ),
-            ),
+          : detail.isSession
+              ? SafeArea(
+                  minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: FilledButton.icon(
+                    key: const Key('quality_inspection_bags'),
+                    onPressed: _openBagSession,
+                    icon: const Icon(Icons.inventory_2_outlined),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                    label: Text(
+                      detail.isCompletedSession || !_canUpdate
+                          ? 'Chi tiết từng bao'
+                          : 'Kiểm tra từng bao',
+                    ),
+                  ),
+                )
+              : !_canUpdate || !detail.isDraft
+                  ? null
+                  : SafeArea(
+                      minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: FilledButton.icon(
+                        key: const Key('quality_inspection_edit'),
+                        onPressed: _openEdit,
+                        icon: const Icon(Icons.fact_check_outlined),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        label: const Text('Kiểm định ngay'),
+                      ),
+                    ),
     );
   }
 
@@ -251,6 +297,29 @@ class _QualityInspectionDetailScreenState
             _field('Phạm vi xử lý', detail.scopeText),
           ]),
           _section('Kết quả kiểm định', [
+            if (detail.isSession)
+              _field('Loại kiểm tra', _inspectionType(detail.inspectionType)),
+            if (detail.isSession)
+              _field(
+                'Số bao cần kiểm',
+                detail.targetedBagCount == null
+                    ? '—'
+                    : '${detail.targetedBagCount} bao',
+              ),
+            if (detail.isSession)
+              _field(
+                'Khối lượng cần kiểm',
+                detail.targetedWeightKg == null
+                    ? '—'
+                    : formatKg(detail.targetedWeightKg),
+              ),
+            if (detail.isSession)
+              _field(
+                'Tiến độ phiên',
+                detail.completedAt == null
+                    ? 'Chưa hoàn tất'
+                    : 'Hoàn tất ${formatDate(detail.completedAt, withTime: true)}',
+              ),
             _field('Độ ẩm', _percent(detail.moisturePercent)),
             _field('Tạp chất', _percent(detail.impurityPercent)),
             _field(
@@ -432,3 +501,18 @@ String _dash(String? value, {String fallback = '—'}) {
 
 String _percent(double? value) =>
     value == null ? '—' : '${formatNumber(value, digits: 2)}%';
+
+String _inspectionType(String? value) {
+  switch ((value ?? '').trim().toUpperCase()) {
+    case 'RECEIVING':
+      return 'Kiểm tra khi nhập';
+    case 'STORAGE':
+      return 'Kiểm tra trong kho';
+    case 'RECHECK':
+      return 'Kiểm tra lại';
+    case 'OUTBOUND_EXCEPTION':
+      return 'Kiểm tra ngoại lệ khi xuất';
+    default:
+      return value?.trim().isNotEmpty == true ? value!.trim() : '—';
+  }
+}

@@ -120,6 +120,17 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
         InboundOrderStatuses.partiallyReceived,
       ].contains(_orderStatus);
 
+  bool get _isWaitingApproval => _orderStatus == InboundOrderStatuses.submitted;
+
+  /// Chỉ phiếu đã được duyệt/đang nhận và người dùng có UPDATE mới được sửa
+  /// phương án hoặc xác nhận xếp kho.
+  bool get _canEditPlan => _canUpdate && _canPrepare;
+
+  /// Phiếu chờ duyệt và tài khoản chỉ có READ vẫn được tải phương án để xem.
+  /// Nhánh này không được gọi start/record/confirm.
+  bool get _shouldLoadReadOnlyPlan =>
+      _isWaitingApproval || (_canPrepare && !_canUpdate);
+
   List<StorageLocation> get _warehouseLocations {
     final warehouseId = _line.order.warehouseId;
     final needsQuarantine = _line.item.needsQuarantine;
@@ -134,17 +145,6 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
         .toList()
       ..sort((a, b) => b.priority.compareTo(a.priority));
     return list;
-  }
-
-  List<StorageLocation> get _manualLocations => _warehouseLocations
-      .where((location) => location.id != _selectedLocationId)
-      .toList();
-
-  PutawaySuggestion? get _selectedSuggestion {
-    for (final suggestion in _suggestions) {
-      if (suggestion.locationId == _selectedLocationId) return suggestion;
-    }
-    return null;
   }
 
   // ================= Tải dữ liệu =================
@@ -179,15 +179,29 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   /// Chạy đúng một lần cho mỗi lượt xếp; phiếu chưa được duyệt thì bỏ qua và sẽ
   /// tự chạy khi realtime báo phiếu đã duyệt trên web.
   Future<void> _maybeAutoPrepare() async {
-    if (!_canUpdate) return;
     if (!mounted || _busy || _finished || _autoPrepared) return;
-    if (!_canPrepare || _line.item.remainingKg <= 0) return;
+    if (_line.item.remainingKg <= 0) return;
     if (_suggestions.isNotEmpty || (_plan?.columns.isNotEmpty ?? false)) return;
+
+    if (_shouldLoadReadOnlyPlan) {
+      _autoPrepared = true;
+      await _loadPlanPreview();
+      return;
+    }
+    if (!_canEditPlan) return;
     _autoPrepared = true;
     await _prepare();
   }
 
-  Future<void> _fetchSuggestions({int? preferredLocationId}) async {
+  Future<void> _loadPlanPreview() async {
+    if (_busy || !_shouldLoadReadOnlyPlan) return;
+    await _fetchSuggestions(readOnly: true);
+  }
+
+  Future<void> _fetchSuggestions({
+    int? preferredLocationId,
+    bool readOnly = false,
+  }) async {
     setState(() => _busy = true);
     try {
       final suggestions = await _repository.getPutawaySuggestions(
@@ -198,6 +212,11 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
         _line.order.id,
         _line.item.id,
       );
+      if (plan == null || plan.columns.isEmpty) {
+        throw const InboundOrderException(
+          'Không có phương án xếp nguyên bao cho dòng nhập kho này.',
+        );
+      }
       if (!mounted) return;
       final ordered =
           BagPutawayPlanner.orderSuggestionsByPlan(suggestions, plan);
@@ -213,7 +232,12 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
         _expandedGroups.clear();
         _suggestions = ordered;
         _selectedLocationId = selected?.locationId;
-        if (selected == null) {
+        if (readOnly) {
+          _status = PutawayStatus.waiting;
+          _message = _isWaitingApproval
+              ? 'Phiếu đang chờ người khác phê duyệt. Phương án xếp kho bên dưới chỉ để xem.'
+              : 'Bạn chỉ có quyền xem. Phương án xếp kho bên dưới không thể chỉnh sửa.';
+        } else if (selected == null) {
           _status = PutawayStatus.capacity;
           _message = 'Không còn vị trí phù hợp đủ sức chứa.';
         } else {
@@ -269,7 +293,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   /// còn phải nhập (giống web tự động ghi nhận `remaining` sau khi duyệt) nên
   /// không cần ô nhập tay.
   Future<void> _prepare({int? preferredLocationId}) async {
-    if (!_canUpdate) return;
+    if (!_canEditPlan) return;
     if (_busy) return;
     final weight = _line.item.remainingKg;
     if (weight <= 0) return;
@@ -334,21 +358,8 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     if (_canPrepare) await _prepare(preferredLocationId: location.id);
   }
 
-  void _selectManualLocation(int? locationId) {
-    setState(() {
-      _manualLocationId = locationId;
-      if (locationId == null) return;
-      for (final location in _manualLocations) {
-        if (location.id == locationId) {
-          _placementWeightKg =
-              math.min(_line.item.remainingKg, location.freeCapacityKg);
-        }
-      }
-    });
-  }
-
   Future<void> _confirmPutaway() async {
-    if (!_canUpdate) return;
+    if (!_canEditPlan) return;
     if (_busy) return;
     final plan = _plan;
     final hasPlan = plan != null && plan.columns.isNotEmpty;
@@ -404,9 +415,8 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
           _line.item.id,
           locationId: locationId,
           isOverride: _manualOverride,
-          overrideReason: _manualOverride
-              ? _overrideReasonController.text.trim()
-              : null,
+          overrideReason:
+              _manualOverride ? _overrideReasonController.text.trim() : null,
           weightKg: weightKg,
         );
       }
@@ -460,6 +470,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   // ================= Sửa phương án xếp bao =================
 
   void _applyPlanResult(BagPlanMoveResult result) {
+    if (!_canEditPlan || _busy) return;
     setState(() {
       if (result.error != null) {
         _status = PutawayStatus.capacity;
@@ -479,35 +490,35 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   Widget build(BuildContext context) {
     final item = _line.item;
     return Scaffold(
-        backgroundColor: AppColors.backgroundFor(context),
-        body: SafeArea(
-          bottom: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              AppGradientHeader(
-                overline: _line.order.poCode,
-                title: item.paddyLotCode ?? _line.order.poCode,
-                subtitle:
-                    '${_line.order.warehouseName ?? 'Kho #${_line.order.warehouseId}'} · '
-                    'còn ${formatKg(item.remainingKg)}',
-                leading: IconButton(
-                  color: Colors.white,
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => Navigator.of(context).pop(_changed),
-                ),
-                trailing: IconButton(
-                  color: Colors.white,
-                  tooltip: 'Tải lại',
-                  icon: const Icon(Icons.refresh_rounded),
-                  onPressed: _busy ? null : _reloadLine,
-                ),
+      backgroundColor: AppColors.backgroundFor(context),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppGradientHeader(
+              overline: _line.order.poCode,
+              title: item.paddyLotCode ?? _line.order.poCode,
+              subtitle:
+                  '${_line.order.warehouseName ?? 'Kho #${_line.order.warehouseId}'} · '
+                  'còn ${formatKg(item.remainingKg)}',
+              leading: IconButton(
+                color: Colors.white,
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.of(context).pop(_changed),
               ),
-              Expanded(child: _body()),
-            ],
-          ),
+              trailing: IconButton(
+                color: Colors.white,
+                tooltip: 'Tải lại',
+                icon: const Icon(Icons.refresh_rounded),
+                onPressed: _busy ? null : _reloadLine,
+              ),
+            ),
+            Expanded(child: _body()),
+          ],
         ),
-        bottomNavigationBar: _bottomBar(),
+      ),
+      bottomNavigationBar: _bottomBar(),
     );
   }
 
@@ -535,12 +546,12 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
           _bagPlanSection(plan)
         else if (_busy && _suggestions.isEmpty)
           _preparingCard()
-        else ...[
-          if (_status == PutawayStatus.error && _canPrepare) _retryCard(),
-          _suggestionSection(),
-        ],
-        if (_suggestions.isNotEmpty && (plan == null || plan.columns.isEmpty))
-          _overrideSection(),
+        else if (_status == PutawayStatus.error)
+          _retryCard()
+        else if (!_canPrepare)
+          _suggestionSection()
+        else
+          _waitingForBagPlanCard(),
       ],
     );
   }
@@ -599,8 +610,15 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
             const SizedBox(height: 10),
             const AppInfoBanner(
               message:
-                  'Phiếu đang chờ phê duyệt. Việc phê duyệt phiếu nhập chỉ thực '
-                  'hiện trên web; sau khi được duyệt, quay lại đây để nhận hàng.',
+                  'Phiếu đang chờ người khác phê duyệt. Bạn vẫn có thể xem phương án '
+                  'xếp kho bên dưới, nhưng chưa thể thay đổi hoặc xác nhận nhập kho.',
+            ),
+          ],
+          if (!waitingApproval && !_canUpdate) ...[
+            const SizedBox(height: 10),
+            const AppInfoBanner(
+              message:
+                  'Bạn chỉ có quyền xem phiếu và phương án xếp kho; các thao tác thay đổi đã bị khóa.',
             ),
           ],
           if (_canUpdate && _actionLabel.isNotEmpty) ...[
@@ -655,17 +673,33 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
           ),
           const SizedBox(height: 10),
           FilledButton.icon(
-            onPressed: _busy || !_canUpdate
+            onPressed: _busy || (!_canEditPlan && !_shouldLoadReadOnlyPlan)
                 ? null
                 : () {
                     _autoPrepared = true;
-                    _prepare();
+                    if (_shouldLoadReadOnlyPlan) {
+                      _loadPlanPreview();
+                    } else {
+                      _prepare();
+                    }
                   },
             icon: const Icon(Icons.refresh_rounded),
-            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+            style:
+                FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
             label: const Text('Thử lại'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _waitingForBagPlanCard() {
+    return const AppCard(
+      margin: EdgeInsets.only(bottom: 12),
+      child: AppInfoBanner(
+        message:
+            'Màn này yêu cầu phương án xếp nguyên bao từ Backend. Chưa có cột và danh sách bao để hiển thị.',
+        tone: AppTone.warning,
       ),
     );
   }
@@ -727,7 +761,8 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
               ),
               Text(
                 '${column.bags.length} bao · ${formatKg(column.totalKg)}',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+                style: const TextStyle(
+                    fontWeight: FontWeight.w700, fontSize: 12.5),
               ),
             ],
           ),
@@ -837,7 +872,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
               IconButton(
                 tooltip: 'Đưa nhóm lên đỉnh',
                 visualDensity: VisualDensity.compact,
-                onPressed: _busy || group.priorityStart == 1
+                onPressed: !_canEditPlan || _busy || group.priorityStart == 1
                     ? null
                     : () => _applyPlanResult(
                           BagPutawayPlanner.moveGroupOrder(
@@ -852,7 +887,9 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
               IconButton(
                 tooltip: 'Đưa nhóm xuống đáy',
                 visualDensity: VisualDensity.compact,
-                onPressed: _busy || group.priorityEnd == column.bags.length
+                onPressed: !_canEditPlan ||
+                        _busy ||
+                        group.priorityEnd == column.bags.length
                     ? null
                     : () => _applyPlanResult(
                           BagPutawayPlanner.moveGroupOrder(
@@ -982,12 +1019,13 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
             ),
           ),
       ],
-      onChanged: _busy
+      onChanged: !_canEditPlan || _busy
           ? null
           : (value) {
               if (value == null || value == currentLocationId) return;
               if (plan.capacityRemain(value) + 0.001 < requiredKg) {
-                _snack('Cột đã chọn không đủ sức chứa cho ${formatKg(requiredKg)}.');
+                _snack(
+                    'Cột đã chọn không đủ sức chứa cho ${formatKg(requiredKg)}.');
                 return;
               }
               onPick(value);
@@ -1014,7 +1052,8 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     if (locations.isEmpty) {
       return const HEmptyState(
         title: 'Không còn khu/cột phù hợp',
-        description: 'Kho này hiện không có vị trí còn sức chứa đúng điều kiện.',
+        description:
+            'Kho này hiện không có vị trí còn sức chứa đúng điều kiện.',
         icon: Icons.location_off_outlined,
       );
     }
@@ -1117,85 +1156,15 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     );
   }
 
-  Widget _overrideSection() {
-    return AppCard(
-      margin: const EdgeInsets.only(top: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  _manualOverride ? 'Đang ghi đè vị trí' : 'Ghi đè thủ công',
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-              ),
-              Switch(
-                value: _manualOverride,
-                onChanged: _busy
-                    ? null
-                    : (value) => setState(() {
-                          _manualOverride = value;
-                          _manualLocationId = null;
-                          _overrideReasonController.clear();
-                        }),
-              ),
-            ],
-          ),
-          if (_manualOverride) ...[
-            const SizedBox(height: 8),
-            if (_manualLocations.isEmpty)
-              Text(
-                'Không còn vị trí khác phù hợp trong kho này.',
-                style: TextStyle(color: AppColors.textSecondaryFor(context)),
-              )
-            else
-              DropdownButtonFormField<int>(
-                initialValue: _manualLocationId,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Vị trí khác trong kho',
-                ),
-                items: [
-                  for (final location in _manualLocations)
-                    DropdownMenuItem<int>(
-                      value: location.id,
-                      child: Text(
-                        '${location.label} · còn ${formatKg(location.freeCapacityKg)} · ưu tiên ${location.priority}',
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12.5),
-                      ),
-                    ),
-                ],
-                onChanged: _busy ? null : _selectManualLocation,
-              ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _overrideReasonController,
-              enabled: !_busy,
-              maxLength: 250,
-              decoration: const InputDecoration(
-                labelText: 'Lý do ghi đè',
-                hintText: 'Nhập lý do chọn ngoài đề xuất',
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   Widget? _bottomBar() {
-    if (_finished || !_canUpdate) return null;
+    if (_finished || !_canEditPlan) return null;
     final plan = _plan;
     final hasPlan = plan != null && plan.columns.isNotEmpty;
-    if (!hasPlan && _suggestions.isEmpty) return null;
+    if (!hasPlan) return null;
 
-    final label = hasPlan
-        ? 'Xác nhận xếp ${plan.bagCount} bao · ${formatKg(plan.totalKg)}'
-        : 'Xác nhận xếp ${formatKg(_placementWeightKg)}';
-    final blocked = hasPlan && plan.unplacedBagIds.isNotEmpty;
+    final label =
+        'Xác nhận xếp ${plan.bagCount} bao · ${formatKg(plan.totalKg)}';
+    final blocked = plan.unplacedBagIds.isNotEmpty;
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),

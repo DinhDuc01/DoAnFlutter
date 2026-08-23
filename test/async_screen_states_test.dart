@@ -256,7 +256,8 @@ class _NotificationRepository implements NotificationsRepository {
 }
 
 class _InspectionRepository implements QualityInspectionRepository {
-  _InspectionRepository({this.items = const <QualityInspection>[], this.failing = false});
+  _InspectionRepository(
+      {this.items = const <QualityInspection>[], this.failing = false});
 
   final List<QualityInspection> items;
   final bool failing;
@@ -288,6 +289,9 @@ class _InspectionRepository implements QualityInspectionRepository {
 
   @override
   Future<Map<int, QualityLot>> loadLotMap() async => const <int, QualityLot>{};
+
+  @override
+  Future<Map<int, QualityLot>> loadAwaitingPaddyLots() => loadLotMap();
 
   @override
   Future<void> update(QualityInspectionUpdate payload) async =>

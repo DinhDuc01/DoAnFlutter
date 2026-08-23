@@ -137,18 +137,28 @@ class ApiInboundOrderRepository implements InboundOrderRepository {
 
   @override
   Future<BagPutawayPlan?> getBagPutawayPlan(int orderId, int itemId) async {
-    try {
-      final json = await _get(
-        '/api/v1/inbound-orders/$orderId/receipts/$itemId/bag-putaway-plan',
+    final json = await _get(
+      '/api/v1/inbound-orders/$orderId/receipts/$itemId/bag-putaway-plan',
+    );
+    final resources = JsonReader.map(json, 'resources');
+    if (resources == null) {
+      throw const InboundOrderException(
+        'API không trả dữ liệu phương án xếp bao.',
       );
-      final resources = JsonReader.map(json, 'resources');
-      if (resources == null) return null;
-      final plan = BagPutawayPlan.fromJson(resources);
-      return plan.columns.isEmpty && plan.candidateLocations.isEmpty ? null : plan;
-    } catch (_) {
-      // Phiếu không quản lý theo bao thì backend không có phương án xếp bao.
-      return null;
     }
+
+    final plan = BagPutawayPlan.fromJson(resources);
+    if (plan.columns.isEmpty) {
+      throw const InboundOrderException(
+        'API chưa trả cột và danh sách bao cho phương án xếp nguyên bao.',
+      );
+    }
+    if (plan.bagCount <= 0 || plan.columns.every((column) => column.bagIds.isEmpty)) {
+      throw const InboundOrderException(
+        'Phương án xếp không có bao vật lý hợp lệ.',
+      );
+    }
+    return plan;
   }
 
   @override

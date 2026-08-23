@@ -80,8 +80,8 @@ void main() {
         },
       );
 
-      final lines =
-          await ApiInboundOrderRepository(apiClient: client).getPutawayPending();
+      final lines = await ApiInboundOrderRepository(apiClient: client)
+          .getPutawayPending();
 
       expect(lines, hasLength(1));
       expect(lines.single.item.paddyLotCode, 'LOT-01');
@@ -90,7 +90,8 @@ void main() {
 
     test('submits a draft order without touching the approve endpoint',
         () async {
-      final client = FakeApiClient(onPost: (_, __, ___) async => {'isSucceeded': true});
+      final client =
+          FakeApiClient(onPost: (_, __, ___) async => {'isSucceeded': true});
 
       await ApiInboundOrderRepository(apiClient: client).submit(9);
 
@@ -102,7 +103,8 @@ void main() {
     });
 
     test('sends the bag columns when confirming a receipt', () async {
-      final client = FakeApiClient(onPost: (_, __, ___) async => {'isSucceeded': true});
+      final client =
+          FakeApiClient(onPost: (_, __, ___) async => {'isSucceeded': true});
 
       await ApiInboundOrderRepository(apiClient: client).confirmReceipt(
         9,
@@ -185,7 +187,8 @@ void main() {
         );
 
     test('groups only consecutive bags of the same weight, top first', () {
-      final groups = BagPutawayPlanner.columnGroups(plan().columns.first, plan());
+      final groups =
+          BagPutawayPlanner.columnGroups(plan().columns.first, plan());
 
       expect(groups, hasLength(2));
       // Nhóm đầu tiên hiển thị là ĐỈNH cột (STT ưu tiên 1).
@@ -224,7 +227,8 @@ void main() {
     });
 
     test('moves a fitting group and keeps LIFO order in the target column', () {
-      final result = BagPutawayPlanner.moveGroupToLocation(plan(), const [3], 2);
+      final result =
+          BagPutawayPlanner.moveGroupToLocation(plan(), const [3], 2);
 
       expect(result.isChanged, isTrue);
       final source =
@@ -299,7 +303,10 @@ void main() {
 
     testWidgets('a submitted order can not be approved from mobile',
         (tester) async {
-      final repository = _FakeInboundRepository();
+      final repository = _FakeInboundRepository(
+        suggestions: const [_testPutawaySuggestion],
+        bagPlan: _testBagPlan,
+      );
       await tester.pumpWidget(
         MaterialApp(
           home: InboundPutawayLineScreen(
@@ -310,11 +317,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('chỉ thực hiện trên web'), findsOneWidget);
+      expect(find.textContaining('chờ người khác phê duyệt'), findsWidgets);
+      expect(find.text('Phương án xếp nguyên bao'), findsOneWidget);
       expect(find.text('Phê duyệt phiếu'), findsNothing);
       expect(find.text('Gửi duyệt phiếu'), findsNothing);
-      // Phiếu chưa duyệt thì không được tự nhận hàng.
+      expect(find.textContaining('Xác nhận xếp'), findsNothing);
+      // Chờ duyệt chỉ tải dữ liệu xem trước, không chạy mutation nhận hàng.
       expect(repository.startedReceipts, isEmpty);
+      expect(repository.recordedQuantities, isEmpty);
+      expect(repository.suggestionCalls, 1);
     });
 
     testWidgets('a draft order only offers sending it for approval',
@@ -334,10 +345,82 @@ void main() {
     });
 
     testWidgets(
-        'an approved order goes straight to the suggested locations, '
+        'an approved order goes straight to the whole-bag plan, '
         'without the receive / load-locations buttons', (tester) async {
       final repository = _FakeInboundRepository(
         // Sau khi nhận hàng, backend trả phiếu ở trạng thái đang nhận.
+        lines: [line('Receiving', receiptStatus: 'QuantityEntered')],
+        suggestions: const [
+          PutawaySuggestion(
+            locationId: 4,
+            score: 9,
+            availableCapacity: 2000,
+            currentOccupancy: 500,
+            priority: 5,
+            categoryMatch: true,
+            recommendedWeightKg: 1000,
+            canFitWhole: true,
+            isQuarantine: false,
+            zoneName: 'A',
+            slotCode: 'A-01',
+          ),
+        ],
+        bagPlan: const BagPutawayPlan(
+          columns: [
+            BagPutawayColumn(
+              locationId: 4,
+              slotCode: 'A-01',
+              bags: [
+                BagPutawayBag(id: 101, bagNo: 1, weightKg: 1000),
+              ],
+              totalKg: 1000,
+              capacityRemainAfter: 1000,
+              priorityRank: 1,
+            ),
+          ],
+          candidateLocations: [
+            BagPutawayCandidate(
+              locationId: 4,
+              slotCode: 'A-01',
+              capacityAvailableKg: 2000,
+              priority: 5,
+            ),
+          ],
+          unplacedBagIds: [],
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: InboundPutawayLineScreen(
+            line: line('Approved'),
+            repository: repository,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Chuỗi nhận hàng chạy tự động, đúng như web làm ngay sau khi duyệt.
+      expect(repository.startedReceipts, [11]);
+      expect(repository.recordedQuantities, [1000.0]);
+      expect(repository.suggestionCalls, 1);
+
+      // Hai nút thao tác từng bước của bản cũ không còn.
+      expect(find.text('Bắt đầu nhận hàng'), findsNothing);
+      expect(find.text('Tải vị trí gợi ý'), findsNothing);
+
+      // API trả kế hoạch bao thì chỉ render phương án xếp nguyên bao.
+      expect(find.text('Phương án xếp nguyên bao'), findsOneWidget);
+      expect(find.textContaining('Ưu tiên 1'), findsOneWidget);
+      expect(find.textContaining('A-01'), findsWidgets);
+      expect(find.textContaining('Xác nhận xếp'), findsOneWidget);
+      expect(find.text('Vị trí đề xuất'), findsNothing);
+    });
+
+    testWidgets(
+        'missing bag plan shows the backend-plan error, not simple suggestions',
+        (tester) async {
+      final repository = _FakeInboundRepository(
         lines: [line('Receiving', receiptStatus: 'QuantityEntered')],
         suggestions: const [
           PutawaySuggestion(
@@ -366,19 +449,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Chuỗi nhận hàng chạy tự động, đúng như web làm ngay sau khi duyệt.
-      expect(repository.startedReceipts, [11]);
-      expect(repository.recordedQuantities, [1000.0]);
-      expect(repository.suggestionCalls, 1);
-
-      // Hai nút thao tác từng bước của bản cũ không còn.
-      expect(find.text('Bắt đầu nhận hàng'), findsNothing);
-      expect(find.text('Tải vị trí gợi ý'), findsNothing);
-
-      // Vị trí gợi ý hiện thẳng kèm nút xác nhận.
-      expect(find.textContaining('Ưu tiên 1'), findsOneWidget);
-      expect(find.textContaining('Khu A / Ô A-01'), findsOneWidget);
-      expect(find.textContaining('Xác nhận xếp'), findsOneWidget);
+      expect(find.textContaining('Không có phương án xếp nguyên bao'),
+          findsOneWidget);
+      expect(find.text('Vị trí đề xuất'), findsNothing);
+      expect(find.textContaining('Xác nhận xếp'), findsNothing);
+      expect(find.text('Thử lại'), findsOneWidget);
     });
     testWidgets('READ-only session never starts the inbound mutation chain',
         (tester) async {
@@ -398,7 +473,10 @@ void main() {
           ],
         ),
       );
-      final repository = _FakeInboundRepository();
+      final repository = _FakeInboundRepository(
+        suggestions: const [_testPutawaySuggestion],
+        bagPlan: _testBagPlan,
+      );
       await tester.pumpWidget(
         MaterialApp(
           home: InboundPutawayLineScreen(
@@ -411,20 +489,60 @@ void main() {
 
       expect(repository.startedReceipts, isEmpty);
       expect(repository.recordedQuantities, isEmpty);
-      expect(repository.suggestionCalls, 0);
+      expect(repository.suggestionCalls, 1);
       expect(repository.submitCalls, 0);
+      expect(find.text('Phương án xếp nguyên bao'), findsOneWidget);
+      expect(find.textContaining('Xác nhận xếp'), findsNothing);
     });
   });
 }
+
+const _testPutawaySuggestion = PutawaySuggestion(
+  locationId: 4,
+  score: 9,
+  availableCapacity: 2000,
+  currentOccupancy: 500,
+  priority: 5,
+  categoryMatch: true,
+  recommendedWeightKg: 1000,
+  canFitWhole: true,
+  isQuarantine: false,
+  zoneName: 'A',
+  slotCode: 'A-01',
+);
+
+const _testBagPlan = BagPutawayPlan(
+  columns: [
+    BagPutawayColumn(
+      locationId: 4,
+      slotCode: 'A-01',
+      bags: [BagPutawayBag(id: 101, bagNo: 1, weightKg: 1000)],
+      totalKg: 1000,
+      capacityRemainAfter: 1000,
+      priorityRank: 1,
+    ),
+  ],
+  candidateLocations: [
+    BagPutawayCandidate(
+      locationId: 4,
+      slotCode: 'A-01',
+      capacityAvailableKg: 2000,
+      priority: 5,
+    ),
+  ],
+  unplacedBagIds: [],
+);
 
 class _FakeInboundRepository implements InboundOrderRepository {
   _FakeInboundRepository({
     this.suggestions = const <PutawaySuggestion>[],
     this.lines = const <InboundPutawayLine>[],
+    this.bagPlan,
   });
 
   final List<PutawaySuggestion> suggestions;
   final List<InboundPutawayLine> lines;
+  final BagPutawayPlan? bagPlan;
 
   final List<int> startedReceipts = <int>[];
   final List<double> recordedQuantities = <double>[];
@@ -468,7 +586,7 @@ class _FakeInboundRepository implements InboundOrderRepository {
 
   @override
   Future<BagPutawayPlan?> getBagPutawayPlan(int orderId, int itemId) async =>
-      null;
+      bagPlan;
 
   @override
   Future<void> selectPutaway(

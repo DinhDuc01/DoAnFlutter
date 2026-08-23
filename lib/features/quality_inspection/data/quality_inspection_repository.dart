@@ -5,10 +5,7 @@ import '../models/quality_inspection.dart';
 
 /// Truy cập API màn "Chất lượng & cách ly".
 ///
-/// Mobile chỉ dùng 5 trong 7 API QualityInspection của backend: paged-advanced,
-/// GET {id}, GET by-lot/{paddyLotId}, PUT (cập nhật) và GET /paddy-lots/{id} để
-/// lấy thông tin lô + danh sách bao. Hai API còn lại (POST tạo phiếu, POST
-/// recheck) CỐ Ý không nối: tạo phiếu kiểm định chỉ làm trên web.
+/// API đọc/cập nhật phiếu chất lượng dùng chung trên mobile.
 abstract class QualityInspectionRepository {
   Future<QualityInspectionPage> loadPage({
     int page,
@@ -26,10 +23,43 @@ abstract class QualityInspectionRepository {
   /// Bản đồ lô để bảng hiện đúng "Loại hàng / Vị trí / Tổng tồn" như web.
   Future<Map<int, QualityLot>> loadLotMap();
 
+  /// Lô lúa đang chờ kiểm định dùng riêng cho form tạo phiếu.
+  Future<Map<int, QualityLot>> loadAwaitingPaddyLots() async {
+    final lots = await loadLotMap();
+    return {
+      for (final entry in lots.entries)
+        if (entry.value.isPaddy) entry.key: entry.value,
+    };
+  }
+
   Future<void> update(QualityInspectionUpdate payload);
 }
 
-class ApiQualityInspectionRepository implements QualityInspectionRepository {
+/// Tách capability tạo phiếu để các fake repository read-only hiện có không bị
+/// buộc phải triển khai mutation. Production repository hỗ trợ capability này.
+abstract class QualityInspectionCreateRepository {
+  Future<void> create(QualityInspectionCreate payload);
+}
+
+abstract class QualityInspectionBagRepository {
+  Future<QualityInspectionBagProgress> getBagProgress(int inspectionId);
+
+  Future<void> saveBagResult(
+    int inspectionId,
+    int bagId,
+    SaveBagInspectionResult payload,
+  );
+
+  Future<void> completeBagInspection(int inspectionId, {String? note});
+
+  Future<QualityMoistureConfig> getMoistureConfig();
+}
+
+class ApiQualityInspectionRepository
+    implements
+        QualityInspectionRepository,
+        QualityInspectionBagRepository,
+        QualityInspectionCreateRepository {
   ApiQualityInspectionRepository({ApiClient? apiClient})
       : _api = apiClient ?? ApiClient();
 
@@ -76,7 +106,11 @@ class ApiQualityInspectionRepository implements QualityInspectionRepository {
       'draw': safePage,
       'start': (safePage - 1) * pageSize,
       'length': pageSize,
-      'search': {'value': search.trim(), 'regex': false, 'fixed': const <dynamic>[]},
+      'search': {
+        'value': search.trim(),
+        'regex': false,
+        'fixed': const <dynamic>[]
+      },
       'columns': [
         for (var index = 0; index < _columns.length; index++)
           _column(
@@ -91,7 +125,8 @@ class ApiQualityInspectionRepository implements QualityInspectionRepository {
       ],
     };
 
-    final json = await _post('/api/v1/quality-inspections/paged-advanced', body);
+    final json =
+        await _post('/api/v1/quality-inspections/paged-advanced', body);
     final resources = JsonReader.map(json, 'resources') ?? json;
     final rows = JsonReader.list(resources, 'data') ??
         JsonReader.list(resources, 'dataSource') ??
@@ -124,7 +159,8 @@ class ApiQualityInspectionRepository implements QualityInspectionRepository {
         if (row is Map<String, dynamic>) QualityInspection.fromJson(row),
     ];
     items.sort(
-      (a, b) => (b.inspectedAt ?? DateTime(0)).compareTo(a.inspectedAt ?? DateTime(0)),
+      (a, b) => (b.inspectedAt ?? DateTime(0))
+          .compareTo(a.inspectedAt ?? DateTime(0)),
     );
     return items;
   }
@@ -165,8 +201,63 @@ class ApiQualityInspectionRepository implements QualityInspectionRepository {
   }
 
   @override
+  Future<Map<int, QualityLot>> loadAwaitingPaddyLots() async {
+    final json = await _get('/api/v1/paddy-lots/awaiting-qc');
+    final rows = JsonReader.value(json, 'resources');
+    final map = <int, QualityLot>{};
+    if (rows is! List) return map;
+    for (final row in rows) {
+      if (row is! Map<String, dynamic>) continue;
+      final lot = QualityLot.fromJson(row);
+      if (lot.id > 0 && lot.isPaddy) map[lot.id] = lot;
+    }
+    return map;
+  }
+
+  @override
   Future<void> update(QualityInspectionUpdate payload) async {
     await _put('/api/v1/quality-inspections', payload.toJson());
+  }
+
+  @override
+  Future<void> create(QualityInspectionCreate payload) async {
+    await _post('/api/v1/quality-inspections', payload.toJson());
+  }
+
+  @override
+  Future<QualityInspectionBagProgress> getBagProgress(
+    int inspectionId,
+  ) async {
+    final json = await _get('/api/v1/quality-inspections/$inspectionId/bags');
+    return QualityInspectionBagProgress.fromJson(_resourceMap(json));
+  }
+
+  @override
+  Future<void> saveBagResult(
+    int inspectionId,
+    int bagId,
+    SaveBagInspectionResult payload,
+  ) async {
+    await _put(
+      '/api/v1/quality-inspections/$inspectionId/bags/$bagId',
+      payload.toJson(),
+    );
+  }
+
+  @override
+  Future<void> completeBagInspection(
+    int inspectionId, {
+    String? note,
+  }) async {
+    await _post('/api/v1/quality-inspections/$inspectionId/complete', {
+      'note': (note ?? '').trim().isEmpty ? null : note!.trim(),
+    });
+  }
+
+  @override
+  Future<QualityMoistureConfig> getMoistureConfig() async {
+    final json = await _get('/api/v1/quality-inspections/config');
+    return QualityMoistureConfig.fromJson(_resourceMap(json));
   }
 
   static Map<String, dynamic> _column(String data, String search) => {

@@ -526,6 +526,52 @@ void main() {
       expect(client.calls.every((call) => call.method == 'GET'), isTrue);
     });
 
+    test('loads awaiting PADDY lots with physical bags for create form',
+        () async {
+      final client = FakeApiClient(
+        onGet: (path, _, __) async {
+          expect(path, '/api/v1/paddy-lots/awaiting-qc');
+          return {
+            'isSucceeded': true,
+            'resources': [
+              {
+                'id': 13,
+                'lotCode': 'LOT-PADDY-20260815-0013',
+                'lotType': 'PADDY',
+                'statusCode': 'AWAITING_QC',
+                'productVariantName': 'Lúa ST25',
+                'initialWeightKg': 90,
+                'bags': [
+                  {'id': 31, 'bagNo': 1, 'weightKg': 20, 'status': 'Pending'},
+                  {'id': 32, 'bagNo': 2, 'weightKg': 30, 'status': 'Pending'},
+                  {'id': 33, 'bagNo': 3, 'weightKg': 40, 'status': 'Pending'},
+                ],
+              },
+              {
+                'id': 14,
+                'lotCode': 'LOT-RICE-20260815-0014',
+                'lotType': 'RICE',
+                'statusCode': 'AWAITING_QC',
+                'bags': [
+                  {'id': 41, 'bagNo': 1, 'weightKg': 10},
+                ],
+              },
+            ],
+          };
+        },
+      );
+
+      final lots = await ApiQualityInspectionRepository(apiClient: client)
+          .loadAwaitingPaddyLots();
+
+      expect(lots.keys, [13]);
+      final lot = lots.values.single;
+      expect(lot.lotType, 'PADDY');
+      expect(lot.bags.map((bag) => bag.bagNo), [1, 2, 3]);
+      expect(lot.bags.map((bag) => bag.weightKg), [20, 30, 40]);
+      expect(client.calls.single.method, 'GET');
+    });
+
     test('updates a inspection with the logged-in user as inspector', () async {
       final client = FakeApiClient(
         onPut: (_, __, ___) async => {'isSucceeded': true},

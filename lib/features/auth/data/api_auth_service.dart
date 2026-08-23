@@ -84,9 +84,12 @@ class ApiAuthService implements AuthService {
     }
 
     try {
-      // Backend nhận username/password và trả accessToken + userInfo.
+      // Mobile này dùng tài khoản nghiệp vụ (OWNER/PURCHASING/SALES/WAREHOUSE...).
+      // Nhánh admin/login của Backend nạp đầy đủ RoleIds vào JWT; endpoint login
+      // dành cho client không nạp role nên các API có kiểm tra role sẽ trả 403 dù
+      // /auth/me/session vẫn hiển thị đúng menu và permission của người dùng.
       final json = await _apiClient.post(
-        '/api/v1/auth/login', // Điểm cuối (endpoint) API đăng nhập
+        '/api/v1/auth/admin/login',
         body: {
           'username': email.trim(),
           'password': password,
