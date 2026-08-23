@@ -186,8 +186,6 @@ class _NotificationsTabState extends State<NotificationsTab>
       }
     }
     if (!mounted) return;
-
-    if (!mounted) return;
     await _showNotificationDetail(notification.copyWith(isRead: true));
   }
 

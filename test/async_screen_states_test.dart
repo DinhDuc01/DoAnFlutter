@@ -160,7 +160,7 @@ void main() {
           routes: {
             '/admin/milling-orders': (_) => const Text('Màn nghiệp vụ'),
           },
-          home: NotificationsScreen(
+          home: NotificationsTab(
             repository: _NotificationRepository([
               Future.value(const [notification]),
             ]),
