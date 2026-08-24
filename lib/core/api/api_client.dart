@@ -88,6 +88,8 @@ class ApiClient {
     String? token,
     bool retryTransient = true,
   }) async {
+    // Chỉ GET được retry tự động vì có tính idempotent. Mutation POST/PUT/
+    // PATCH/DELETE không retry để tránh tạo hoặc cập nhật nghiệp vụ hai lần.
     final attempts = method == 'GET' && retryTransient ? 2 : 1;
     for (var attempt = 1; attempt <= attempts; attempt++) {
       try {
@@ -169,7 +171,8 @@ class ApiClient {
         }
       }
 
-      // Nếu mã trạng thái HTTP không nằm trong khoảng thành công (200 - 299)
+      // HTTP 4xx/5xx luôn thành exception; tầng repository/UI không được coi
+      // response có body JSON nhưng status lỗi là một mutation thành công.
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ApiException(
           message: JsonReader.string(json, 'message') ??

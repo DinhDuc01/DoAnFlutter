@@ -20,8 +20,8 @@ abstract class SalesOrderRepository {
 
   /// Tạo đơn bán mới (trạng thái NEW). Trả về id + mã đơn vừa tạo.
   ///
-  /// Việc XÁC NHẬN đơn (NEW → Chờ xác nhận) chỉ làm trên web; mobile không gọi
-  /// `/confirm`. Mobile chỉ tạo đơn và kiểm tra & giữ hàng ([reserve]).
+  /// Tạo xong, đơn ở trạng thái NEW. Người có `SALE_ORDERS + UPDATE` có thể
+  /// xác nhận đơn từ màn chi tiết bằng [confirm].
   Future<CreatedSalesOrder> create(CreateSalesOrderInput input);
 
   /// Duyệt/xác nhận đơn bán mới: NEW -> PENDING_CONFIRM.
@@ -191,6 +191,7 @@ class SalesProductOption {
     this.unitName,
     this.productCategoryId,
     this.productCategoryName,
+    this.isActive = true,
   });
 
   /// Các ID danh mục được Backend seed và Web dùng cho hàng được phép bán.
@@ -207,15 +208,17 @@ class SalesProductOption {
   final String? unitName;
   final int? productCategoryId;
   final String? productCategoryName;
+  final bool isActive;
 
   bool get isRawPaddy => productCategoryId == rawPaddyCategoryId;
 
   bool get isAllowedSalesProduct =>
-      productCategoryId == finishedRiceCategoryId ||
-      productCategoryId == byproductCategoryId;
+      isActive &&
+      (productCategoryId == finishedRiceCategoryId ||
+          productCategoryId == byproductCategoryId);
 
   String get label =>
-      (sku ?? '').trim().isEmpty ? name : '$name · ${sku!.trim()}';
+      (sku ?? '').trim().isEmpty ? name : '${sku!.trim()} · $name';
 }
 
 String? _blankToNull(String? value) {
@@ -428,6 +431,7 @@ class ApiSalesOrderRepository implements SalesOrderRepository {
             productCategoryName:
                 JsonReader.string(row, 'productCategoryName') ??
                     JsonReader.string(row, 'ProductCategoryName'),
+            isActive: JsonReader.boolean(row, 'isActive') ?? true,
           ),
     ];
 

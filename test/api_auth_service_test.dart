@@ -61,7 +61,10 @@ void main() {
     expect(session.user.id, 7);
     expect(session.user.fullName, 'Admin User');
     expect(session.user.avatarUrl, 'avatar.png');
-    expect(client.calls.single.path, '/api/v1/auth/login');
+    // Business users must use the login contract that embeds RoleIds in JWT.
+    // Role-backed endpoints (for example the inbound bag putaway planner) deny
+    // a token from /auth/login even when /auth/me/session has permissions.
+    expect(client.calls.single.path, '/api/v1/auth/admin/login');
     expect(client.calls.single.body, {
       'username': 'admin',
       'password': 'secret',

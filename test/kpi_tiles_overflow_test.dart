@@ -143,6 +143,9 @@ class _QualityRepository implements QualityInspectionRepository {
       };
 
   @override
+  Future<Map<int, QualityLot>> loadAwaitingPaddyLots() => loadLotMap();
+
+  @override
   Future<void> update(QualityInspectionUpdate payload) async =>
       throw StateError('Test không được ghi dữ liệu.');
 }

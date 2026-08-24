@@ -587,8 +587,9 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                   ? null
                   : (value) => setState(() {
                         _selectedWarehouseId = value;
-                        if (_selectedLot?.warehouseId != value)
+                        if (_selectedLot?.warehouseId != value) {
                           _selectedLot = null;
+                        }
                       }),
             ),
             if (_selectedWarehouseId == null)
@@ -633,9 +634,10 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
               decoration: const InputDecoration(
                 labelText: 'Yield áp dụng *',
                 hintText: 'Ví dụ: 0.68',
+                helperText: 'Cố định theo cấu hình hệ thống',
               ),
               validator: _validateYield,
-              enabled: !_submitting,
+              enabled: false,
             ),
             const SizedBox(height: 12),
             TextFormField(
@@ -647,7 +649,7 @@ class _MillingCreateOrderScreenState extends State<MillingCreateOrderScreen> {
                 hintText: 'Nhập sản lượng gạo đầu ra mong muốn',
               ),
               validator: _validateTargetRice,
-              enabled: !_submitting && !isEditing && !isSalesOrderLocked,
+              enabled: !_submitting,
             ),
             const SizedBox(height: 12),
             InputDecorator(

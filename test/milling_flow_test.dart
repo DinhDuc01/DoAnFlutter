@@ -5,6 +5,7 @@ import 'package:stocklite/features/auth/data/auth_session_store.dart';
 import 'package:stocklite/features/auth/models/auth_permission.dart';
 import 'package:stocklite/features/auth/models/auth_session.dart';
 import 'package:stocklite/features/milling/data/milling_repository.dart';
+import 'package:stocklite/features/milling/models/milling_order.dart';
 import 'package:stocklite/features/milling/presentation/screens/milling_preparation_screen.dart';
 import 'package:stocklite/features/home/presentation/widgets/home_today_tab.dart';
 
@@ -94,7 +95,7 @@ void main() {
         find.byKey(const Key('milling_weighing_confirm_sticky')), findsNothing);
     await tester.tap(find.byKey(const Key('milling_enter_output_button')));
     await tester.pumpAndSettle();
-    expect(find.text('Nhập kết quả xay'), findsOneWidget);
+    expect(find.textContaining('Nhập kết quả xay'), findsOneWidget);
   });
 
   testWidgets('home milling shortcut opens the dedicated milling route',
@@ -137,6 +138,110 @@ void main() {
     await tester.pump(const Duration(milliseconds: 600));
     expect(observer.pushedRoutes, contains(AppRoutes.milling));
   });
+
+  testWidgets('Start milling button starts immediately without showing dialog',
+      (tester) async {
+    AuthSessionStore.current = const AuthSession(
+      accessToken: 'test-token',
+      refreshToken: 'test-refresh',
+      user: AuthUser(
+        id: 20,
+        fullName: 'Milling worker',
+        email: 'milling@test.local',
+        permissions: [
+          UserPermission(
+            menuId: 61,
+            menuCode: 'MILLING_ORDERS',
+            actions: {'READ', 'UPDATE'},
+          ),
+        ],
+      ),
+    );
+
+    final repo = _StartTestRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MillingPreparationScreen(repository: repo),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.textContaining('MO-2026-022').first);
+    await tester.pumpAndSettle();
+
+    final startButton = find.text('Bắt đầu xay');
+    expect(startButton, findsOneWidget);
+    await tester.tap(startButton);
+    await tester.pumpAndSettle();
+
+    // Verify startOrder was called directly with default machine and no AlertDialog was shown
+    expect(repo.startedOrderId, 22);
+    expect(repo.startedMachineRef, 'máy xay 1');
+    expect(find.byType(AlertDialog), findsNothing);
+  });
+}
+
+class _StartTestRepository extends MockMillingRepository {
+  int? startedOrderId;
+  String? startedMachineRef;
+
+  @override
+  Future<MillingOrderPage> getMillingOrderPage({
+    String search = '',
+    int? statusId,
+    int? warehouseId,
+    int start = 0,
+    int length = 20,
+  }) async =>
+      MillingOrderPage(
+        orders: [
+          MillingOrder(
+            id: 22,
+            millingCode: 'MO-2026-022',
+            warehouseId: 1,
+            inputLotCode: 'LOT-22',
+            inputWeightKg: 5000,
+            warehouseZone: 'Khu A',
+            locationCode: 'LOC-01',
+            scaleCode: 'SCALE-01',
+            totalRiceOutputKg: 3400,
+            yieldRateUsed: 0.68,
+            statusCode: 'RESERVED',
+            riceBags: const [],
+            branBags: const [],
+            brokenBags: const [],
+          ),
+        ],
+        recordsTotal: 1,
+        recordsFiltered: 1,
+      );
+
+  @override
+  Future<MillingOrder> getMillingOrderDetail(int id) async => MillingOrder(
+        id: 22,
+        millingCode: 'MO-2026-022',
+        warehouseId: 1,
+        inputLotCode: 'LOT-22',
+        inputWeightKg: 5000,
+        warehouseZone: 'Khu A',
+        locationCode: 'LOC-01',
+        scaleCode: 'SCALE-01',
+        totalRiceOutputKg: 3400,
+        yieldRateUsed: 0.68,
+        statusCode: 'RESERVED',
+        riceBags: const [],
+        branBags: const [],
+        brokenBags: const [],
+      );
+
+  @override
+  Future<void> startOrder(
+    int orderId, {
+    required String machineRef,
+    int? operatorId,
+  }) async {
+    startedOrderId = orderId;
+    startedMachineRef = machineRef;
+  }
 }
 
 class _RouteObserver extends NavigatorObserver {

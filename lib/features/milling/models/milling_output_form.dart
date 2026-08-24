@@ -236,6 +236,10 @@ List<MillingOutputValidationError> validateMillingOutputs({
 Map<String, dynamic> buildMillingCompletePayloadPreview({
   required List<MillingOutputFormValue> outputs,
   required String? note,
+  String? machineRef,
+  int? operatorId,
+  double? lossKg,
+  double? byproductKg,
   double? millingCost,
   double? incidentalCost,
 }) => {
@@ -252,6 +256,18 @@ Map<String, dynamic> buildMillingCompletePayloadPreview({
               'unitCost': output.unitCost,
             },
       ],
+      if (machineRef != null && machineRef.trim().isNotEmpty)
+        'machineRef': machineRef.trim(),
+      if (operatorId != null && operatorId > 0) 'operatorId': operatorId,
+      if (lossKg != null && lossKg.isFinite && lossKg >= 0) 'lossKg': lossKg,
+      if (byproductKg != null && byproductKg.isFinite && byproductKg >= 0)
+        'byproductKg': byproductKg,
+      if (millingCost != null && millingCost.isFinite && millingCost >= 0)
+        'millingCost': millingCost,
+      if (incidentalCost != null &&
+          incidentalCost.isFinite &&
+          incidentalCost >= 0)
+        'incidentalCost': incidentalCost,
       'note': note?.trim().isEmpty ?? true ? null : note!.trim(),
     };
 

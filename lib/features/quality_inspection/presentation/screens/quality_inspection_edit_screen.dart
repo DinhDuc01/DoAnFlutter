@@ -56,6 +56,7 @@ class _QualityInspectionEditScreenState
   String? _error;
 
   bool get _canUpdate =>
+      AuthSessionStore.current?.user.hasRole('PURCHASING') == true &&
       AuthSessionStore.current?.hasPermission(
         'QUALITY_INSPECTIONS',
         'UPDATE',

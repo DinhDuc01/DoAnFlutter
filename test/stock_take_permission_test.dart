@@ -40,6 +40,43 @@ void main() {
     expect(find.byKey(const Key('stock_take_create_fab')), findsOneWidget);
     expect(repository.mutationCalls, 0);
   });
+
+  testWidgets('stock take list back button returns to previous screen',
+      (tester) async {
+    AuthSessionStore.current = _session(const {'READ'});
+    final repository = _ListOnlyStockTakeRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              key: const Key('open_stock_take'),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => StockTakeListScreen(repository: repository),
+                ),
+              ),
+              child: const Text('Open'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('open_stock_take')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.byKey(const Key('stock_take_back')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('stock_take_back')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.byKey(const Key('open_stock_take')), findsOneWidget);
+    expect(repository.mutationCalls, 0);
+  });
 }
 
 AuthSession _session(Set<String> actions) => AuthSession(

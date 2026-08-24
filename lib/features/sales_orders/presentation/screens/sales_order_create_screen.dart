@@ -99,16 +99,22 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
       _loadError = null;
     });
     try {
-      final customers = await _repository.getCustomers();
-      final warehouses = await _repository.getWarehouses();
-      final products = await _repository.getProductVariants();
+      // Các lookup độc lập được tải cùng lúc để form hiển thị đồng bộ.
+      final results = await Future.wait([
+        _repository.getCustomers(),
+        _repository.getWarehouses(),
+        _repository.getProductVariants(),
+      ]);
+      final customers = results[0] as List<SalesCustomerOption>;
+      final warehouses = results[1] as List<SalesWarehouseOption>;
+      final products = results[2] as List<SalesProductOption>;
       if (!mounted) return;
       setState(() {
         _customers = customers;
         _warehouses = warehouses;
         _products = products;
-        // Chỉ có 1 kho thì chọn sẵn để bớt một thao tác ngoài hiện trường.
-        _warehouseId = warehouses.length == 1 ? warehouses.first.id : null;
+        // Không tự chọn kho; người dùng phải xác nhận kho xuất của đơn.
+        _warehouseId = null;
         _loading = false;
       });
     } catch (error) {
@@ -312,14 +318,13 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (AuthSessionStore.current?.user.isWarehouseWorker == true ||
-        AuthSessionStore.current?.hasPermission('SALE_ORDERS', 'CREATE') !=
+    if (AuthSessionStore.current?.hasPermission('SALE_ORDERS', 'CREATE') !=
             true) {
       return Scaffold(
         backgroundColor: AppColors.backgroundFor(context),
         appBar: AppBar(title: const Text('Đơn bán')),
         body: const Center(
-          child: Text('Nhân viên kho chỉ được xem đơn bán.'),
+          child: Text('Bạn không có quyền tạo đơn bán.'),
         ),
       );
     }
@@ -356,10 +361,9 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
       children: [
         const AppInfoBanner(
           tone: AppTone.info,
-          icon: Icons.desktop_windows_outlined,
+          icon: Icons.info_outline,
           message: 'Đơn tạo trên điện thoại ở trạng thái "Mới tạo". '
-              'Việc xác nhận đơn thực hiện trên web, sau đó quay lại đây để '
-              'kiểm tra & giữ hàng.',
+              'Sau khi tạo, mở chi tiết để xác nhận đơn theo quyền được cấp.',
         ),
         const SizedBox(height: 12),
         _infoCard(),
@@ -499,11 +503,11 @@ class _SalesOrderCreateScreenState extends State<SalesOrderCreateScreen> {
                 ? null
                 : (value) => setState(() => _requiresMilling = value),
             title: const Text(
-              'Cần xay xát',
+              'Đơn cần xay mới có gạo giao',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
             subtitle: const Text(
-              'Đơn phải hoàn thành lệnh xay trước khi giữ hàng.',
+              'Sau khi tạo và xác nhận, hãy tạo/hoàn thành lệnh xay trước khi bấm giữ hàng.',
               style: TextStyle(fontSize: 12),
             ),
           ),

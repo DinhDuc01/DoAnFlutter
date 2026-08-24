@@ -114,6 +114,7 @@ class _AllocateSheetState extends State<AllocateSheet> {
     Navigator.of(context).pop(payload);
   }
 
+
   @override
   Widget build(BuildContext context) {
     return _SheetShell(
@@ -226,10 +227,9 @@ class _AllocateSheetState extends State<AllocateSheet> {
 // 2. LẤY HÀNG (pick)
 // ══════════════════════════════════════════════════════════════════════
 
-/// Nhập số lượng thực lấy theo từng nhóm bao (lô + vị trí + khối lượng bao).
+/// Xác nhận khối lượng thực lấy theo từng bao vật lý (OutboundBagAllocation) có status == ACTIVE.
 ///
-/// Số kg nhập được rải ngược về từng allocation trong nhóm — đúng cách web làm,
-/// vì backend nhận `picks` theo `allocationId`.
+/// Backend yêu cầu gửi payload từng bao ACTIVE với `bagAllocationId` và khối lượng đúng bằng `allocatedWeightKg`.
 class PickSheet extends StatefulWidget {
   const PickSheet({required this.order, super.key});
 
@@ -240,27 +240,26 @@ class PickSheet extends StatefulWidget {
 }
 
 class _PickSheetState extends State<PickSheet> {
-  late final List<_PickRow> _rows;
+  late final List<_PickBagRow> _rows;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    final activeBags = widget.order.activeBagAllocations;
     _rows = [
-      for (final item in widget.order.items)
-        for (final group in item.groups)
-          _PickRow(
-            item: item,
-            group: group,
-            controller: TextEditingController(
-              // Mặc định lấy đủ như đã phân bổ (giống web).
-              text: formatQuantityInput(
-                group.totalPickedKg > 0
-                    ? group.totalPickedKg
-                    : group.totalAllocatedKg,
-              ),
+      for (final bag in activeBags)
+        _PickBagRow(
+          bag: bag,
+          controller: TextEditingController(
+            // Mặc định lấy đủ theo allocatedWeightKg của từng bao.
+            text: formatQuantityInput(
+              bag.pickedWeightKg > 0
+                  ? bag.pickedWeightKg
+                  : bag.allocatedWeightKg,
             ),
           ),
+        ),
     ];
   }
 
@@ -273,38 +272,42 @@ class _PickSheetState extends State<PickSheet> {
   }
 
   void _submit() {
-    final allocationById = <int, OutboundAllocation>{
-      for (final item in widget.order.items)
-        for (final allocation in item.allocations) allocation.id: allocation,
-    };
+    if (_rows.isEmpty) {
+      setState(() => _error =
+          'Chưa tải được danh sách bao vật lý, hãy làm mới.');
+      return;
+    }
 
     final picks = <PickAllocationPayload>[];
     for (final row in _rows) {
-      final picked = parseDecimal(row.controller.text) ?? 0;
-      if (picked < 0 || picked > row.group.totalAllocatedKg + 0.001) {
+      final bag = row.bag;
+      if (bag.bagAllocationId <= 0) {
         setState(() => _error =
-            'Số lượng lấy của lô ${row.group.lotLabel} phải trong khoảng 0 – ${formatKg(row.group.totalAllocatedKg)}.');
+            '${bag.bagLabel} có mã phân bổ không hợp lệ.');
         return;
       }
-      // Rải số kg thực lấy lần lượt cho từng bao trong nhóm.
-      var remaining = picked;
-      for (final allocationId in row.group.allocationIds) {
-        final allocated =
-            allocationById[allocationId]?.quantityAllocated ?? 0;
-        final quantity = remaining < allocated ? remaining : allocated;
-        remaining = remaining - quantity;
-        if (remaining < 0) remaining = 0;
-        picks.add(PickAllocationPayload(
-          allocationId: allocationId,
-          quantityPicked: quantity,
-        ));
+
+      final raw = row.controller.text.trim();
+      final picked = parseDecimal(raw);
+      if (picked == null || !picked.isFinite || picked < 0) {
+        setState(() => _error =
+            'Số lượng lấy của ${bag.bagLabel} không hợp lệ.');
+        return;
       }
+
+      // Backend yêu cầu xác nhận đúng từng bao ACTIVE theo khối lượng đã phân bổ
+      if ((picked - bag.allocatedWeightKg).abs() > 0.001) {
+        setState(() => _error =
+            '${bag.bagLabel} (Lô ${bag.lotLabel}) phải lấy đúng ${formatKg(bag.allocatedWeightKg)} đã phân bổ.');
+        return;
+      }
+
+      picks.add(PickAllocationPayload(
+        bagAllocationId: bag.bagAllocationId,
+        quantityPicked: picked,
+      ));
     }
 
-    if (picks.isEmpty) {
-      setState(() => _error = 'Phiếu chưa có phân bổ lô để lấy hàng.');
-      return;
-    }
     Navigator.of(context).pop(picks);
   }
 
@@ -313,16 +316,23 @@ class _PickSheetState extends State<PickSheet> {
     final secondary = AppColors.textSecondaryFor(context);
     return _SheetShell(
       title: 'Cập nhật lấy hàng',
-      subtitle: 'Nhập khối lượng thực tế đã lấy khỏi từng lô.',
+      subtitle: 'Xác nhận khối lượng thực tế đã lấy cho từng bao vật lý.',
       error: _error,
       confirmLabel: 'Lưu số lượng lấy',
       confirmIcon: Icons.save_rounded,
       onConfirm: _submit,
       children: [
         if (_rows.isEmpty)
-          Text(
-            'Phiếu chưa có phân bổ lô. Hãy phân bổ trước khi lấy hàng.',
-            style: TextStyle(color: secondary),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'Chưa tải được danh sách bao vật lý, hãy làm mới.',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.danger,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           )
         else
           for (final row in _rows)
@@ -336,20 +346,26 @@ class _PickSheetState extends State<PickSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          row.item.productVariantName,
+                          row.bag.bagLabel,
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          'Lô ${row.group.lotLabel} • ${row.group.locationLabel}',
+                          'Lô ${row.bag.lotLabel} • Vị trí ${row.bag.locationLabel}',
                           style: TextStyle(fontSize: 11.5, color: secondary),
                         ),
+                        const SizedBox(height: 2),
                         Text(
-                          '${row.group.bagCount} bao × ${formatKg(row.group.weightPerBagKg)}'
-                          ' = ${formatKg(row.group.totalAllocatedKg)}',
-                          style: TextStyle(fontSize: 11.5, color: secondary),
+                          'Phân bổ: ${formatKg(row.bag.allocatedWeightKg)}'
+                          '${row.bag.pickedWeightKg > 0 ? ' • Đã lấy: ${formatKg(row.bag.pickedWeightKg)}' : ''}',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: secondary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -379,15 +395,13 @@ class _PickSheetState extends State<PickSheet> {
   }
 }
 
-class _PickRow {
-  _PickRow({
-    required this.item,
-    required this.group,
+class _PickBagRow {
+  _PickBagRow({
+    required this.bag,
     required this.controller,
   });
 
-  final OutboundOrderItem item;
-  final OutboundAllocationGroup group;
+  final OutboundBagAllocation bag;
   final TextEditingController controller;
 }
 
@@ -414,13 +428,13 @@ class PackingItemWeight {
 
 class PackingResult {
   const PackingResult({
-    required this.qrCode,
+    this.qrCode,
     this.actualWeightKg,
     this.scaleDevice,
     this.items = const [],
   });
 
-  final String qrCode;
+  final String? qrCode;
 
   /// Tổng khối lượng thực tế (= tổng các dòng). Giữ lại để tương thích ngược.
   final double? actualWeightKg;
@@ -589,10 +603,6 @@ class _PackingSheetState extends State<PackingSheet> {
   // ── Gửi ────────────────────────────────────────────────────────────
   void _submit() {
     final qr = _qrController.text.trim();
-    if (qr.isEmpty) {
-      setState(() => _error = 'Mã QR đóng gói không được để trống.');
-      return;
-    }
 
     // Gộp các dòng lô về từng OutboundOrderItem — backend lưu theo item.
     final byItem = <int, double>{};
@@ -627,7 +637,7 @@ class _PackingSheetState extends State<PackingSheet> {
     final total = ceilKg(_total);
 
     Navigator.of(context).pop(PackingResult(
-      qrCode: qr,
+      qrCode: qr.isEmpty ? null : qr,
       actualWeightKg: total > 0 ? total : null,
       // Chỉ khai báo thiết bị cân khi thật sự có số đến từ cân.
       scaleDevice: _anyFromScale ? _scaleDevice : null,
@@ -653,7 +663,9 @@ class _PackingSheetState extends State<PackingSheet> {
       children: [
         TextField(
           controller: _qrController,
-          decoration: const InputDecoration(labelText: 'Mã QR đóng gói *'),
+          decoration: const InputDecoration(
+            labelText: 'Mã QR đóng gói (không bắt buộc)',
+          ),
           onChanged: (_) {
             if (_error != null) setState(() => _error = null);
           },

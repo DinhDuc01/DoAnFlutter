@@ -57,6 +57,8 @@ class PermissionBuilder extends StatelessWidget {
       permitted = currentSession.hasMenuAccess(menuCode);
     }
 
+    // PermissionBuilder dành cho CTA/widget nhỏ. Nó không thay thế kiểm tra
+    // quyền lần hai bên trong function mutation trước khi gọi repository.
     if (builder != null) {
       return builder!(context, permitted);
     }
@@ -103,6 +105,8 @@ class PermissionGuard extends StatelessWidget {
       permitted = currentSession.hasReadAccess(menuCode);
     }
 
+    // Chỉ dựng child sau khi pass guard để initState của feature không thể tải
+    // dữ liệu/API trước rồi mới hiện màn "không có quyền".
     if (permitted) {
       return child;
     }

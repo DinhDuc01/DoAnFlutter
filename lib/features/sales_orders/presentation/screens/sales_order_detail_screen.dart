@@ -13,11 +13,8 @@ import '../../models/sales_order.dart';
 import '../widgets/sales_order_card.dart' show salesOrderTone;
 import '../widgets/create_outbound_sheet.dart';
 
-/// Chi tiết đơn bán: xem thông tin, KIỂM TRA & GIỮ HÀNG, hủy đơn kèm lý do,
-/// tạo phiếu xuất và mở màn xay xát cho đơn cần xay.
-///
-/// Cố ý KHÔNG có nút "Xác nhận đơn" — bước Mới tạo → Chờ xác nhận chỉ làm trên
-/// web. Mobile chờ web xác nhận rồi mới giữ hàng được.
+/// Chi tiết đơn bán: xác nhận, kiểm tra & giữ hàng, hủy đơn và tạo phiếu xuất
+/// theo permission/status mà Backend quy định.
 class SalesOrderDetailScreen extends StatefulWidget {
   const SalesOrderDetailScreen({
     required this.salesOrderId,
@@ -111,7 +108,7 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
     final accepted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Duyệt đơn bán?'),
+        title: const Text('Xác nhận đơn bán?'),
         content: Text(
           'Xác nhận duyệt đơn ${order.soCode}. Sau khi duyệt, đơn sẽ chuyển '
           'sang trạng thái Chờ xác nhận để tiếp tục kiểm tra và giữ hàng.',
@@ -123,7 +120,7 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Duyệt đơn'),
+            child: const Text('Xác nhận đơn'),
           ),
         ],
       ),
@@ -142,7 +139,7 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
         _snack('Đơn đã được gửi duyệt nhưng trạng thái chưa được cập nhật.');
         return;
       }
-      _snack('Đã duyệt đơn bán ${order.soCode}.', success: true);
+      _snack('Đã xác nhận đơn bán ${order.soCode}.', success: true);
     } catch (error) {
       if (!mounted) return;
       setState(() => _busy = false);
@@ -178,6 +175,8 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
   /// Gọi `/reserve`: backend kiểm tra khách hàng còn hoạt động, hạn mức công nợ
   /// và tồn khả dụng trước khi chuyển đơn sang "Đã giữ hàng".
   Future<void> _reserveOrder(SalesOrderDetail order) async {
+    // _canUpdate kiểm tra permission, canReserve kiểm tra status nghiệp vụ,
+    // còn _busy ngăn người dùng bấm hai lần tạo hai request reserve.
     if (!_canUpdate || !order.canReserve || _busy) return;
     final accepted = await showDialog<bool>(
       context: context,
@@ -353,13 +352,13 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
               icon: Icons.cancel_outlined,
             ),
           ],
-          if (order.waitingWebConfirm) ...[
+          if (order.waitingConfirmation) ...[
             const SizedBox(height: 12),
             const AppInfoBanner(
-              message: 'Đơn cần được xác nhận trên web trước khi giữ hàng. '
-                  'Sau khi web xác nhận, quay lại đây bấm "Kiểm tra & giữ hàng".',
+              message: 'Đơn cần được xác nhận trước khi giữ hàng. Người có '
+                  'quyền cập nhật có thể bấm "Xác nhận đơn" bên dưới.',
               tone: AppTone.info,
-              icon: Icons.desktop_windows_outlined,
+              icon: Icons.verified_outlined,
             ),
           ],
           if (order.needsMilling) ...[
@@ -515,12 +514,11 @@ class _SalesOrderDetailScreenState extends State<SalesOrderDetailScreen>
           key: const Key('sales_order_confirm'),
           onPressed: _busy ? null : () => _confirmOrder(order),
           icon: const Icon(Icons.verified_outlined),
-          label: const Text('Duyệt đơn'),
+          label: const Text('Xác nhận đơn'),
         ),
       );
     }
 
-    // Mobile chỉ có "Kiểm tra & giữ hàng"; bước xác nhận đơn để web làm.
     if (canUpdate && order.canReserve) {
       buttons.add(
         FilledButton.icon(

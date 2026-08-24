@@ -58,6 +58,8 @@ class AppRoutes {
     return {
       login: (_) => const LoginScreen(),
       home: (context) {
+        // Home là cửa ngõ chứa các tab nghiệp vụ. Kiểm tra ở đây ngăn trường
+        // hợp pushNamed('/home') trực tiếp khi session đã hết hạn/bị chặn.
         final session = AuthSessionStore.current;
         if (session == null ||
             session.accessToken.trim().isEmpty ||
@@ -78,6 +80,8 @@ class AppRoutes {
           ),
         );
       },
+      // PermissionGuard không chỉ ẩn menu: nó chặn dựng cả feature screen.
+      // Vì vậy repository/API của feature cũng chưa được gọi khi thiếu READ.
       purchaseScheduleDetail: (_) => const PermissionGuard(
           menuCode: 'RICE_PURCHASE', child: PurchaseScheduleDetailScreen()),
       thuMuaSuccess: (_) => const PermissionGuard(
