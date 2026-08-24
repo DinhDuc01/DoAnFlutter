@@ -228,15 +228,14 @@ class SalesOrderDetail {
       ].contains(statusId);
 
   /// Kiểm tra & giữ hàng chỉ chạy được khi đơn đang ở "Chờ xác nhận"
-  /// (khớp `ReserveAsync` của backend). Bước xác nhận đơn Mới tạo → Chờ xác nhận
-  /// chỉ làm trên web nên mobile không có nút xác nhận.
+  /// (khớp `ReserveAsync` của backend).
   bool get canReserve => statusId == SalesOrderStatusIds.pendingConfirm;
 
   /// Backend chỉ cho xác nhận đơn đang ở trạng thái NEW.
   bool get canConfirm => statusId == SalesOrderStatusIds.newOrder;
 
-  /// Đơn vừa tạo, đang chờ được xác nhận trên web thì mới giữ hàng được.
-  bool get waitingWebConfirm => statusId == SalesOrderStatusIds.newOrder;
+  /// Đơn vừa tạo đang chờ người có quyền UPDATE xác nhận.
+  bool get waitingConfirmation => statusId == SalesOrderStatusIds.newOrder;
 
   /// Chỉ tạo được phiếu xuất từ RESERVED/PREPARING và khi đơn CHƯA có phiếu xuất
   /// nào còn hiệu lực (khớp validate backend).

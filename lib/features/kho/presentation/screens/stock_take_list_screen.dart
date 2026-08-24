@@ -113,6 +113,13 @@ class _StockTakeListScreenState extends State<StockTakeListScreen>
               title: 'Kiểm kê kho',
               subtitle:
                   'Đếm theo BAO, cân lại bao nghi ngờ, ghi nhận chất lượng',
+              leading: IconButton(
+                key: const Key('stock_take_back'),
+                tooltip: 'Quay lại',
+                onPressed: () => Navigator.of(context).maybePop(),
+                color: Colors.white,
+                icon: const Icon(Icons.arrow_back_rounded),
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

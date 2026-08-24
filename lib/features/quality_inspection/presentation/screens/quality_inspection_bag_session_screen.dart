@@ -142,6 +142,8 @@ class _QualityInspectionBagSessionScreenState
   }
 
   Future<void> _complete() async {
+    // Chỉ hoàn tất khi toàn bộ bao đã lưu kết quả. Sau mutation phải tải lại
+    // và xác minh Backend thật sự trả trạng thái completed, không success giả.
     final progress = _progress;
     if (progress == null ||
         progress.isCompleted ||

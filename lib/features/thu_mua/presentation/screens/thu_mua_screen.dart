@@ -66,7 +66,7 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
 
   /// Ngưỡng khối lượng trung bình tối đa cho mỗi bao lúa (kg). Vượt ngưỡng này
   /// coi là nhập sai (ví dụ nhầm tổng khối lượng với số bao).
-  static const int _maxKgPerBag = 200;
+  static const int _maxKgPerBag = 70;
 
   ThuMuaReceipt? _receipt;
   bool _quantityInitialized = false;
@@ -460,6 +460,8 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
         errors[i] = 'Khối lượng bao ${i + 1} không hợp lệ';
       } else if (value <= 0) {
         errors[i] = 'Khối lượng phải lớn hơn 0';
+      } else if (value > _maxKgPerBag) {
+        errors[i] = 'Khối lượng mỗi bao không được vượt quá $_maxKgPerBag kg';
       } else {
         final rounded = ceilKg(value);
         _bagWeightControllers[i].text = formatQuantityInput(rounded, digits: 1);
@@ -821,7 +823,8 @@ class _ThuMuaScreenState extends State<ThuMuaScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Hủy'),
+            // Đây chỉ là đóng hộp thoại xác nhận cập nhật, không phải hủy phiếu.
+            child: const Text('Quay lại'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),

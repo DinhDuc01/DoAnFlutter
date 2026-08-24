@@ -6,7 +6,6 @@ import '../../../../core/realtime/realtime_reload_mixin.dart';
 import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../../auth/data/auth_session_store.dart';
-import '../../../auth/models/auth_session.dart';
 import '../../data/api_milling_repository.dart';
 import '../../data/milling_repository.dart';
 import '../../models/milling_order.dart';
@@ -26,129 +25,7 @@ class MillingPreparationScreen extends StatefulWidget {
       _MillingPreparationScreenState();
 }
 
-class _MillingStartInput {
-  const _MillingStartInput({required this.machineRef, this.operatorId});
 
-  final String machineRef;
-  final int? operatorId;
-}
-
-class _MillingStartDialog extends StatefulWidget {
-  const _MillingStartDialog({
-    required this.currentUser,
-    required this.operatorsFuture,
-  });
-
-  final AuthUser? currentUser;
-  final Future<List<MillingOperator>> operatorsFuture;
-
-  @override
-  State<_MillingStartDialog> createState() => _MillingStartDialogState();
-}
-
-class _MillingStartDialogState extends State<_MillingStartDialog> {
-  final _formKey = GlobalKey<FormState>();
-  final _machineController = TextEditingController();
-  int? _operatorId;
-  List<MillingOperator> _operators = const [];
-
-  @override
-  void initState() {
-    super.initState();
-    _operatorId = widget.currentUser?.id;
-    widget.operatorsFuture.then((operators) {
-      if (mounted) setState(() => _operators = operators);
-    });
-  }
-
-  @override
-  void dispose() {
-    _machineController.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    Navigator.of(context).pop(
-      _MillingStartInput(
-        machineRef: _machineController.text.trim(),
-        operatorId: _operatorId,
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final user = widget.currentUser;
-    return AlertDialog(
-      title: const Text('Bắt đầu lệnh xay'),
-      content: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: _machineController,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Mã máy xay *',
-                hintText: 'Ví dụ: MAY-XAY-01',
-              ),
-              maxLength: 255,
-              validator: (value) {
-                final text = value?.trim() ?? '';
-                if (text.isEmpty) return 'Vui lòng nhập mã máy xay.';
-                if (text.length > 255) return 'Mã máy tối đa 255 ký tự.';
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<int?>(
-              value: _operatorId,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Người vận hành',
-              ),
-              items: [
-                const DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text('Chốt khi hoàn thành'),
-                ),
-                if (user != null)
-                  DropdownMenuItem<int?>(
-                    value: user.id,
-                    child: Text(
-                      user.fullName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ..._operators.where((item) => item.id != user?.id).map(
-                      (item) => DropdownMenuItem<int?>(
-                        value: item.id,
-                        child: Text(
-                          item.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-              ],
-              onChanged: (value) => setState(() => _operatorId = value),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Hủy'),
-        ),
-        FilledButton(onPressed: _submit, child: const Text('Bắt đầu xay')),
-      ],
-    );
-  }
-}
 
 /// Các entity khiến màn xay xát phải tải lại: lệnh xay, lô/bao lúa dùng làm
 /// nguồn, đơn bán gắn với lệnh và tồn kho sinh ra sau khi xay.
@@ -1003,15 +880,13 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
       );
       return;
     }
-    final input = await _showStartDialog();
-    if (input == null || !mounted) return;
 
     setState(() => _actionBusy = true);
     try {
       await widget.repository.startOrder(
         order.id,
-        machineRef: input.machineRef,
-        operatorId: input.operatorId,
+        machineRef: order.machineRef ?? 'máy xay 1',
+        operatorId: order.operatorId,
       );
       if (!mounted) return;
       _reload();
@@ -1027,17 +902,6 @@ class _MillingOrderDetailScreenState extends State<_MillingOrderDetailScreen>
     } finally {
       if (mounted) setState(() => _actionBusy = false);
     }
-  }
-
-  Future<_MillingStartInput?> _showStartDialog() {
-    final currentUser = AuthSessionStore.current?.user;
-    return showDialog<_MillingStartInput>(
-      context: context,
-      builder: (dialogContext) => _MillingStartDialog(
-        currentUser: currentUser,
-        operatorsFuture: widget.repository.getMillingOperators(),
-      ),
-    );
   }
 
   Future<void> _editDraft(MillingOrder order) async {

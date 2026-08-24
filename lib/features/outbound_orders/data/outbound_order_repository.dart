@@ -27,7 +27,7 @@ abstract class OutboundOrderRepository {
 
   Future<void> confirmPacking(
     int id, {
-    required String qrCode,
+    String? qrCode,
     double? actualWeightKg,
     String? scaleDevice,
     List<PackingItemWeightPayload> items = const [],
@@ -91,15 +91,15 @@ class AllocateLotPayload {
 
 class PickAllocationPayload {
   const PickAllocationPayload({
-    required this.allocationId,
+    required this.bagAllocationId,
     required this.quantityPicked,
   });
 
-  final int allocationId;
+  final int bagAllocationId;
   final double quantityPicked;
 
   Map<String, dynamic> toJson() => {
-        'allocationId': allocationId,
+        'bagAllocationId': bagAllocationId,
         'quantityPicked': quantityPicked,
       };
 }
@@ -224,7 +224,12 @@ class ApiOutboundOrderRepository implements OutboundOrderRepository {
   @override
   Future<void> pick(int id, List<PickAllocationPayload> picks) async {
     if (picks.isEmpty) {
-      throw const OutboundOrderException('Chưa có allocation nào để lấy hàng.');
+      throw const OutboundOrderException('Chưa có bao nào để lấy hàng.');
+    }
+    for (final pick in picks) {
+      if (pick.bagAllocationId <= 0) {
+        throw const OutboundOrderException('Mã phân bổ bao không hợp lệ.');
+      }
     }
     await _guard(() => _api.post(
           '/api/v1/outbound-orders/$id/pick',
@@ -236,21 +241,18 @@ class ApiOutboundOrderRepository implements OutboundOrderRepository {
   @override
   Future<void> confirmPacking(
     int id, {
-    required String qrCode,
+    String? qrCode,
     double? actualWeightKg,
     String? scaleDevice,
     List<PackingItemWeightPayload> items = const [],
   }) async {
-    final code = qrCode.trim();
-    if (code.isEmpty) {
-      throw const OutboundOrderException('Mã QR đóng gói không được để trống.');
-    }
+    final code = qrCode?.trim();
     final device = scaleDevice?.trim();
     await _guard(() => _api.post(
           '/api/v1/outbound-orders/$id/confirm-packing',
           token: _token,
           body: {
-            'qrCode': code,
+            'qrCode': code == null || code.isEmpty ? null : code,
             'actualWeightKg': actualWeightKg,
             'scaleDevice': device == null || device.isEmpty ? null : device,
             if (items.isNotEmpty)

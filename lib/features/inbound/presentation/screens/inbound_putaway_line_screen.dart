@@ -75,7 +75,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
 
   @override
   void onRealtimeChanged() {
-    if (!_busy) _reloadLine();
+    if (!_busy && !_finished && mounted) _reloadLine();
   }
 
   @override
@@ -85,9 +85,47 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     _line = widget.line;
     _locations = widget.locations;
     _placementWeightKg = _initialWeight();
-    // Giống web: không bắt người dùng bấm "Bắt đầu nhận hàng" rồi "Tải vị trí".
-    // Vào màn là tự nhận hàng và đẩy thẳng danh sách vị trí được gợi ý.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeAutoPrepare());
+    _finished = _line.item.remainingKg <= 0;
+    if (_finished) {
+      _status = PutawayStatus.waiting;
+      _message = 'Đã hoàn tất nhập kho lô hàng.';
+      _autoPrepared = true;
+    } else {
+      // Giống web: không bắt người dùng bấm "Bắt đầu nhận hàng" rồi "Tải vị trí".
+      // Vào màn là tự nhận hàng và đẩy thẳng danh sách vị trí được gợi ý.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_finished) _maybeAutoPrepare();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(InboundPutawayLineScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.line.item.id != widget.line.item.id) {
+      _line = widget.line;
+      _locations = widget.locations;
+      _placementWeightKg = _initialWeight();
+      _finished = _line.item.remainingKg <= 0;
+      _autoPrepared = false;
+      _suggestions = const <PutawaySuggestion>[];
+      _plan = null;
+      _selectedLocationId = null;
+      _manualLocationId = null;
+      _manualOverride = false;
+      _overrideReasonController.clear();
+      if (_finished) {
+        _status = PutawayStatus.waiting;
+        _message = 'Đã hoàn tất nhập kho lô hàng.';
+        _autoPrepared = true;
+      } else {
+        _status = PutawayStatus.waiting;
+        _message = '';
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && !_finished) _maybeAutoPrepare();
+        });
+      }
+    }
   }
 
   @override
@@ -103,9 +141,14 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   }
 
   String get _orderStatus => _line.order.normalizedStatus;
-  bool get _canUpdate =>
-      AuthSessionStore.current?.hasPermission('INBOUND_ORDERS', 'UPDATE') ==
-      true;
+
+  bool get _canUpdate {
+    final session = AuthSessionStore.current;
+    if (session == null) return false;
+    if (session.isAdmin) return true;
+    return session.hasPermission('INBOUND_ORDERS', 'UPDATE') ||
+        session.hasPermission('INBOUND_ORDERS', 'APPROVE');
+  }
 
   /// Nhãn nút chuyển bước. Chỉ còn GỬI DUYỆT:
   /// - "Phê duyệt phiếu" cố ý không có trên mobile (chỉ web).
@@ -122,8 +165,8 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
 
   bool get _isWaitingApproval => _orderStatus == InboundOrderStatuses.submitted;
 
-  /// Chỉ phiếu đã được duyệt/đang nhận và người dùng có UPDATE mới được sửa
-  /// phương án hoặc xác nhận xếp kho.
+  /// Chỉ phiếu đã được duyệt/đang nhận và người dùng có UPDATE/APPROVE mới được
+  /// sửa phương án hoặc xác nhận xếp kho.
   bool get _canEditPlan => _canUpdate && _canPrepare;
 
   /// Phiếu chờ duyệt và tài khoản chỉ có READ vẫn được tải phương án để xem.
@@ -136,7 +179,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     final needsQuarantine = _line.item.needsQuarantine;
     final list = _locations
         .where((location) =>
-            location.warehouseId == warehouseId &&
+            (warehouseId == 0 || location.warehouseId == warehouseId) &&
             location.isActive &&
             !location.isOutboundStaging &&
             !location.isLockedForOutbound &&
@@ -150,26 +193,32 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   // ================= Tải dữ liệu =================
 
   Future<void> _reloadLine() async {
+    if (_finished || !mounted) return;
     try {
       final lines = await _repository.getPutawayPending();
       final locations = await _repository.getLocations();
-      if (!mounted) return;
+      if (!mounted || _finished) return;
       InboundPutawayLine? found;
       for (final line in lines) {
         if (line.item.id == _line.item.id) found = line;
       }
+      final shouldPrepare = found != null && found.item.remainingKg > 0;
       setState(() {
         if (locations.isNotEmpty) _locations = locations;
-        if (found != null) {
-          _line = found;
+        if (shouldPrepare) {
+          _line = found!;
+          _finished = false;
         } else {
-          // Dòng đã hoàn tất nhập kho nên không còn trong danh sách chờ.
+          // Endpoint pending có thể còn trả về dòng vừa hoàn tất trong một
+          // khoảng ngắn hoặc không còn dòng nào trong pending.
           _finished = true;
           _status = PutawayStatus.waiting;
-          _message = 'Lô này đã hoàn tất nhập kho.';
+          _message = 'Đã hoàn tất nhập kho lô hàng.';
         }
       });
-      await _maybeAutoPrepare();
+      if (shouldPrepare && !_finished && mounted) {
+        await _maybeAutoPrepare();
+      }
     } catch (_) {
       // Reload im lặng thất bại thì giữ nguyên màn đang thao tác.
     }
@@ -180,7 +229,16 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   /// tự chạy khi realtime báo phiếu đã duyệt trên web.
   Future<void> _maybeAutoPrepare() async {
     if (!mounted || _busy || _finished || _autoPrepared) return;
-    if (_line.item.remainingKg <= 0) return;
+    if (_line.item.remainingKg <= 0) {
+      if (!_finished && mounted) {
+        setState(() {
+          _finished = true;
+          _status = PutawayStatus.waiting;
+          _message = 'Đã hoàn tất nhập kho lô hàng.';
+        });
+      }
+      return;
+    }
     if (_suggestions.isNotEmpty || (_plan?.columns.isNotEmpty ?? false)) return;
 
     if (_shouldLoadReadOnlyPlan) {
@@ -194,7 +252,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   }
 
   Future<void> _loadPlanPreview() async {
-    if (_busy || !_shouldLoadReadOnlyPlan) return;
+    if (_busy || _finished || !_shouldLoadReadOnlyPlan || !mounted) return;
     await _fetchSuggestions(readOnly: true);
   }
 
@@ -202,45 +260,86 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     int? preferredLocationId,
     bool readOnly = false,
   }) async {
-    setState(() => _busy = true);
-    try {
-      final suggestions = await _repository.getPutawaySuggestions(
-        _line.order.id,
-        _line.item.id,
-      );
-      final plan = await _repository.getBagPutawayPlan(
-        _line.order.id,
-        _line.item.id,
-      );
-      if (plan == null || plan.columns.isEmpty) {
-        throw const InboundOrderException(
-          'Không có phương án xếp nguyên bao cho dòng nhập kho này.',
-        );
+    if (_finished || !mounted) return;
+    setState(() {
+      _busy = true;
+      if (_status == PutawayStatus.error || _status == PutawayStatus.conflict) {
+        _status = PutawayStatus.waiting;
+        _message = '';
       }
-      if (!mounted) return;
-      final ordered =
-          BagPutawayPlanner.orderSuggestionsByPlan(suggestions, plan);
+    });
+    try {
+      // Web luôn có danh sách vị trí hợp lệ của kho làm dữ liệu dự phòng.
+      // Mobile cũng phải tải danh sách này; API gợi ý có thể trả rỗng hoặc lỗi
+      // nhưng người có READ vẫn cần xem được các khu/cột còn sức chứa.
+      if (_locations.isEmpty) {
+        final locations = await _repository.getLocations();
+        if (!mounted || _finished) return;
+        _locations = List<StorageLocation>.unmodifiable(locations);
+      }
+
+      List<PutawaySuggestion> suggestions = const <PutawaySuggestion>[];
+      Object? suggestionError;
+      try {
+        suggestions = await _repository.getPutawaySuggestions(
+          _line.order.id,
+          _line.item.id,
+        );
+      } catch (error) {
+        suggestionError = error;
+      }
+      if (!mounted || _finished) return;
+
+      // Với luồng thao tác, lỗi API gợi ý vẫn phải chặn nếu cả kho không có vị trí fallback.
+      if (suggestionError != null &&
+          (!readOnly || _warehouseLocations.isEmpty)) {
+        throw suggestionError;
+      }
+
+      // Giống FE web: lấy phương án xếp nguyên bao nếu có. Nếu backend không có bao
+      // (hoặc trả 403 do vai trò/lô không bao), FE web bắt lỗi và gán plan = null,
+      // sau đó hiển thị danh sách vị trí đề xuất hoặc các khu/cột còn chỗ để xếp.
+      BagPutawayPlan? plan;
+      try {
+        if (!readOnly) {
+          plan = await _repository.getBagPutawayPlan(
+            _line.order.id,
+            _line.item.id,
+          );
+        }
+      } catch (_) {
+        plan = null;
+      }
+      if (!mounted || _finished) return;
+
+      final ordered = (plan == null || plan.columns.isEmpty)
+          ? List<PutawaySuggestion>.unmodifiable(suggestions)
+          : BagPutawayPlanner.orderSuggestionsByPlan(suggestions, plan);
       PutawaySuggestion? selected;
       for (final suggestion in ordered) {
         if (suggestion.locationId == preferredLocationId) selected = suggestion;
       }
       selected ??= ordered.isEmpty ? null : ordered.first;
 
+      if (!mounted || _finished) return;
       setState(() {
         _busy = false;
         _plan = plan;
         _expandedGroups.clear();
         _suggestions = ordered;
-        _selectedLocationId = selected?.locationId;
+        _selectedLocationId = selected?.locationId ??
+            (ordered.isEmpty && _warehouseLocations.isNotEmpty
+                ? _warehouseLocations.first.id
+                : null);
         if (readOnly) {
           _status = PutawayStatus.waiting;
           _message = _isWaitingApproval
               ? 'Phiếu đang chờ người khác phê duyệt. Phương án xếp kho bên dưới chỉ để xem.'
               : 'Bạn chỉ có quyền xem. Phương án xếp kho bên dưới không thể chỉnh sửa.';
-        } else if (selected == null) {
+        } else if (selected == null && _warehouseLocations.isEmpty) {
           _status = PutawayStatus.capacity;
           _message = 'Không còn vị trí phù hợp đủ sức chứa.';
-        } else {
+        } else if (selected != null) {
           _placementWeightKg = selected.recommendedWeightKg;
           _status = selected.canFitWhole
               ? PutawayStatus.suggested
@@ -251,10 +350,17 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
               : (selected.canFitWhole
                   ? 'Đã tìm thấy vị trí phù hợp.'
                   : 'Lô cần được tách qua nhiều vị trí.');
+        } else {
+          _placementWeightKg = math.min(
+            _line.item.remainingKg,
+            _warehouseLocations.first.freeCapacityKg,
+          );
+          _status = PutawayStatus.suggested;
+          _message = 'Chọn một khu/cột bên dưới để xếp kho.';
         }
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || _finished) return;
       setState(() {
         _busy = false;
         _suggestions = const <PutawaySuggestion>[];
@@ -270,20 +376,26 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
 
   /// Chỉ còn một bước thủ công: gửi phiếu nháp đi duyệt.
   Future<void> _advance() async {
-    if (!_canUpdate) return;
+    if (!_canUpdate || _finished || !mounted) return;
     if (_busy || _orderStatus != InboundOrderStatuses.draft) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      if (_status == PutawayStatus.error || _status == PutawayStatus.conflict) {
+        _status = PutawayStatus.waiting;
+        _message = '';
+      }
+    });
     try {
       await _repository.submit(_line.order.id);
       _changed = true;
-      if (!mounted) return;
+      if (!mounted || _finished) return;
       setState(() => _busy = false);
       await _reloadLine();
       _snack(
         'Đã gửi phiếu nhập kho để duyệt. Phê duyệt phiếu chỉ thực hiện trên web.',
       );
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || _finished) return;
       setState(() => _busy = false);
       _snack('Không thể gửi duyệt phiếu nhập: $error');
     }
@@ -293,12 +405,25 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   /// còn phải nhập (giống web tự động ghi nhận `remaining` sau khi duyệt) nên
   /// không cần ô nhập tay.
   Future<void> _prepare({int? preferredLocationId}) async {
-    if (!_canEditPlan) return;
+    if (!_canEditPlan || _finished || !mounted) return;
     if (_busy) return;
     final weight = _line.item.remainingKg;
-    if (weight <= 0) return;
+    if (weight <= 0) {
+      if (!_finished && mounted) {
+        setState(() {
+          _finished = true;
+          _status = PutawayStatus.waiting;
+          _message = 'Đã hoàn tất nhập kho lô hàng.';
+        });
+      }
+      return;
+    }
 
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _status = PutawayStatus.waiting;
+      _message = '';
+    });
     try {
       if (_orderStatus == InboundOrderStatuses.approved) {
         await _repository.startReceipt(_line.order.id, _line.item.id);
@@ -307,18 +432,15 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
         await _repository.recordQuantity(_line.order.id, _line.item.id, weight);
       }
       _changed = true;
-      if (!mounted) return;
-      setState(() {
-        _busy = false;
-        _placementWeightKg = weight;
-      });
+      if (!mounted || _finished) return;
+      _placementWeightKg = weight;
       // Nạp lại dòng để trạng thái phiếu / receiptStatus không còn cũ — lần
       // chạy sau (bấm Thử lại, chọn khu khác) mới không gọi lặp start-receipt.
       await _reloadLine();
       if (!mounted || _finished) return;
       await _fetchSuggestions(preferredLocationId: preferredLocationId);
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || _finished) return;
       setState(() {
         _busy = false;
         _status = PutawayStatus.error;
@@ -328,6 +450,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   }
 
   void _chooseSuggestion(PutawaySuggestion suggestion) {
+    if (_finished || !mounted) return;
     setState(() {
       _selectedLocationId = suggestion.locationId;
       _placementWeightKg = suggestion.recommendedWeightKg;
@@ -335,11 +458,12 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
       _status = suggestion.canFitWhole
           ? PutawayStatus.suggested
           : PutawayStatus.split;
+      _message = '';
     });
   }
 
   Future<void> _chooseWarehouseLocation(StorageLocation location) async {
-    if (!_canUpdate) return;
+    if (!_canUpdate || _finished || !mounted) return;
     if (_busy) return;
     if (_orderStatus == InboundOrderStatuses.draft ||
         _orderStatus == InboundOrderStatuses.submitted) {
@@ -354,12 +478,18 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
       _selectedLocationId = location.id;
       _placementWeightKg =
           math.min(_line.item.remainingKg, location.freeCapacityKg);
+      _status = PutawayStatus.suggested;
+      _message = '';
     });
-    if (_canPrepare) await _prepare(preferredLocationId: location.id);
+    if (_canPrepare && !_finished && mounted) {
+      await _prepare(preferredLocationId: location.id);
+    }
   }
 
   Future<void> _confirmPutaway() async {
-    if (!_canEditPlan) return;
+    // Guard ba lớp cho mutation: quyền + trạng thái kế hoạch + cờ _busy + _finished.
+    // UI có thể ẩn nút, nhưng function vẫn phải tự bảo vệ khi bị gọi trực tiếp.
+    if (!_canEditPlan || _finished || !mounted) return;
     if (_busy) return;
     final plan = _plan;
     final hasPlan = plan != null && plan.columns.isNotEmpty;
@@ -404,10 +534,15 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (confirmed != true || !mounted || _finished || _busy) return;
 
     final remainingBefore = _line.item.remainingKg;
-    setState(() => _busy = true);
+    final isFullyReceived = weightKg >= remainingBefore - 0.0001;
+    setState(() {
+      _busy = true;
+      _status = PutawayStatus.waiting;
+      _message = '';
+    });
     try {
       if (!hasPlan) {
         await _repository.selectPutaway(
@@ -436,15 +571,25 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
         _manualOverride = false;
         _manualLocationId = null;
         _overrideReasonController.clear();
-        // Còn hàng thì lượt xếp tiếp theo lại tự nhận hàng + lấy gợi ý.
-        _autoPrepared = false;
+        _autoPrepared = isFullyReceived;
+        if (isFullyReceived) {
+          _finished = true;
+          _status = PutawayStatus.waiting;
+          _message = 'Đã hoàn tất nhập kho lô hàng.';
+        } else {
+          _finished = false;
+          _status = PutawayStatus.waiting;
+          _message = '';
+        }
       });
       _snack(
-        weightKg < remainingBefore - 0.0001
+        !isFullyReceived
             ? 'Đã nhập một phần lô. Chọn vị trí tiếp theo để nhập phần còn lại.'
             : 'Đã hoàn tất nhập kho lô hàng.',
       );
-      await _reloadLine();
+      if (!isFullyReceived && mounted && !_finished) {
+        await _reloadLine();
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -462,15 +607,15 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
 
   void _snack(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.hideCurrentSnackBar();
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 
   // ================= Sửa phương án xếp bao =================
 
   void _applyPlanResult(BagPlanMoveResult result) {
-    if (!_canEditPlan || _busy) return;
+    if (!_canEditPlan || _busy || _finished || !mounted) return;
     setState(() {
       if (result.error != null) {
         _status = PutawayStatus.capacity;
@@ -489,36 +634,43 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
   @override
   Widget build(BuildContext context) {
     final item = _line.item;
-    return Scaffold(
-      backgroundColor: AppColors.backgroundFor(context),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppGradientHeader(
-              overline: _line.order.poCode,
-              title: item.paddyLotCode ?? _line.order.poCode,
-              subtitle:
-                  '${_line.order.warehouseName ?? 'Kho #${_line.order.warehouseId}'} · '
-                  'còn ${formatKg(item.remainingKg)}',
-              leading: IconButton(
-                color: Colors.white,
-                icon: const Icon(Icons.arrow_back_rounded),
-                onPressed: () => Navigator.of(context).pop(_changed),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        Navigator.of(context).pop(_changed);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundFor(context),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppGradientHeader(
+                overline: _line.order.poCode,
+                title: item.paddyLotCode ?? _line.order.poCode,
+                subtitle:
+                    '${_line.order.warehouseName ?? 'Kho #${_line.order.warehouseId}'} · '
+                    'còn ${formatKg(item.remainingKg)}',
+                leading: IconButton(
+                  color: Colors.white,
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => Navigator.of(context).pop(_changed),
+                ),
+                trailing: IconButton(
+                  color: Colors.white,
+                  tooltip: 'Tải lại',
+                  icon: const Icon(Icons.refresh_rounded),
+                  onPressed: _busy || _finished ? null : _reloadLine,
+                ),
               ),
-              trailing: IconButton(
-                color: Colors.white,
-                tooltip: 'Tải lại',
-                icon: const Icon(Icons.refresh_rounded),
-                onPressed: _busy ? null : _reloadLine,
-              ),
-            ),
-            Expanded(child: _body()),
-          ],
+              Expanded(child: _body()),
+            ],
+          ),
         ),
+        bottomNavigationBar: _bottomBar(),
       ),
-      bottomNavigationBar: _bottomBar(),
     );
   }
 
@@ -526,7 +678,7 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     if (_finished) {
       return const HEmptyState(
         title: 'Đã hoàn tất nhập kho',
-        description: 'Lô này không còn phần nào chờ xếp vị trí.',
+        description: 'Đã hoàn tất nhập kho lô hàng.',
         icon: Icons.done_all_rounded,
       );
     }
@@ -537,21 +689,23 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
       children: [
         if (_busy) const LinearProgressIndicator(minHeight: 2),
         _lifecycleCard(),
-        if (_message.isNotEmpty) ...[
+        if (_message.isNotEmpty && !_finished) ...[
           const SizedBox(height: 12),
           AppInfoBanner(message: _message, tone: _messageTone),
         ],
         const SizedBox(height: 12),
         if (plan != null && plan.columns.isNotEmpty)
           _bagPlanSection(plan)
-        else if (_busy && _suggestions.isEmpty)
+        else if (_busy ||
+            (_canPrepare &&
+                _suggestions.isEmpty &&
+                _warehouseLocations.isEmpty &&
+                _status == PutawayStatus.waiting))
           _preparingCard()
         else if (_status == PutawayStatus.error)
           _retryCard()
-        else if (!_canPrepare)
-          _suggestionSection()
         else
-          _waitingForBagPlanCard(),
+          _suggestionSection(),
       ],
     );
   }
@@ -689,17 +843,6 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
             label: const Text('Thử lại'),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _waitingForBagPlanCard() {
-    return const AppCard(
-      margin: EdgeInsets.only(bottom: 12),
-      child: AppInfoBanner(
-        message:
-            'Màn này yêu cầu phương án xếp nguyên bao từ Backend. Chưa có cột và danh sách bao để hiển thị.',
-        tone: AppTone.warning,
       ),
     );
   }
@@ -1004,46 +1147,45 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
           DropdownMenuItem<int>(
             value: candidate.locationId,
             enabled: candidate.locationId == currentLocationId ||
-                plan.capacityRemain(candidate.locationId) + 0.001 >= requiredKg,
+                candidate.capacityAvailableKg >= requiredKg,
             child: Text(
-              '${candidate.slotCode} · còn ${formatKg(plan.capacityRemain(candidate.locationId))}',
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: dense ? 11.5 : 12.5,
-                color: candidate.locationId == currentLocationId ||
-                        plan.capacityRemain(candidate.locationId) + 0.001 >=
-                            requiredKg
-                    ? null
-                    : AppColors.textTertiary,
-              ),
+              '${candidate.slotCode}'
+              '${candidate.locationId == currentLocationId ? ' (hiện tại)' : ' · còn ${formatKg(candidate.capacityAvailableKg)}'}',
             ),
           ),
       ],
-      onChanged: !_canEditPlan || _busy
-          ? null
-          : (value) {
-              if (value == null || value == currentLocationId) return;
-              if (plan.capacityRemain(value) + 0.001 < requiredKg) {
-                _snack(
-                    'Cột đã chọn không đủ sức chứa cho ${formatKg(requiredKg)}.');
-                return;
-              }
-              onPick(value);
-            },
+      onChanged: (target) {
+        if (target != null && target != currentLocationId) onPick(target);
+      },
     );
   }
 
   Widget _suggestionSection() {
     if (_suggestions.isNotEmpty) {
+      final suggestions = _suggestions;
+      final remainingLocations = _warehouseLocations
+          .where((loc) => !suggestions.any((s) => s.locationId == loc.id))
+          .toList();
+
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const AppSectionHeader(
             title: 'Vị trí đề xuất',
-            icon: Icons.place_outlined,
+            icon: Icons.auto_awesome_rounded,
           ),
-          for (var index = 0; index < _suggestions.length; index++)
-            _suggestionCard(_suggestions[index], index),
+          for (var i = 0; i < suggestions.length; i++)
+            _suggestionCard(suggestions[i], i),
+          if (remainingLocations.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            AppSectionHeader(
+              title:
+                  'Các khu/cột phù hợp khác trong ${_line.order.warehouseName ?? 'kho'}',
+              icon: Icons.grid_view_rounded,
+            ),
+            for (final location in remainingLocations)
+              _warehouseLocationCard(location),
+          ],
         ],
       );
     }
@@ -1064,36 +1206,52 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
           title: 'Khu/cột còn chỗ trong ${_line.order.warehouseName ?? 'kho'}',
           icon: Icons.grid_view_rounded,
         ),
-        for (final location in locations)
-          AppCard(
-            margin: const EdgeInsets.only(bottom: 10),
-            onTap: _busy ? null : () => _chooseWarehouseLocation(location),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+        for (final location in locations) _warehouseLocationCard(location),
+      ],
+    );
+  }
+
+  Widget _warehouseLocationCard(StorageLocation location) {
+    final selected = location.id == _selectedLocationId && _plan == null;
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: 10),
+      color: selected ? AppColors.brandTint : null,
+      onTap: !_canEditPlan || _busy
+          ? null
+          : () => _chooseWarehouseLocation(location),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
                   location.label,
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${location.isQuarantine ? 'Khu cách ly' : 'Khu lưu trữ thường'} · '
-                  'còn ${formatKg(location.freeCapacityKg)}',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: AppColors.textSecondaryFor(context),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                _capacityBar(
-                  location.maxCapacity <= 0
-                      ? 0
-                      : location.currentOccupancy / location.maxCapacity,
-                ),
-              ],
+              ),
+              if (selected)
+                const Icon(Icons.check_circle_rounded,
+                    color: AppColors.primary, size: 20),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${location.isQuarantine ? 'Khu cách ly' : 'Khu lưu trữ thường'} · '
+            'còn ${formatKg(location.freeCapacityKg)}',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: AppColors.textSecondaryFor(context),
             ),
           ),
-      ],
+          const SizedBox(height: 6),
+          _capacityBar(
+            location.maxCapacity <= 0
+                ? 0
+                : location.currentOccupancy / location.maxCapacity,
+          ),
+        ],
+      ),
     );
   }
 
@@ -1102,7 +1260,8 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     return AppCard(
       margin: const EdgeInsets.only(bottom: 10),
       color: selected ? AppColors.brandTint : null,
-      onTap: _busy ? null : () => _chooseSuggestion(suggestion),
+      onTap:
+          !_canEditPlan || _busy ? null : () => _chooseSuggestion(suggestion),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1160,11 +1319,19 @@ class _InboundPutawayLineScreenState extends State<InboundPutawayLineScreen>
     if (_finished || !_canEditPlan) return null;
     final plan = _plan;
     final hasPlan = plan != null && plan.columns.isNotEmpty;
-    if (!hasPlan) return null;
+    final locationId = hasPlan
+        ? plan.columns.first.locationId
+        : (_manualOverride ? _manualLocationId : _selectedLocationId);
 
-    final label =
-        'Xác nhận xếp ${plan.bagCount} bao · ${formatKg(plan.totalKg)}';
-    final blocked = plan.unplacedBagIds.isNotEmpty;
+    if (!hasPlan && (locationId == null || locationId <= 0)) {
+      return null;
+    }
+
+    final blocked = hasPlan && plan.unplacedBagIds.isNotEmpty;
+    final weightKg = hasPlan ? plan.totalKg : _placementWeightKg;
+    final label = hasPlan
+        ? 'Xác nhận xếp ${plan.bagCount} bao · ${formatKg(weightKg)}'
+        : 'Xác nhận xếp ${formatKg(weightKg)}';
 
     return SafeArea(
       minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),

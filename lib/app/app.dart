@@ -24,6 +24,8 @@ class StockLiteApp extends StatelessWidget {
           themeMode: themeMode,
           navigatorKey: appNavigatorKey,
           scaffoldMessengerKey: appMessengerKey,
+          // Đây chỉ là điểm vào ban đầu. Route Home vẫn tự kiểm tra session
+          // lần nữa để direct navigation không thể bỏ qua lớp bảo vệ auth.
           initialRoute: isLoggedIn ? AppRoutes.home : AppRoutes.login,
           routes: AppRoutes.routes,
         );

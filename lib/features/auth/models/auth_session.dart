@@ -131,11 +131,25 @@ class AuthUser {
     });
   }
 
+  /// Nhận diện nhân viên thu mua ngay cả khi API session chỉ trả `name`
+  /// mà không trả `code`. Quyền thao tác vẫn phải được kiểm tra riêng bằng
+  /// `hasPermission`; helper này không tự cấp thêm quyền cho người dùng.
+  bool get isPurchasingWorker {
+    return roles.any((role) {
+      final code = role.code.trim().toUpperCase();
+      final name = role.name.trim().toUpperCase();
+      return code == 'PURCHASING' ||
+          name == 'NHÂN VIÊN THU MUA' ||
+          name == 'NHAN VIEN THU MUA';
+    });
+  }
+
   /// Kiểm tra có một vai trò cụ thể hay không.
   bool hasRole(String roleCode) {
     final code = roleCode.trim().toUpperCase();
     if (code == 'ADMIN' && isAdmin) return true;
-    return roles.any((r) => r.code == code);
+    if (code == 'PURCHASING' && isPurchasingWorker) return true;
+    return roles.any((r) => r.code.trim().toUpperCase() == code);
   }
 
   /// Kiểm tra có quyền hạn `action` trên `menuCode` hay không (VD: `hasPermission('STOCKTAKE', 'CREATE')`).
@@ -163,7 +177,9 @@ class AuthUser {
     // 1. Kiểm tra trong danh sách menus được cấp
     if (menus.any((m) => m.code == targetMenu)) return true;
 
-    // 2. Kiểm tra trong danh sách permissions có quyền READ hoặc bất kỳ quyền nào
+    // 2. Menu có thể xuất hiện để tổ chức điều hướng nếu có bất kỳ action nào.
+    // Không dùng helper này cho route list/detail; route phải dùng
+    // hasReadAccess để CREATE/UPDATE đơn lẻ không vô tình cấp quyền xem.
     final perm = permissions.firstWhere(
       (p) => p.menuCode == targetMenu,
       orElse: () => const UserPermission(menuId: 0, menuCode: '', actions: {}),
@@ -265,6 +281,8 @@ List<UserPermission> _mergePermissions(List<UserPermission> permissions) {
           (id > 0 && item.menuId == id),
     );
     final existing = index < 0 ? null : merged[index];
+    // Backend có thể trả nhiều record cho cùng menu (mỗi record một action).
+    // Union actions tại đây giúp READ/CREATE/UPDATE không ghi đè lẫn nhau.
     final combined = UserPermission(
       menuId: existing?.menuId ?? id,
       menuCode:

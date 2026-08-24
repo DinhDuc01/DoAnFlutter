@@ -37,6 +37,8 @@ class AuthSessionStore {
 
   /// Lưu phiên vào RAM + bộ nhớ cục bộ sau khi đăng nhập thành công.
   static Future<void> save(AuthSession session) async {
+    // Gán RAM trước để request kế tiếp dùng ngay token mới. Việc lưu local có
+    // thể thất bại nhưng không nên làm hỏng phiên đang chạy hiện tại.
     current = session;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -61,6 +63,8 @@ class AuthSessionStore {
 
   /// Xoá phiên khỏi RAM + bộ nhớ cục bộ khi đăng xuất.
   static Future<void> clear() async {
+    // Xóa RAM trước để UI/route không tiếp tục đọc permission cũ trong lúc
+    // SharedPreferences đang được cập nhật bất đồng bộ.
     current = null;
     try {
       final prefs = await SharedPreferences.getInstance();

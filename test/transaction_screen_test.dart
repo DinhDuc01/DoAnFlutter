@@ -61,6 +61,59 @@ void main() {
       expect(repository.confirmCount, 0);
     });
 
+    phoneTestWidgets('rejects a bag heavier than 70 kg', (tester) async {
+      final repository = _ThuMuaRepository(Future.value(_inboundReceipt()));
+      await tester.pumpWidget(
+        MaterialApp(home: ThuMuaScreen(repository: repository)),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const ValueKey('thu_mua_bag_weight_0')),
+        '70.1',
+      );
+      await tester.ensureVisible(find.text('Lưu phiếu mua'));
+      await tester.tap(find.text('Lưu phiếu mua'));
+      await tester.pump();
+
+      expect(
+        find.text('Khối lượng mỗi bao không được vượt quá 70 kg'),
+        findsOneWidget,
+      );
+      expect(repository.confirmCount, 0);
+    });
+
+    phoneTestWidgets('accepts a bag weighing exactly 70 kg', (tester) async {
+      final repository = _ThuMuaRepository(Future.value(_inboundReceipt()));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ThuMuaScreen(repository: repository),
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRoutes.thuMuaSuccess) {
+              return MaterialPageRoute<void>(
+                builder: (_) => const Scaffold(body: Text('Saved 70 kg bag')),
+              );
+            }
+            return null;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const ValueKey('thu_mua_bag_weight_0')),
+        '70',
+      );
+      await tester.ensureVisible(find.text('Lưu phiếu mua'));
+      await tester.tap(find.text('Lưu phiếu mua'));
+      await tester.pumpAndSettle();
+
+      expect(repository.confirmCount, 1);
+      expect(repository.lastReceipt?.actualWeightKg, 70);
+      expect(repository.lastReceipt?.bags.single.weightKg, 70);
+      expect(find.text('Saved 70 kg bag'), findsOneWidget);
+    });
+
     phoneTestWidgets('submits increased quantity and opens success route',
         (tester) async {
       final repository = _ThuMuaRepository(Future.value(_inboundReceipt()));

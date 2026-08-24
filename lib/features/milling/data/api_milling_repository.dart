@@ -59,18 +59,21 @@ class ApiMillingRepository implements MillingRepository {
   @override
   Future<List<MillingOperator>> getMillingOperators() async {
     final response = await _apiClient.get(
-      '/api/v1/user',
+      '/api/v1/milling-orders/operators',
       token: _currentToken(),
     );
-    final resources = JsonReader.list(response, 'resources') ?? const [];
+    final resources = JsonReader.list(response, 'resources') ??
+        JsonReader.list(response, 'data') ??
+        const [];
     return [
       for (final item in resources.whereType<Map<String, dynamic>>())
         if ((JsonReader.integer(item, 'id') ?? 0) > 0)
           MillingOperator(
             id: JsonReader.integer(item, 'id')!,
             name: (JsonReader.string(item, 'name') ??
+                    JsonReader.string(item, 'fullName') ??
                     JsonReader.string(item, 'username') ??
-                    'Nhân viên')
+                    'Nhân viên xay xát')
                 .trim(),
           ),
     ];
@@ -662,12 +665,30 @@ class ApiMillingRepository implements MillingRepository {
     MillingOrder order, {
     Map<String, int> outputLocationIds = const {},
     String? note,
+    String? machineRef,
+    int? operatorId,
+    double? lossKg,
+    double? byproductKg,
+    double? millingCost,
+    double? incidentalCost,
     List<MillingOutputFormValue>? outputForms,
   }) async {
+    final effectiveMachineRef = (machineRef != null && machineRef.trim().isNotEmpty)
+        ? machineRef.trim()
+        : (order.machineRef?.trim().isNotEmpty == true
+            ? order.machineRef!.trim()
+            : 'máy xay 1');
+
     if (outputForms != null) {
       final payload = buildMillingCompletePayloadPreview(
         outputs: outputForms,
         note: note,
+        machineRef: effectiveMachineRef,
+        operatorId: operatorId ?? order.operatorId,
+        lossKg: lossKg,
+        byproductKg: byproductKg,
+        millingCost: millingCost ?? order.millingCost,
+        incidentalCost: incidentalCost ?? order.incidentalCost,
       );
       final json = await _apiClient.post(
         '/api/v1/milling-orders/${order.id}/complete',

@@ -7,7 +7,6 @@ import '../../../../core/widgets/app_ui.dart';
 import '../../../../core/widgets/state_widgets.dart';
 import '../../../auth/data/auth_session_store.dart';
 import '../../../sales_orders/data/sales_order_repository.dart';
-import '../../../scale/presentation/widgets/scale_status_chip.dart';
 import '../../data/outbound_order_repository.dart';
 import '../../models/outbound_order.dart';
 import '../widgets/outbound_action_sheets.dart';
@@ -410,11 +409,6 @@ class _OutboundOrderDetailScreenState extends State<OutboundOrderDetailScreen>
                   // Cân chỉ liên quan khi phiếu đang ở bước lấy hàng/đóng bao.
                   // Khi phiếu đã hoàn tất (hoặc ở trạng thái khác), màn hình chỉ
                   // hiển thị số liệu đã ghi nhận, không gợi ý kết nối cân nữa.
-                  if (order?.canPack == true)
-                    const KeyedSubtree(
-                      key: Key('outbound_scale_status'),
-                      child: ScaleStatusChip(),
-                    ),
                   IconButton(
                     onPressed: _busy ? null : () => _load(),
                     color: Colors.white,

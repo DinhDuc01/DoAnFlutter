@@ -17,8 +17,8 @@ import 'sales_order_detail_screen.dart';
 
 /// Danh sách đơn bán.
 ///
-/// Mobile được TẠO đơn bán (giống web) và KIỂM TRA & GIỮ HÀNG ở màn chi tiết.
-/// Bước XÁC NHẬN đơn (Mới tạo → Chờ xác nhận) chỉ làm trên web.
+/// Mobile được tạo, xác nhận và kiểm tra & giữ hàng theo permission/status
+/// giống contract mà Web đang dùng.
 ///
 /// Lọc trạng thái, lọc kênh bán và phân trang đều chạy phía backend qua
 /// `POST /sales-orders/paged`, nên tổng số trang luôn khớp bộ lọc đang chọn.

@@ -174,11 +174,11 @@ void main() {
 
     test('chỉ giữ hàng được khi đơn đã ở Chờ xác nhận', () {
       expect(_detail(SalesOrderStatusIds.newOrder).canReserve, isFalse);
-      expect(_detail(SalesOrderStatusIds.newOrder).waitingWebConfirm, isTrue);
+      expect(_detail(SalesOrderStatusIds.newOrder).waitingConfirmation, isTrue);
 
       expect(_detail(SalesOrderStatusIds.pendingConfirm).canReserve, isTrue);
       expect(
-        _detail(SalesOrderStatusIds.pendingConfirm).waitingWebConfirm,
+        _detail(SalesOrderStatusIds.pendingConfirm).waitingConfirmation,
         isFalse,
       );
 
@@ -302,6 +302,14 @@ void main() {
                 'productCategoryName': 'Phụ phẩm',
               },
               {
+                'id': 145,
+                'sku': 'CAM-ST24-10KG',
+                'name': 'Cám ST24 đóng bao 10kg',
+                'productCategoryId': 103,
+                'productCategoryName': 'Phụ phẩm',
+                'isActive': false,
+              },
+              {
                 'id': 201,
                 'sku': 'BAO-PP-01',
                 'name': 'Bao đóng gói',
@@ -325,6 +333,7 @@ void main() {
       expect(products.any((item) => item.isRawPaddy), isFalse);
       expect(products.every((item) => item.isAllowedSalesProduct), isTrue);
       expect(client.calls.single.path, '/api/v1/product-variant/search');
+      expect(products.first.label, 'GAO-ST24-10KG · Gạo ST24 đóng bao 10kg');
     });
   });
 }

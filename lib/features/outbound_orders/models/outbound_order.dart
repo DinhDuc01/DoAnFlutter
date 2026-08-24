@@ -105,6 +105,7 @@ class OutboundOrderDetail {
     required this.totalDispatchedValue,
     required this.totalDispatchedSaleValue,
     required this.items,
+    this.bagAllocations = const [],
     this.completedDate,
     this.note,
     this.cancelReason,
@@ -128,8 +129,13 @@ class OutboundOrderDetail {
   final String? cancelReason;
   final DateTime? createdDate;
   final List<OutboundOrderItem> items;
+  final List<OutboundBagAllocation> bagAllocations;
 
   String get statusLabel => outboundStatusLabel(statusId, statusName);
+
+  /// Danh sách các bao vật lý đang ở trạng thái ACTIVE (dành cho màn Lấy hàng).
+  List<OutboundBagAllocation> get activeBagAllocations =>
+      bagAllocations.where((b) => b.isActive).toList();
 
   /// Lý do hủy đã nhập (chỉ hiển thị khi phiếu đã hủy).
   String? get cancelReasonText {
@@ -150,8 +156,13 @@ class OutboundOrderDetail {
 
   // ── Guard theo trạng thái, khớp đúng web ────────────────────────────
   bool get canAllocate => statusId == OutboundStatusIds.draft;
-  bool get canPick => statusId == OutboundStatusIds.picking;
-  bool get canPack => statusId == OutboundStatusIds.picking;
+  bool get isFullyPicked =>
+      items.isNotEmpty &&
+      items.every(
+        (item) => item.quantityPicked + 0.001 >= item.quantityOrdered,
+      );
+  bool get canPick => statusId == OutboundStatusIds.picking && !isFullyPicked;
+  bool get canPack => statusId == OutboundStatusIds.picking && isFullyPicked;
   bool get canDispatch => statusId == OutboundStatusIds.packed;
   bool get canDeliver => statusId == OutboundStatusIds.dispatched;
   bool get canCancel => const [
@@ -193,6 +204,10 @@ class OutboundOrderDetail {
         items: [
           for (final row in JsonReader.list(json, 'items') ?? const [])
             if (row is Map<String, dynamic>) OutboundOrderItem.fromJson(row),
+        ],
+        bagAllocations: [
+          for (final row in JsonReader.list(json, 'bagAllocations') ?? const [])
+            if (row is Map<String, dynamic>) OutboundBagAllocation.fromJson(row),
         ],
       );
 }
@@ -321,6 +336,73 @@ class OutboundAllocation {
         quantityAllocated: JsonReader.decimal(json, 'quantityAllocated') ?? 0,
         quantityPicked: JsonReader.decimal(json, 'quantityPicked') ?? 0,
         unitCostPrice: JsonReader.decimal(json, 'unitCostPrice') ?? 0,
+      );
+}
+
+/// Phân bổ bao vật lý cụ thể của phiếu xuất (khớp `BagAllocationDetailDto` của backend).
+class OutboundBagAllocation {
+  const OutboundBagAllocation({
+    required this.bagAllocationId,
+    required this.bagId,
+    required this.bagNo,
+    required this.allocatedWeightKg,
+    required this.pickedWeightKg,
+    required this.status,
+    this.outboundOrderItemId,
+    this.bagWeightSnapshotKg = 0,
+    this.lotId,
+    this.lotCode,
+    this.locationId,
+    this.locationCode,
+    this.stackOrder = 0,
+    this.isFull = true,
+    this.qrCode,
+    this.bagStatus,
+  });
+
+  final int bagAllocationId;
+  final int? outboundOrderItemId;
+  final int bagId;
+  final int bagNo;
+  final double allocatedWeightKg;
+  final double bagWeightSnapshotKg;
+  final double pickedWeightKg;
+  final int? lotId;
+  final String? lotCode;
+  final int? locationId;
+  final String? locationCode;
+  final int stackOrder;
+  final bool isFull;
+  final String? qrCode;
+  final String? bagStatus;
+  final String status;
+
+  bool get isActive => status.trim().toUpperCase() == 'ACTIVE';
+
+  String get bagLabel => 'Bao #$bagNo';
+  String get lotLabel => lotCode?.isNotEmpty == true ? lotCode! : (lotId != null ? 'Lô #$lotId' : '—');
+  String get locationLabel => locationCode?.isNotEmpty == true ? locationCode! : '—';
+
+  factory OutboundBagAllocation.fromJson(Map<String, dynamic> json) =>
+      OutboundBagAllocation(
+        bagAllocationId: JsonReader.integer(json, 'bagAllocationId') ?? 0,
+        outboundOrderItemId: JsonReader.integer(json, 'outboundOrderItemId'),
+        bagId: JsonReader.integer(json, 'bagId') ?? 0,
+        bagNo: JsonReader.integer(json, 'bagNo') ?? 0,
+        allocatedWeightKg:
+            JsonReader.decimal(json, 'allocatedWeightKg') ?? 0,
+        bagWeightSnapshotKg:
+            JsonReader.decimal(json, 'bagWeightSnapshotKg') ?? 0,
+        pickedWeightKg: JsonReader.decimal(json, 'pickedWeightKg') ?? 0,
+        lotId: JsonReader.integer(json, 'lotId'),
+        lotCode: JsonReader.string(json, 'lotCode'),
+        locationId: JsonReader.integer(json, 'locationId'),
+        locationCode: JsonReader.string(json, 'locationCode'),
+        stackOrder: JsonReader.integer(json, 'stackOrder') ?? 0,
+        isFull: JsonReader.boolean(json, 'isFull') ?? true,
+        qrCode: JsonReader.string(json, 'qrCode'),
+        bagStatus: JsonReader.string(json, 'bagStatus'),
+        status: JsonReader.string(json, 'status') ?? '',
       );
 }
 

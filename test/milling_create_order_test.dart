@@ -224,6 +224,76 @@ void main() {
     expect(find.text('Chọn lô lúa (không bắt buộc)'), findsOneWidget);
     expect(repository.created, isFalse);
   });
+
+  testWidgets('Yield field is locked and cannot be edited', (tester) async {
+    final repository = _CreateRepository();
+    final salesOrderRepository = _FakeSalesOrderRepository();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MillingCreateOrderScreen(
+          repository: repository,
+          salesOrderRepository: salesOrderRepository,
+          riceVarietiesLoader: () async => const [
+            RiceVarietyOption(id: 12, name: 'OM5451'),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final yieldFinder = find.widgetWithText(TextFormField, 'Yield áp dụng *');
+    expect(yieldFinder, findsOneWidget);
+    final formField = tester.widget<TextFormField>(yieldFinder);
+    expect(formField.enabled, isFalse);
+
+    final targetRiceFinder =
+        find.widgetWithText(TextFormField, 'Gạo dự kiến (kg) *');
+    expect(targetRiceFinder, findsOneWidget);
+    final targetRiceField = tester.widget<TextFormField>(targetRiceFinder);
+    expect(targetRiceField.enabled, isTrue);
+  });
+
+  testWidgets('Target rice field is editable when editing an existing order',
+      (tester) async {
+    final repository = _CreateRepository();
+    final salesOrderRepository = _FakeSalesOrderRepository();
+    const order = MillingOrder(
+      id: 44,
+      millingCode: 'MO-2026-044',
+      warehouseId: 7,
+      inputLotCode: 'LOT-101',
+      inputWeightKg: 1000,
+      warehouseZone: 'Khu A',
+      locationCode: 'LOC-01',
+      scaleCode: 'SCALE-01',
+      totalRiceOutputKg: 650,
+      yieldRateUsed: 0.65,
+      statusCode: 'DRAFT',
+      riceBags: [],
+      branBags: [],
+      brokenBags: [],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MillingCreateOrderScreen(
+          order: order,
+          repository: repository,
+          salesOrderRepository: salesOrderRepository,
+          riceVarietiesLoader: () async => const [
+            RiceVarietyOption(id: 12, name: 'OM5451'),
+          ],
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final targetRiceFinder =
+        find.widgetWithText(TextFormField, 'Gạo dự kiến (kg) *');
+    expect(targetRiceFinder, findsOneWidget);
+    final targetRiceField = tester.widget<TextFormField>(targetRiceFinder);
+    expect(targetRiceField.enabled, isTrue);
+  });
 }
 
 class _CreateRepository extends MockMillingRepository {

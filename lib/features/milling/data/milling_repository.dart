@@ -127,6 +127,12 @@ abstract class MillingRepository {
     MillingOrder order, {
     Map<String, int> outputLocationIds = const {},
     String? note,
+    String? machineRef,
+    int? operatorId,
+    double? lossKg,
+    double? byproductKg,
+    double? millingCost,
+    double? incidentalCost,
     List<MillingOutputFormValue>? outputForms,
   });
 }
@@ -360,6 +366,12 @@ class MockMillingRepository implements MillingRepository {
     MillingOrder order, {
     Map<String, int> outputLocationIds = const {},
     String? note,
+    String? machineRef,
+    int? operatorId,
+    double? lossKg,
+    double? byproductKg,
+    double? millingCost,
+    double? incidentalCost,
     List<MillingOutputFormValue>? outputForms,
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 700));

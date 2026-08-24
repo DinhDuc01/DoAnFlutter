@@ -13,6 +13,8 @@ import 'features/auth/data/startup_session_resolver.dart';
 import 'features/character/data/character_appearance_store.dart';
 
 Future<void> main() async {
+  // Mọi plugin dùng channel native (SharedPreferences, Firebase...) chỉ được
+  // gọi sau dòng này. Nếu bỏ, app có thể lỗi trước khi widget đầu tiên được dựng.
   WidgetsFlutterBinding.ensureInitialized();
   await CharacterAppearanceController.instance.load();
 
@@ -20,7 +22,9 @@ Future<void> main() async {
   ApiClient.onUnauthorized =
       TokenRefreshCoordinator.instance.refreshAccessToken;
 
-  // Nạp lại phiên đăng nhập đã lưu để không phải đăng nhập lại mỗi lần mở app.
+  // Nạp cache trước, sau đó luôn hỏi lại Backend để xác minh phiên. Đây là
+  // cơ chế fail-closed: token bị 401/403 hoặc role bị cấm sẽ không vào Home
+  // bằng permission cũ lưu trên máy.
   await AuthSessionStore.load();
   final isLoggedIn = await resolveStartupSession(
     cachedSession: AuthSessionStore.current,
@@ -31,7 +35,8 @@ Future<void> main() async {
     stopRealtime: RealtimeService.instance.stop,
   );
 
-  // Khởi tạo Firebase + đăng ký handler thông báo đẩy khi app ở nền/đã tắt.
+  // initApp chỉ cấu hình hạ tầng Firebase. startForUser bên dưới mới đăng ký
+  // dịch vụ theo tài khoản, vì vậy không chạy dịch vụ người dùng trước auth.
   await FcmService.instance.initApp();
 
   // Nếu đã có phiên, bật lại thông báo đẩy + realtime cho người dùng.

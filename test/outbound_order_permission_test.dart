@@ -49,21 +49,36 @@ void main() {
       expect(find.byKey(const Key('outbound_fail_delivery')), findsNothing);
     });
 
-    testWidgets('UPDATE shows pick, pack, cancel for PICKING status',
+    testWidgets('UPDATE shows pick before all items are picked',
         (tester) async {
       AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
-      final repository =
-          _FakeOutboundRepository(_order(statusId: OutboundStatusIds.picking));
+      final repository = _FakeOutboundRepository(
+        _order(statusId: OutboundStatusIds.picking, quantityPicked: 0),
+      );
 
       await _pumpDetail(tester, repository);
 
       expect(find.byKey(const Key('outbound_pick')), findsOneWidget);
-      expect(find.byKey(const Key('outbound_pack')), findsOneWidget);
+      expect(find.byKey(const Key('outbound_pack')), findsNothing);
       expect(find.byKey(const Key('outbound_cancel')), findsOneWidget);
       expect(find.byKey(const Key('outbound_allocate')), findsNothing);
       expect(find.byKey(const Key('outbound_dispatch')), findsNothing);
       expect(find.byKey(const Key('outbound_complete_delivery')), findsNothing);
       expect(find.byKey(const Key('outbound_fail_delivery')), findsNothing);
+    });
+
+    testWidgets('UPDATE shows pack only after all items are picked',
+        (tester) async {
+      AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
+      final repository = _FakeOutboundRepository(
+        _order(statusId: OutboundStatusIds.picking, quantityPicked: 1000),
+      );
+
+      await _pumpDetail(tester, repository);
+
+      expect(find.byKey(const Key('outbound_pick')), findsNothing);
+      expect(find.byKey(const Key('outbound_pack')), findsOneWidget);
+      expect(find.byKey(const Key('outbound_cancel')), findsOneWidget);
     });
 
     testWidgets('UPDATE shows dispatch and cancel for PACKED status',
@@ -153,7 +168,7 @@ void main() {
       }
     });
 
-    testWidgets('PICKING keeps live scale status and weighing summary',
+    testWidgets('PICKING hides header scale connection and keeps weighing summary',
         (tester) async {
       AuthSessionStore.current = _session(const {'READ', 'UPDATE'});
       final repository = _FakeOutboundRepository(
@@ -162,7 +177,7 @@ void main() {
 
       await _pumpDetail(tester, repository);
 
-      expect(find.byKey(const Key('outbound_scale_status')), findsOneWidget);
+      expect(find.byKey(const Key('outbound_scale_status')), findsNothing);
       expect(find.text('Cân & đóng bao'), findsOneWidget);
       expect(find.text('Thực lấy'), findsOneWidget);
       expect(find.text('Kết quả xuất kho'), findsNothing);
@@ -248,7 +263,10 @@ AuthSession _session(Set<String> actions) {
   );
 }
 
-OutboundOrderDetail _order({required int statusId}) {
+OutboundOrderDetail _order({
+  required int statusId,
+  double quantityPicked = 1000,
+}) {
   return OutboundOrderDetail(
     id: 101,
     salesOrderId: 55,
@@ -262,13 +280,13 @@ OutboundOrderDetail _order({required int statusId}) {
     warehouseName: 'Kho Tổng',
     totalDispatchedValue: 50000000,
     totalDispatchedSaleValue: 60000000,
-    items: const [
+    items: [
       OutboundOrderItem(
         id: 1,
         productVariantId: 10,
         productVariantName: 'Gạo ST25 Đóng Túi 5kg',
         quantityOrdered: 1000,
-        quantityPicked: 1000,
+        quantityPicked: quantityPicked,
         unitCostPrice: 20000,
         allocations: [],
         allocationGroups: [],
@@ -326,7 +344,7 @@ class _FakeOutboundRepository implements OutboundOrderRepository {
   @override
   Future<void> confirmPacking(
     int id, {
-    required String qrCode,
+    String? qrCode,
     double? actualWeightKg,
     String? scaleDevice,
     List<PackingItemWeightPayload> items = const [],

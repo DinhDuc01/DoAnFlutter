@@ -194,6 +194,7 @@ void main() {
       );
 
       expect(session.isAdmin, isFalse);
+      expect(user.hasRole('PURCHASING'), isTrue);
       expect(session.hasPermission('RICE_PURCHASE', 'CREATE'), isTrue);
       expect(session.hasPermission('RICE_PURCHASE', 'UPDATE'), isTrue);
       expect(session.hasPermission('RICE_PURCHASE', 'APPROVE'), isFalse);

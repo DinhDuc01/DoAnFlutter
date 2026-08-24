@@ -37,9 +37,11 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   bool get _warehouseReadOnly =>
       AuthSessionStore.current?.user.isWarehouseWorker == true;
   bool get _canCreate =>
-      AuthSessionStore.current?.hasPermission('RICE_PURCHASE', 'CREATE') == true;
+      AuthSessionStore.current?.hasPermission('RICE_PURCHASE', 'CREATE') ==
+      true;
   bool get _canUpdate =>
-      AuthSessionStore.current?.hasPermission('RICE_PURCHASE', 'UPDATE') == true;
+      AuthSessionStore.current?.hasPermission('RICE_PURCHASE', 'UPDATE') ==
+      true;
   final PurchaseScheduleRepository _repository = PurchaseScheduleRepository();
   final ApiThuMuaRepository _receiptRepository = ApiThuMuaRepository();
   Future<List<PurchaseSchedule>>? _schedulesFuture;
@@ -212,7 +214,9 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   }
 
   Future<void> _editDraft(ThuMuaDraftSummary draft) async {
-    if (!_canUpdate) return;
+    // Thu mua chỉ được mở form sửa khi có UPDATE. Nhân viên kho vẫn là
+    // read-only dù tài khoản vô tình được gán thêm action này.
+    if (_warehouseReadOnly || !_canUpdate) return;
     try {
       final detail = await _receiptRepository
           .getDraftReceiptDetail(draft.id)
@@ -362,7 +366,10 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                             ))
                         .toList(),
                   ),
-                  if (receipt.isDraft && receipt.id > 0) ...[
+                  if (!_warehouseReadOnly &&
+                      _canUpdate &&
+                      receipt.isDraft &&
+                      receipt.id > 0) ...[
                     const SizedBox(height: 10),
                     Align(
                       alignment: Alignment.centerRight,
@@ -392,7 +399,7 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
   }
 
   Future<void> _editReceipt(ThuMuaReceiptSummary receipt) async {
-    if (!_canUpdate || !receipt.isDraft) return;
+    if (_warehouseReadOnly || !_canUpdate || !receipt.isDraft) return;
     if (receipt.id <= 0) return;
     try {
       final detail = await _receiptRepository.getDraftReceiptDetail(receipt.id);
@@ -653,22 +660,26 @@ class ThuMuaTabState extends State<ThuMuaTab> with WidgetsBindingObserver {
                                               ),
                                             ),
                                           ],
-                                          const SizedBox(height: 12),
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: FilledButton(
-                                              onPressed: () =>
-                                                  _editDraft(draft),
-                                              style: FilledButton.styleFrom(
-                                                minimumSize: const Size(0, 40),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 18),
+                                          if (!_warehouseReadOnly &&
+                                              _canUpdate) ...[
+                                            const SizedBox(height: 12),
+                                            Align(
+                                              alignment: Alignment.centerRight,
+                                              child: FilledButton(
+                                                onPressed: () =>
+                                                    _editDraft(draft),
+                                                style: FilledButton.styleFrom(
+                                                  minimumSize:
+                                                      const Size(0, 40),
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal: 18),
+                                                ),
+                                                child: const Text(
+                                                    'Tiếp tục chỉnh sửa'),
                                               ),
-                                              child: const Text(
-                                                  'Tiếp tục chỉnh sửa'),
                                             ),
-                                          ),
+                                          ],
                                         ],
                                       ),
                                     ),
